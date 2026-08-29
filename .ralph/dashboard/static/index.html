@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ralph Control Center</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell" id="app-shell" data-view="execution">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">R</span>
+        <div><strong>Ralph Control Center</strong><small>내 컴퓨터에서 실행되는 Ralph Loop 관제 화면</small></div>
+      </div>
+      <div class="run-identity" id="run-identity">
+        <span class="connection" id="connection" title="대시보드와 로컬 이벤트 스트림의 연결 상태"><i></i><span>연결 중</span></span>
+        <span class="context-chip" title="현재 선택한 Ralph 작업 종류"><small>작업</small><strong id="top-task">실행 대기</strong></span>
+        <span class="context-chip workspace-chip" id="workspace-chip" title="Ralph가 파일을 읽고 수정하는 프로젝트 폴더">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 6.5V6a2 2 0 0 1 2-2h4l2 2z"/></svg>
+          <span><small>작업공간</small><strong id="top-workspace">—</strong></span>
+        </span>
+        <span class="context-chip" title="작업공간이 아니라 현재 Git 브랜치입니다"><small>Git 브랜치</small><strong id="top-branch">—</strong></span>
+      </div>
+      <div class="top-actions">
+        <div class="view-switch" aria-label="대시보드 페이지">
+          <button class="active" data-view="execution" type="button">실행 현황</button>
+          <button data-view="usage" type="button">모델·토큰</button>
+        </div>
+        <button id="refresh" type="button">새로고침</button>
+        <button id="operator-note-open" type="button">오퍼레이터 메모</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="run-sidebar">
+        <div class="sidebar-heading">
+          <span>Loop history <b id="run-count">0</b></span>
+          <button id="history-edit" type="button" title="여러 실행 기록을 선택하거나 전체 삭제합니다">편집</button>
+        </div>
+        <div class="history-edit-bar" id="history-edit-bar" hidden>
+          <strong id="history-selection-count">0개 선택</strong>
+          <div>
+            <button id="delete-selected-runs" type="button" disabled>선택 삭제</button>
+            <button id="delete-all-runs" type="button">전체 삭제</button>
+          </div>
+        </div>
+        <div id="run-list" class="run-list"></div>
+        <div class="privacy-note">
+          <strong>이 컴퓨터에서만 표시</strong>
+          <span>127.0.0.1에서 이 저장소의 실행 증거만 사용하며, 삭제는 편집 모드에서 확인 후 수행합니다.</span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <div id="execution-view">
+          <section class="run-overview">
+            <div class="overview-title">
+              <div>
+                <span class="eyebrow" id="run-status-label">NO ACTIVE RUN</span>
+                <h1 id="run-title">Ralph 실행을 기다리고 있습니다</h1>
+                <p id="run-subtitle">대시보드를 먼저 켠 뒤 Ralph Loop를 실행해도 자동으로 연결됩니다.</p>
+              </div>
+              <div class="overview-score">
+                <strong id="progress-value">0%</strong>
+                <span id="progress-label">0 / 0 단계</span>
+              </div>
+            </div>
+            <div class="progress-track"><div id="progress-fill"></div></div>
+            <div class="overview-facts">
+              <div><span>Iteration</span><strong id="fact-iteration">—</strong></div>
+              <div><span>Critic score</span><strong id="fact-score">—</strong></div>
+              <div><span>시작 시각</span><strong id="fact-started">—</strong></div>
+              <div><span>종료 시각</span><strong id="fact-ended">—</strong></div>
+              <div><span>Git HEAD</span><strong id="fact-head">—</strong></div>
+              <div><span>Working tree</span><strong id="fact-tree">—</strong></div>
+            </div>
+          </section>
+
+          <section class="panel work-contract">
+            <div class="panel-heading">
+              <div><span class="eyebrow">PROMPT.MD</span><h2>이번 Loop의 작업 계약</h2><p>AI가 반드시 수행하고 검증해야 하는 항목입니다.</p></div>
+              <span class="panel-meta" id="task-count">0개 항목</span>
+            </div>
+            <div id="task-list" class="task-list"></div>
+          </section>
+
+          <section class="panel pipeline-panel">
+            <div class="panel-heading">
+              <div><span class="eyebrow">EXECUTION</span><h2>Ralph 파이프라인</h2><p>노드를 누르면 수행 내용과 근거가 펼쳐집니다.</p></div>
+              <div class="status-legend"><span><i class="complete"></i>완료</span><span><i class="running"></i>실행 중</span><span><i class="warning"></i>주의</span><span><i class="failed"></i>실패</span><span><i class="pending"></i>대기</span></div>
+            </div>
+            <div id="iteration-list" class="iteration-list"></div>
+          </section>
+        </div>
+
+        <div id="usage-view" hidden>
+          <section class="usage-hero">
+            <div><span class="eyebrow">MODEL USAGE</span><h1>모델별 작업과 토큰</h1><p id="usage-note">선택한 실행에서 각 모델이 담당한 단계와 공급자가 보고한 토큰을 집계합니다.</p></div>
+            <span class="usage-run-id" id="usage-run-id">실행을 선택하세요</span>
+          </section>
+          <section class="usage-summary" id="usage-summary"></section>
+          <section class="usage-charts">
+            <article class="panel chart-card"><div class="panel-heading"><div><span class="eyebrow">MODEL SHARE</span><h2>모델별 총 토큰 비율</h2></div></div><div id="model-share-chart" class="chart-body"></div></article>
+            <article class="panel chart-card"><div class="panel-heading"><div><span class="eyebrow">I/O SHARE</span><h2>입력·출력 토큰 비율</h2></div></div><div id="io-share-chart" class="chart-body"></div></article>
+          </section>
+          <section class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">BY MODEL</span><h2>모델별 수행 작업</h2><p>정확한 모델 ID, 추론 강도, 담당 단계와 사용량입니다.</p></div></div>
+            <div id="model-usage-list" class="model-usage-list"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">CALL HISTORY</span><h2>모델 호출 내역</h2><p>한 번의 모델 시도 단위로 작업과 토큰을 확인합니다.</p></div></div>
+            <div id="usage-call-list" class="usage-call-list"></div>
+          </section>
+        </div>
+      </main>
+
+      <aside class="inspector">
+        <div class="inspector-heading">
+          <span class="eyebrow" id="detail-kicker">SELECT A NODE</span>
+          <h2 id="detail-title">단계를 선택하세요</h2>
+          <p id="detail-summary">파이프라인의 노드를 누르면 사용한 모델, 판단 요약과 증거를 확인할 수 있습니다.</p>
+          <div class="detail-facts">
+            <div title="AI 단계는 정확한 모델과 추론 강도, 자동 단계는 실행한 로컬 스크립트를 표시합니다"><span>실행 주체</span><strong id="detail-model">—</strong></div>
+            <div title="폴백 체인에서 이 모델을 호출한 순번"><span>시도</span><strong id="detail-attempt">—</strong></div>
+            <div title="이 단계가 남긴 로컬 로그·판정·출력 파일"><span>증거 파일</span><strong id="detail-artifact">—</strong></div>
+          </div>
+        </div>
+        <nav class="detail-tabs" aria-label="단계 상세">
+          <button type="button" class="active" data-tab="stream">판단·행동</button>
+          <button type="button" data-tab="evidence">검증 증거</button>
+          <button type="button" data-tab="changes">파일·Git</button>
+        </nav>
+        <div id="detail-content" class="detail-content"></div>
+      </aside>
+    </div>
+  </div>
+
+  <dialog id="operator-note-dialog">
+    <form method="dialog" id="operator-note-form">
+      <div class="dialog-heading"><div><span class="eyebrow">NEXT NODE</span><h2>오퍼레이터 메모</h2></div><button type="button" id="operator-note-close" aria-label="닫기">×</button></div>
+      <p>현재 모델 호출에는 끼어들지 않고, 다음 Critic·Meta·Worker 입력부터 반영됩니다.</p>
+      <textarea id="operator-note-input" maxlength="4000" placeholder="예: 새 기능을 추가하지 말고 현재 타입 오류만 먼저 해결해줘."></textarea>
+      <div class="dialog-status" id="operator-note-status"></div>
+      <div class="dialog-actions"><button type="button" id="operator-note-cancel">취소</button><button type="submit" class="primary">다음 노드에 적용</button></div>
+    </form>
+  </dialog>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
