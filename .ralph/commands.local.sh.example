@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+# config.local.json.example의 Gemini + Claude 모델 실행 레지스트리다.
+# config.local.json이 폴백 순서를 소유하고 이 함수는 각 모델·역할의 실제 실행 명령을 반환한다.
+# 명령은 stdin으로 프롬프트를 받고 stdout으로 최종 답을 출력해야 한다.
+
+ralph_command_for() {
+  local role="$1"
+  local model_alias="$2"
+  local execution_mode="${3:-run}"
+  local model_id=""
+  local model_effort=""
+
+  case "${role}:${model_alias}" in
+    critic:gemini-flash|metaPrompter:gemini-flash)
+      printf '%s\n' '.ralph/antigravity-agent.sh gemini-3.7-flash-high plan high'
+      ;;
+    # Codex를 쓰는 사용자는 config.local.json에 같은 alias를 선택한 뒤 아래 case를 활성화한다.
+    # critic:openai-sol|metaPrompter:openai-sol)
+    #   printf '%s\n' '.ralph/codex-builtin-agent.sh gpt-5.6-sol xhigh read-only'
+    #   ;;
+    # worker:openai-sol)
+    #   if [[ "${execution_mode}" == "smoke" ]]; then
+    #     printf '%s\n' '.ralph/codex-builtin-agent.sh gpt-5.6-sol xhigh read-only'
+    #   else
+    #     printf '%s\n' '.ralph/codex-builtin-agent.sh gpt-5.6-sol xhigh workspace-write'
+    #   fi
+    #   ;;
+    worker:gemini-flash)
+      if [[ "${execution_mode}" == "smoke" ]]; then
+        printf '%s\n' '.ralph/antigravity-agent.sh gemini-3.7-flash-high plan high'
+      else
+        printf '%s\n' '.ralph/antigravity-agent.sh gemini-3.7-flash-high accept-edits high'
+      fi
+      ;;
+    critic:claude-fable|metaPrompter:claude-fable)
+      printf '%s\n' '.ralph/claude-builtin-agent.sh claude-fable-5 max plan'
+      ;;
+    critic:claude-opus|metaPrompter:claude-opus)
+      printf '%s\n' '.ralph/claude-builtin-agent.sh claude-opus-5 max plan'
+      ;;
+    critic:claude-sonnet|metaPrompter:claude-sonnet)
+      printf '%s\n' '.ralph/claude-builtin-agent.sh claude-sonnet-5 high plan'
+      ;;
+    worker:claude-fable|worker:claude-opus|worker:claude-sonnet)
+      model_id="$(
+        case "${model_alias}" in
+          claude-fable) printf '%s' 'claude-fable-5' ;;
+          claude-opus) printf '%s' 'claude-opus-5' ;;
+          claude-sonnet) printf '%s' 'claude-sonnet-5' ;;
+        esac
+      )"
+      if [[ "${model_alias}" == "claude-sonnet" ]]; then
+        model_effort='high'
+      else
+        model_effort='max'
+      fi
+      if [[ "${execution_mode}" == "smoke" ]]; then
+        printf '.ralph/claude-builtin-agent.sh %s %s plan\n' "${model_id}" "${model_effort}"
+      else
+        printf '.ralph/claude-builtin-agent.sh %s %s acceptEdits\n' "${model_id}" "${model_effort}"
+      fi
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# API 키는 이 파일에 쓰지 않는다. DeepSeek/GLM을 Critic·Meta로 선택한 사용자는
+# api-text-agent.sh 명령 case를 추가하고 실제 키는 .env에만 넣는다.
+
+export RALPH_VERIFY_CMD='.ralph/verify-project.sh'
+
+# 일시적인 실행 정책 override가 필요할 때만 사용한다.
+# export RALPH_TASK='backend_core'
+# export RALPH_MAX_ITERATIONS='6'
+# export RALPH_MIN_CRITIC_SCORE='85'

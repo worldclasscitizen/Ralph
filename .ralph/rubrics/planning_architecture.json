@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "task": "planning_architecture",
+  "name": "기획 및 아키텍처 설계",
+  "criteria": [
+    {"id": "problem_requirements_trace", "label": "문제 정의와 요구사항 추적", "weight": 20, "guidance": "사용자 문제, baseline, 성공 지표와 요구사항의 연결을 평가합니다."},
+    {"id": "architecture_decisions", "label": "아키텍처 결정과 경계", "weight": 15, "guidance": "컴포넌트 경계, 데이터 흐름, 선택 근거와 ADR을 평가합니다."},
+    {"id": "failure_security_recovery", "label": "실패·보안·복구 설계", "weight": 15, "guidance": "실패 모드, 복구 경로, 보안과 데이터 보호 방식을 평가합니다."},
+    {"id": "delivery_validation_plan", "label": "구현·검증 계획", "weight": 10, "guidance": "작업 분해, 의존성, 검증 방법과 완료 증거가 실행 가능한지 평가합니다."}
+  ],
+  "hardGates": [
+    {"id": "requirements_without_source", "label": "핵심 요구사항의 근거 부재", "guidance": "핵심 문제나 성공 지표가 사실처럼 제시됐지만 출처·가정 구분이 없으면 실패입니다."}
+  ]
+}

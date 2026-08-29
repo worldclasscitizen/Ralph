@@ -1,0 +1,4 @@
+# Ralph Progress Ledger
+
+# Ralph가 run·iteration 결과와 중간 실패 원인을 시간순으로 추가합니다.
+# 이 파일에는 비밀값이나 모델의 비공개 사고과정을 기록하지 않습니다.

@@ -1,0 +1,335 @@
+{
+  "$schema": "./config.schema.json",
+  "schemaVersion": "3.0",
+  "kind": "ralph-orchestration-spec",
+  "_comment": [
+    "팀 전체가 공유하는 Provider·모델·Reasoning·태스크 허용 규격이다.",
+    "개인이 실제로 사용하는 Provider, 추론 강도, 폴백 순서, Ralph 역할은 config.local.json에만 작성한다.",
+    "Antigravity의 네이티브 설정 파일이 아니라 Ralph가 resolve-config.sh로 검증·해석하는 프로젝트 매니페스트다."
+  ],
+  "paths": {
+    "onboarding": "START_HERE.md",
+    "reasoningGuide": ".antigravity/REASONING_GUIDE.md",
+    "localConfig": ".antigravity/config.local.json",
+    "localConfigTemplate": ".antigravity/config.local.json.example",
+    "teamSchema": ".antigravity/config.schema.json",
+    "localSchema": ".antigravity/config.local.schema.json",
+    "ralphDirectory": ".ralph"
+  },
+  "routingPolicy": {
+    "maxModelAgeMonths": 6,
+    "removeExpiredModelsInsteadOfFallback": true,
+    "maxAttemptsPerModel": 2,
+    "initialBackoffSeconds": 2,
+    "maxBackoffSeconds": 8,
+    "retryableErrors": [
+      "rate_limit",
+      "timeout",
+      "server_error",
+      "empty_response"
+    ],
+    "nonRetryableErrors": [
+      "authentication",
+      "invalid_request",
+      "policy_denial"
+    ],
+    "requireDeterministicVerifier": true,
+    "preferDifferentProviderForFinalCritic": true,
+    "forbidSecretsInPrompts": true
+  },
+  "workerHarnessPolicy": {
+    "maxModelTurns": 48,
+    "maxToolCalls": 160,
+    "maxReadBytes": 262144,
+    "maxWriteBytes": 2097152,
+    "maxToolOutputBytes": 65536,
+    "requestTimeoutSeconds": 600,
+    "verifierTimeoutSeconds": 900,
+    "maxPolicyViolations": 3,
+    "protectedPaths": [
+      ".git",
+      ".git/**",
+      ".env",
+      ".env.local",
+      ".env.*.local",
+      ".antigravity/**",
+      ".ralph/**",
+      ".claude/**",
+      "**/*.pem",
+      "**/*.key"
+    ],
+    "verifier": {
+      "id": "project",
+      "argv": [".ralph/verify-project.sh"]
+    }
+  },
+  "gitCheckpointPolicy": {
+    "enabled": true,
+    "requireCleanWorktree": true,
+    "commitEveryIteration": true,
+    "allowEmptyCommits": true,
+    "autoPush": false,
+    "commitMessagePrefix": "chore(ralph)"
+  },
+  "sessionPolicy": {
+    "mode": "hybrid",
+    "enabledAdapters": ["antigravity-agent"],
+    "canonicalState": "files-and-git",
+    "scope": "ralph-run-task-node-model",
+    "isolateNodes": true,
+    "persistentRoles": ["metaPrompter", "worker"],
+    "statelessRoles": ["critic"],
+    "resumeByExactConversationId": true,
+    "neverUseMostRecentConversation": true,
+    "fallbackToFreshSession": true,
+    "maxTurnsPerSession": 12
+  },
+  "providerCatalog": {
+    "anthropic": {
+      "label": "Anthropic Claude",
+      "connectionSpec": {
+        "allowedModes": ["builtin", "api"],
+        "defaults": {
+          "mode": "builtin",
+          "runtime": "Claude CLI",
+          "apiStyle": "agent-cli",
+          "credentialSource": "Claude.ai saved OAuth login",
+          "apiKeyRequired": false
+        }
+      }
+    },
+    "google": {
+      "label": "Google Gemini",
+      "connectionSpec": {
+        "allowedModes": ["builtin", "api"],
+        "defaults": {
+          "mode": "builtin",
+          "runtime": "Antigravity IDE / Antigravity CLI (agy)",
+          "apiStyle": "agent-cli",
+          "credentialSource": "Antigravity cached Google account login",
+          "apiKeyRequired": false
+        }
+      }
+    },
+    "openai": {
+      "label": "OpenAI / Codex",
+      "connectionSpec": {
+        "allowedModes": ["builtin", "api"],
+        "defaults": {
+          "mode": "builtin",
+          "runtime": "Codex CLI",
+          "apiStyle": "agent-cli",
+          "credentialSource": "Codex saved login",
+          "apiKeyRequired": false
+        }
+      }
+    },
+    "deepseek": {
+      "label": "DeepSeek",
+      "connectionSpec": {
+        "allowedModes": ["api"],
+        "defaults": {
+          "mode": "api",
+          "runtime": ".ralph/tool-agent.py",
+          "apiStyle": "openai-compatible",
+          "baseUrl": "https://api.deepseek.com",
+          "baseUrlEnv": "DEEPSEEK_BASE_URL",
+          "apiKeyEnv": "DEEPSEEK_API_KEY",
+          "apiKeyRequired": true
+        }
+      }
+    },
+    "zai-coding-plan": {
+      "label": "Z.AI GLM Coding Plan",
+      "connectionSpec": {
+        "allowedModes": ["api"],
+        "defaults": {
+          "mode": "api",
+          "runtime": "Coding Plan compatible coding agent",
+          "apiStyle": "openai-compatible",
+          "baseUrl": "https://api.z.ai/api/coding/paas/v4",
+          "baseUrlEnv": "GLM_BASE_URL",
+          "apiKeyEnv": "GLM_API_KEY",
+          "apiKeyRequired": true,
+          "usageBoundary": "Coding Plan 지원 도구에서만 사용하며 일반 HTTP 호출은 별도의 General API 키와 endpoint를 사용한다."
+        }
+      }
+    },
+    "zai-general": {
+      "label": "Z.AI GLM General API",
+      "connectionSpec": {
+        "allowedModes": ["api"],
+        "defaults": {
+          "mode": "api",
+          "runtime": ".ralph/tool-agent.py",
+          "apiStyle": "openai-compatible",
+          "baseUrl": "https://api.z.ai/api/paas/v4",
+          "baseUrlEnv": "GLM_GENERAL_BASE_URL",
+          "apiKeyEnv": "GLM_GENERAL_API_KEY",
+          "apiKeyRequired": true,
+          "usageBoundary": "자체 tool-call 하네스에서 직접 호출할 때 사용하는 일반 종량제 API다."
+        }
+      }
+    }
+  },
+  "modelCatalog": {
+    "claude-fable": {
+      "provider": "anthropic",
+      "modelId": "claude-fable-5",
+      "reasoningSpec": {
+        "parameter": "output_config.effort",
+        "allowedValues": ["low", "medium", "high", "xhigh", "max"],
+        "recommendedValue": "max"
+      },
+      "note": "Adaptive thinking이 항상 켜져 있으므로 thinking 필드를 생략한다."
+    },
+    "claude-opus": {
+      "provider": "anthropic",
+      "modelId": "claude-opus-5",
+      "reasoningSpec": {
+        "parameter": "output_config.effort",
+        "allowedValues": ["low", "medium", "high", "xhigh", "max"],
+        "recommendedValue": "xhigh"
+      }
+    },
+    "claude-sonnet": {
+      "provider": "anthropic",
+      "modelId": "claude-sonnet-5",
+      "reasoningSpec": {
+        "parameter": "output_config.effort",
+        "allowedValues": ["low", "medium", "high", "xhigh", "max"],
+        "recommendedValue": "high"
+      }
+    },
+    "openai-sol": {
+      "provider": "openai",
+      "modelId": "gpt-5.6-sol",
+      "reasoningSpec": {
+        "parameter": "reasoning.effort",
+        "allowedValues": ["none", "low", "medium", "high", "xhigh", "max"],
+        "recommendedValue": "xhigh"
+      }
+    },
+    "openai-terra": {
+      "provider": "openai",
+      "modelId": "gpt-5.6-terra",
+      "reasoningSpec": {
+        "parameter": "reasoning.effort",
+        "allowedValues": ["none", "low", "medium", "high", "xhigh", "max"],
+        "recommendedValue": "max"
+      }
+    },
+    "openai-luna": {
+      "provider": "openai",
+      "modelId": "gpt-5.6-luna",
+      "reasoningSpec": {
+        "parameter": "reasoning.effort",
+        "allowedValues": ["none", "low", "medium", "high", "xhigh", "max"],
+        "recommendedValue": "low"
+      }
+    },
+    "gemini-flash": {
+      "provider": "google",
+      "modelId": "gemini-3.7-flash",
+      "reasoningSpec": {
+        "parameter": "generationConfig.thinkingConfig.thinkingLevel",
+        "allowedValues": ["low", "medium", "high"],
+        "recommendedValue": "high"
+      }
+    },
+    "deepseek-pro": {
+      "provider": "deepseek",
+      "modelId": "deepseek-v4-pro",
+      "reasoningSpec": {
+        "parameter": "reasoning_effort",
+        "allowedValues": ["low", "high", "max"],
+        "recommendedValue": "max"
+      }
+    },
+    "deepseek-flash": {
+      "provider": "deepseek",
+      "modelId": "deepseek-v4-flash",
+      "reasoningSpec": {
+        "parameter": "reasoning_effort",
+        "allowedValues": ["low", "high", "max"],
+        "recommendedValue": "low"
+      }
+    },
+    "glm-5-3": {
+      "provider": "zai-coding-plan",
+      "modelId": "glm-5.3",
+      "reasoningSpec": {
+        "parameter": "reasoning_effort",
+        "allowedValues": ["low", "high", "max"],
+        "recommendedValue": "max"
+      }
+    },
+    "glm-5-3-flash": {
+      "provider": "zai-coding-plan",
+      "modelId": "glm-5.3-flash",
+      "reasoningSpec": {
+        "parameter": "reasoning_effort",
+        "allowedValues": ["low", "high", "max"],
+        "recommendedValue": "high"
+      }
+    },
+    "glm-5-3-general": {
+      "provider": "zai-general",
+      "modelId": "glm-5.3",
+      "reasoningSpec": {
+        "parameter": "reasoning_effort",
+        "allowedValues": ["low", "high", "max"],
+        "recommendedValue": "max"
+      },
+      "note": "GLM General API 종량제 연결용 alias다. Coding Plan alias와 Model ID는 같지만 인증·endpoint가 다르다."
+    },
+    "glm-5-3-flash-general": {
+      "provider": "zai-general",
+      "modelId": "glm-5.3-flash",
+      "reasoningSpec": {
+        "parameter": "reasoning_effort",
+        "allowedValues": ["low", "high", "max"],
+        "recommendedValue": "high"
+      },
+      "note": "GLM General API 종량제 연결용 alias다."
+    }
+  },
+  "taskCatalog": {
+    "planning_architecture": {
+      "label": "기획 및 아키텍처 설계",
+      "requiredCapabilities": ["deep-reasoning", "long-context", "structured-output"],
+      "recommendedReasoning": "high",
+      "acceptanceEvidence": ["요구사항 추적표", "아키텍처 의사결정 기록", "실패·복구 시나리오"]
+    },
+    "frontend_visual": {
+      "label": "UI/UX 프론트엔드 및 멀티모달 시각 검증",
+      "requiredCapabilities": ["coding", "vision", "tool-use"],
+      "recommendedReasoning": "high",
+      "acceptanceEvidence": ["데스크톱·모바일 캡처", "접근성 검사", "핵심 사용자 흐름"]
+    },
+    "backend_core": {
+      "label": "백엔드 및 코어 비즈니스 로직",
+      "requiredCapabilities": ["agentic-coding", "debugging", "tool-use"],
+      "recommendedReasoning": "high",
+      "acceptanceEvidence": ["계약 테스트", "오류 처리", "데이터 무결성 검증"]
+    },
+    "tdd_debugging": {
+      "label": "TDD 단위 테스트 및 자율 디버깅",
+      "requiredCapabilities": ["agentic-coding", "deep-reasoning", "long-horizon"],
+      "recommendedReasoning": "max",
+      "acceptanceEvidence": ["재현 테스트", "실패 로그", "회귀 테스트"]
+    },
+    "static_review": {
+      "label": "최종 정적 분석, 린트 및 코드 리뷰",
+      "requiredCapabilities": ["code-review", "structured-output"],
+      "recommendedReasoning": "high",
+      "acceptanceEvidence": ["린트 결과", "타입 검사", "보안·회귀 검토"]
+    },
+    "delivery_evidence": {
+      "label": "배포·인수 증거 및 결과 문서",
+      "requiredCapabilities": ["vision", "quantitative-reasoning", "long-context", "document-synthesis"],
+      "recommendedReasoning": "high",
+      "acceptanceEvidence": ["산출물 manifest", "정량 근거 표", "주장-구현-검증 추적표", "독립 critic 점수"]
+    }
+  }
+}

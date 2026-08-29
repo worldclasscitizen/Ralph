@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ralph-orchestration.local/schemas/antigravity-ai-local-config.schema.json",
+  "title": "Ralph orchestration personal AI configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "spec",
+    "ownerLabel",
+    "providers",
+    "models",
+    "taskPipelines",
+    "ralph"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "3.0" },
+    "kind": { "const": "ralph-orchestration-local-config" },
+    "spec": { "const": "./config.json" },
+    "ownerLabel": { "type": "string", "minLength": 1 },
+    "_comment": { "$ref": "#/$defs/comments" },
+    "providers": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/providerSelection" }
+    },
+    "models": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/modelSelection" }
+    },
+    "taskPipelines": { "$ref": "#/$defs/taskPipelines" },
+    "ralph": { "$ref": "#/$defs/ralph" }
+  },
+  "$defs": {
+    "comments": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "connectionSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": { "enum": ["builtin", "api"] },
+        "runtime": { "type": "string" },
+        "apiStyle": { "type": "string" },
+        "credentialSource": { "type": "string" },
+        "baseUrl": { "type": "string" },
+        "baseUrlEnv": { "type": "string" },
+        "apiKeyEnv": { "type": "string" },
+        "apiKeyRequired": { "type": "boolean" },
+        "usageBoundary": { "type": "string" }
+      }
+    },
+    "providerSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalogProvider", "enabled", "connection"],
+      "properties": {
+        "catalogProvider": { "type": "string", "minLength": 1 },
+        "enabled": { "const": true },
+        "connection": { "$ref": "#/$defs/connectionSelection" }
+      }
+    },
+    "modelSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["catalogModel", "reasoningEffort"],
+      "properties": {
+        "catalogModel": { "type": "string", "minLength": 1 },
+        "reasoningEffort": { "type": "string", "minLength": 1 }
+      }
+    },
+    "pipeline": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "taskPipelines": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/pipeline" },
+      "required": [
+        "planning_architecture",
+        "frontend_visual",
+        "backend_core",
+        "tdd_debugging",
+        "static_review",
+        "delivery_evidence"
+      ],
+      "properties": {
+        "planning_architecture": { "$ref": "#/$defs/pipeline" },
+        "frontend_visual": { "$ref": "#/$defs/pipeline" },
+        "backend_core": { "$ref": "#/$defs/pipeline" },
+        "tdd_debugging": { "$ref": "#/$defs/pipeline" },
+        "static_review": { "$ref": "#/$defs/pipeline" },
+        "delivery_evidence": { "$ref": "#/$defs/pipeline" }
+      }
+    },
+    "fallbackChains": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["critic", "metaPrompter"],
+      "properties": {
+        "critic": { "$ref": "#/$defs/pipeline" },
+        "metaPrompter": { "$ref": "#/$defs/pipeline" }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task", "maxIterations", "minimumCriticScore"],
+      "properties": {
+        "task": { "type": "string", "minLength": 1 },
+        "maxIterations": { "type": "integer", "minimum": 1 },
+        "minimumCriticScore": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "ralph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fallbackChains", "defaults"],
+      "properties": {
+        "fallbackChains": { "$ref": "#/$defs/fallbackChains" },
+        "defaults": { "$ref": "#/$defs/defaults" }
+      }
+    }
+  }
+}

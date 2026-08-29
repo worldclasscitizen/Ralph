@@ -1,0 +1,28 @@
+# 개인별 AI 실행 설정
+.antigravity/config.local.json
+
+# 인증 정보 및 환경변수
+.env
+
+# Ralph Loop 로그 및 상태
+.ralph/logs/
+.ralph/runs/
+.ralph/state.json
+.ralph/.lock/
+.ralph/commands.local.sh
+.ralph/OPERATOR_NOTE.local.md
+
+# 종속성
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+
+# 일반적인 앱 빌드·테스트 산출물
+.next/
+out/
+*.tsbuildinfo
+.vercel/
+coverage/
+test-results/
+playwright-report/

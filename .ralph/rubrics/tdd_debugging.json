@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "task": "tdd_debugging",
+  "name": "TDD 단위 테스트 및 자율 디버깅",
+  "criteria": [
+    {"id": "failure_reproduction", "label": "실패 재현", "weight": 15, "guidance": "수정 전 실패가 작고 결정적인 테스트로 재현됐는지 평가합니다."},
+    {"id": "test_quality_coverage", "label": "테스트 품질과 경계 조건", "weight": 20, "guidance": "정상·오류·경계 조건을 의미 있게 검증하고 구현 세부사항에 과결합하지 않는지 평가합니다."},
+    {"id": "root_cause_fix", "label": "근본 원인 수정", "weight": 15, "guidance": "증상 은폐가 아니라 최초 원인을 수정했는지 평가합니다."},
+    {"id": "regression_proof", "label": "회귀 방지 증거", "weight": 10, "guidance": "새 테스트가 수정 전 실패하고 수정 후 통과하며 기존 테스트도 유지되는지 평가합니다."}
+  ],
+  "hardGates": [
+    {"id": "failure_not_reproduced", "label": "실패 재현 없이 완료 주장", "guidance": "재현 가능한 실패 증거 없이 디버깅 완료를 주장하면 실패입니다."}
+  ]
+}

@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ralph-orchestration.local/schemas/antigravity-ai-spec.schema.json",
+  "title": "Ralph orchestration shared AI specification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "kind",
+    "paths",
+    "routingPolicy",
+    "workerHarnessPolicy",
+    "gitCheckpointPolicy",
+    "sessionPolicy",
+    "providerCatalog",
+    "modelCatalog",
+    "taskCatalog"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "3.0" },
+    "kind": { "const": "ralph-orchestration-spec" },
+    "_comment": { "$ref": "#/$defs/comments" },
+    "paths": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "routingPolicy": { "type": "object" },
+    "workerHarnessPolicy": { "$ref": "#/$defs/workerHarnessPolicy" },
+    "gitCheckpointPolicy": { "$ref": "#/$defs/gitCheckpointPolicy" },
+    "sessionPolicy": { "$ref": "#/$defs/sessionPolicy" },
+    "providerCatalog": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/providerSpec" }
+    },
+    "modelCatalog": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/modelSpec" }
+    },
+    "taskCatalog": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/taskSpec" }
+    }
+  },
+  "$defs": {
+    "comments": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "connection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "apiStyle", "apiKeyRequired"],
+      "properties": {
+        "mode": { "enum": ["builtin", "api"] },
+        "runtime": { "type": "string", "minLength": 1 },
+        "apiStyle": { "type": "string", "minLength": 1 },
+        "credentialSource": { "type": "string" },
+        "baseUrl": { "type": "string" },
+        "baseUrlEnv": { "type": "string" },
+        "apiKeyEnv": { "type": "string" },
+        "apiKeyRequired": { "type": "boolean" },
+        "usageBoundary": { "type": "string" }
+      }
+    },
+    "connectionSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowedModes", "defaults"],
+      "properties": {
+        "allowedModes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["builtin", "api"] }
+        },
+        "defaults": { "$ref": "#/$defs/connection" }
+      }
+    },
+    "providerSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "connectionSpec"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "connectionSpec": { "$ref": "#/$defs/connectionSpec" }
+      }
+    },
+    "reasoningSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parameter", "allowedValues", "recommendedValue"],
+      "properties": {
+        "parameter": { "type": "string", "minLength": 1 },
+        "allowedValues": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "recommendedValue": { "type": "string", "minLength": 1 }
+      }
+    },
+    "workerHarnessPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxModelTurns",
+        "maxToolCalls",
+        "maxReadBytes",
+        "maxWriteBytes",
+        "maxToolOutputBytes",
+        "requestTimeoutSeconds",
+        "verifierTimeoutSeconds",
+        "maxPolicyViolations",
+        "protectedPaths",
+        "verifier"
+      ],
+      "properties": {
+        "maxModelTurns": { "type": "integer", "minimum": 1 },
+        "maxToolCalls": { "type": "integer", "minimum": 1 },
+        "maxReadBytes": { "type": "integer", "minimum": 1 },
+        "maxWriteBytes": { "type": "integer", "minimum": 1 },
+        "maxToolOutputBytes": { "type": "integer", "minimum": 1 },
+        "requestTimeoutSeconds": { "type": "integer", "minimum": 1 },
+        "verifierTimeoutSeconds": { "type": "integer", "minimum": 1 },
+        "maxPolicyViolations": { "type": "integer", "minimum": 1 },
+        "protectedPaths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "verifier": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "argv"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "argv": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "gitCheckpointPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "requireCleanWorktree",
+        "commitEveryIteration",
+        "allowEmptyCommits",
+        "autoPush",
+        "commitMessagePrefix"
+      ],
+      "properties": {
+        "enabled": { "const": true },
+        "requireCleanWorktree": { "const": true },
+        "commitEveryIteration": { "const": true },
+        "allowEmptyCommits": { "const": true },
+        "autoPush": { "const": false },
+        "commitMessagePrefix": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sessionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "enabledAdapters",
+        "canonicalState",
+        "scope",
+        "isolateNodes",
+        "persistentRoles",
+        "statelessRoles",
+        "resumeByExactConversationId",
+        "neverUseMostRecentConversation",
+        "fallbackToFreshSession",
+        "maxTurnsPerSession"
+      ],
+      "properties": {
+        "mode": { "const": "hybrid" },
+        "enabledAdapters": {
+          "type": "array",
+          "const": ["antigravity-agent"]
+        },
+        "canonicalState": { "const": "files-and-git" },
+        "scope": { "const": "ralph-run-task-node-model" },
+        "isolateNodes": { "const": true },
+        "persistentRoles": {
+          "type": "array",
+          "const": ["metaPrompter", "worker"]
+        },
+        "statelessRoles": {
+          "type": "array",
+          "const": ["critic"]
+        },
+        "resumeByExactConversationId": { "const": true },
+        "neverUseMostRecentConversation": { "const": true },
+        "fallbackToFreshSession": { "const": true },
+        "maxTurnsPerSession": { "type": "integer", "minimum": 1, "maximum": 64 }
+      }
+    },
+    "modelSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "modelId", "reasoningSpec"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "modelId": { "type": "string", "minLength": 1 },
+        "reasoningSpec": { "$ref": "#/$defs/reasoningSpec" },
+        "note": { "type": "string" }
+      }
+    },
+    "taskSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "requiredCapabilities", "recommendedReasoning", "acceptanceEvidence"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "requiredCapabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "recommendedReasoning": { "type": "string", "minLength": 1 },
+        "acceptanceEvidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
