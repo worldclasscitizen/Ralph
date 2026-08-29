@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "description": "6대 task에 동일한 명확 통과·경계·명확 실패·환경 차단 profile을 적용해 채점 엔진의 과도한 엄격함과 느슨함을 점검합니다.",
+  "tasks": [
+    "planning_architecture",
+    "frontend_visual",
+    "backend_core",
+    "tdd_debugging",
+    "static_review",
+    "delivery_evidence"
+  ],
+  "profiles": [
+    {
+      "id": "clear_pass",
+      "criterionLevel": "complete",
+      "taskGateStatus": "pass",
+      "finding": null,
+      "workerExit": 0,
+      "verifierExit": 0,
+      "expectedDecision": "pass",
+      "expectedBoundaryAdjudication": false
+    },
+    {
+      "id": "borderline_retry",
+      "criterionLevel": "verified",
+      "taskGateStatus": "pass",
+      "finding": null,
+      "workerExit": 0,
+      "verifierExit": 0,
+      "expectedDecision": "retry",
+      "expectedBoundaryAdjudication": true
+    },
+    {
+      "id": "clear_fail",
+      "criterionLevel": "partial",
+      "taskGateStatus": "fail",
+      "finding": {
+        "severity": "high",
+        "kind": "code",
+        "actionableByWorker": true
+      },
+      "workerExit": 0,
+      "verifierExit": 0,
+      "expectedDecision": "retry",
+      "expectedBoundaryAdjudication": false
+    },
+    {
+      "id": "environment_blocker",
+      "criterionLevel": "complete",
+      "taskGateStatus": "unknown",
+      "finding": {
+        "severity": "high",
+        "kind": "environment",
+        "actionableByWorker": false
+      },
+      "workerExit": 0,
+      "verifierExit": 0,
+      "expectedDecision": "needs_operator",
+      "expectedBoundaryAdjudication": true
+    }
+  ]
+}

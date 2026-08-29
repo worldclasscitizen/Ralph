@@ -1,0 +1,47 @@
+{
+  "$schema": "./config.local.schema.json",
+  "schemaVersion": "3.0",
+  "kind": "ralph-orchestration-local-config",
+  "spec": "./config.json",
+  "ownerLabel": "fallback-router-test",
+  "_comment": [
+    "test-fallback-router.sh 전용 개인 설정이다. 실제 실행에 쓰지 않는다.",
+    "tests/fallback-commands.sh 의 가짜 alias(gemini-flash, openai-sol, openai-terra, deepseek-pro)와 짝을 이루고 glm-5-3 은 명령이 없어 skip_unavailable 을 검증한다."
+  ],
+  "providers": {
+    "google": { "catalogProvider": "google", "enabled": true, "connection": { "mode": "builtin" } },
+    "openai": { "catalogProvider": "openai", "enabled": true, "connection": { "mode": "builtin" } },
+    "deepseek": {
+      "catalogProvider": "deepseek",
+      "enabled": true,
+      "connection": { "mode": "api", "baseUrlEnv": "DEEPSEEK_BASE_URL", "apiKeyEnv": "DEEPSEEK_API_KEY" }
+    },
+    "zai-coding-plan": {
+      "catalogProvider": "zai-coding-plan",
+      "enabled": true,
+      "connection": { "mode": "api", "baseUrlEnv": "GLM_BASE_URL", "apiKeyEnv": "GLM_API_KEY" }
+    }
+  },
+  "models": {
+    "gemini-flash": { "catalogModel": "gemini-flash", "reasoningEffort": "high" },
+    "openai-sol": { "catalogModel": "openai-sol", "reasoningEffort": "xhigh" },
+    "openai-terra": { "catalogModel": "openai-terra", "reasoningEffort": "max" },
+    "deepseek-pro": { "catalogModel": "deepseek-pro", "reasoningEffort": "max" },
+    "glm-5-3": { "catalogModel": "glm-5-3", "reasoningEffort": "max" }
+  },
+  "taskPipelines": {
+    "planning_architecture": ["openai-sol"],
+    "frontend_visual": ["openai-sol"],
+    "backend_core": ["openai-sol", "glm-5-3", "deepseek-pro", "openai-terra"],
+    "tdd_debugging": ["openai-sol"],
+    "static_review": ["openai-sol"],
+    "delivery_evidence": ["openai-sol"]
+  },
+  "ralph": {
+    "fallbackChains": {
+      "critic": ["gemini-flash", "openai-sol"],
+      "metaPrompter": ["deepseek-pro", "openai-sol"]
+    },
+    "defaults": { "task": "backend_core", "maxIterations": 1, "minimumCriticScore": 85 }
+  }
+}
