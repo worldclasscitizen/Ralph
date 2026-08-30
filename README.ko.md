@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **베타 소스 상태:** `v0.1.0-beta.0`은 구현되어 로컬 검증을 통과했지만 아직 npm Registry에 게시되지 않았습니다. 지금은 소스에서 설치해야 하며, 아래 `@beta` 명령은 첫 npm 게시 이후 사용할 수 있습니다.
+> **베타 릴리스:** `v0.1.0-beta.0`은 npm의 `beta` dist-tag로 설치할 수 있습니다. 지속적으로 검증 중인 프리뷰이며, 아직 기존 런타임을 대체하는 프로덕션 안정 버전은 아닙니다.
 
 > 영어 [README.md](./README.md)가 기준 문서입니다. 번역과 내용이 다르면 영어 문서를 우선합니다.
 
@@ -65,7 +65,7 @@
 - 변경 사항이 없는 Git 작업 트리
 - 지원되는 CLI 로그인 또는 API 연결 한 개 이상
 
-### npm 베타 게시 이후 설치
+### npm에서 설치
 
 ```bash
 npm install -g @worldclasscitizen/ralph@beta
@@ -78,7 +78,7 @@ ralph --version
 npx @worldclasscitizen/ralph@beta run --project /absolute/path/to/project "로그인 접근성을 개선하고 테스트까지 작성해줘"
 ```
 
-### 현재 소스에서 설치
+### 소스에서 설치
 
 ```bash
 git clone https://github.com/worldclasscitizen/ralph.git

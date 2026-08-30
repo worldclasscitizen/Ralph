@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Beta source status:** `v0.1.0-beta.0` is implemented and locally tested, but it has not been published to the npm registry yet. Install it from source today. The `@beta` registry commands below become available after the first npm publication.
+> **Beta release:** `v0.1.0-beta.0` is available from npm under the `beta` dist-tag. It is an actively tested preview, not yet a production-stable replacement for the legacy runtime.
 
 ## Why Ralph?
 
@@ -70,7 +70,7 @@ Most autonomous coding loops repeatedly call one model and hope the next attempt
 - A Git repository with a clean working tree
 - At least one supported authenticated CLI or API connection
 
-### Install from npm after the beta is published
+### Install from npm
 
 ```bash
 npm install -g @worldclasscitizen/ralph@beta
@@ -83,7 +83,7 @@ Run once without a global install:
 npx @worldclasscitizen/ralph@beta run --project /absolute/path/to/project "Improve login accessibility and add tests"
 ```
 
-### Install from source now
+### Install from source
 
 ```bash
 git clone https://github.com/worldclasscitizen/ralph.git
