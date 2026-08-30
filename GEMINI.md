@@ -1,3 +1,3 @@
 # Gemini entry point
 
-먼저 `START_HERE.md`를 읽고 그 순서대로 사용자를 온보딩합니다. Gemini builtin 연결은 `.ralph/antigravity-agent.sh`가 Antigravity IDE/CLI의 저장된 로그인을 사용하며, 실제 모델 선택과 fallback chain은 `.antigravity/config.local.json`에 둡니다. 작업 계약과 실행 승인을 받기 전에는 Ralph Loop를 시작하지 않습니다.
+먼저 `START_HERE.md`를 읽습니다. Gemini CLI와 Antigravity는 서로 다른 실행 파일·로그인·세션을 가진 선택적 입력·표시 계층입니다. Skill을 쓸 때도 사용자 요청을 동일한 `ralph draft`와 `ralph run` CLI에 전달하고, 계약을 보여준 뒤 명시적 승인을 기다립니다. 특정 Gemini 모델이 다른 Provider 전체를 지휘하지 않습니다.
