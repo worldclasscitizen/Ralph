@@ -1,78 +1,407 @@
-# Ralph Orchestration Template
+<p align="right">
+  <strong>English</strong> | <a href="./README.ko.md">한국어</a>
+</p>
 
-메타 프롬프트로 실패 원인을 반영하고 Ralph Loop로 결과를 반복 개선하며, 작업별 최적 AI를 역할에 따라 연결하는 재사용 가능한 멀티 에이전트 오케스트레이션 템플릿입니다.
+<div align="center">
+  <h1>Ralph</h1>
+  <p><strong>Evidence-first, platform-neutral multi-agent orchestration for software delivery.</strong></p>
+  <p>
+    Turn one natural-language request into an approved task contract, route each role to the right model,
+    verify every iteration, and preserve every outcome as recoverable Git history.
+  </p>
+  <p>
+    <a href="#quick-start"><strong>Quick start</strong></a> ·
+    <a href="#how-ralph-works">How it works</a> ·
+    <a href="#command-reference">Commands</a> ·
+    <a href="#ralph-control-center">Dashboard</a> ·
+    <a href="./docs/ARCHITECTURE.md">Architecture</a>
+  </p>
+  <p>
+    <img alt="Release" src="https://img.shields.io/badge/release-v0.1.0--beta.0-f59e0b?style=flat-square">
+    <a href="https://github.com/worldclasscitizen/hackathon-hackthebeat/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/hackathon-hackthebeat/ci.yml?branch=main&style=flat-square&label=CI"></a>
+    <img alt="Node.js 22 or newer" src="https://img.shields.io/badge/Node.js-%3E%3D22-339933?style=flat-square&logo=nodedotjs&logoColor=white">
+    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
+    <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-2563eb?style=flat-square"></a>
+  </p>
+</div>
 
-이 저장소에는 특정 제품 코드, 기획서, 고객 데이터, 실행 이력이 없습니다. 새 프로젝트의 기반으로 fork하거나 기존 Git 저장소에 안전하게 설치할 수 있습니다.
+> [!IMPORTANT]
+> **Beta source status:** `v0.1.0-beta.0` is implemented and locally tested, but it has not been published to the npm registry yet. Install it from source today. The `@beta` registry commands below become available after the first npm publication.
 
-## 핵심 구성
+## Why Ralph?
 
-- Critic → Meta-Prompter → Worker → Verifier → Post-Critic → Git checkpoint 파이프라인
-- 작업별 모델 체인과 rate-limit·timeout·빈 응답 자동 fallback
-- 로그인형 Gemini·Claude·Codex 및 API형 DeepSeek·GLM 어댑터
-- 파일·검증 결과·Git 커밋을 최종 진실의 원천으로 사용하는 복구 가능한 실행
-- 점수 앵커와 Hard Gate가 있는 결정적 Critic 엔진
-- 로컬 실행 상태, 증거, Git 변경, 모델별 token 사용량을 보여주는 대시보드
+Most autonomous coding loops repeatedly call one model and hope the next attempt is better. Ralph makes the loop explicit, inspectable, and recoverable.
 
-## 빠른 시작
+| Typical failure | Ralph's answer |
+| :--- | :--- |
+| A lightweight model implicitly directs every stronger model | A deterministic TypeScript state machine owns orchestration; models only perform bounded roles. |
+| The agent edits code before the task is understood | A `TaskContract`, verification plan, and model route must be shown and explicitly approved first. |
+| Retries repeat the same mistake | The Meta-Prompter converts Critic and verifier evidence into the next bounded instruction. |
+| A self-evaluating Worker passes its own work | Deterministic checks and a stateless Post-Critic evaluate the result; another provider is preferred. |
+| A runaway loop leaves an unrecoverable working tree | Every completed, failed, or interrupted iteration attempts a local Git checkpoint. |
+| Progress lives only in an LLM context window | Files, verifier output, append-only events, and Git history are the source of truth. |
+| Model routing requires hand-written chains | `ralph init` detects usable connections and builds task-aware fallback chains from a signed catalog. |
+| Operators can only stare at a terminal marked “running” | The local Control Center streams node state, evidence, Git changes, usage, and safe-stop controls. |
+
+## What makes it different?
+
+<table>
+  <tr>
+    <td align="left" width="33%"><strong>Contract before code</strong><br>Ralph converts intent into scope, exclusions, acceptance criteria, artifacts, and verifier commands before any write is allowed.</td>
+    <td align="center" width="34%"><strong>Evidence before confidence</strong><br>Critics return anchored rubric evidence. Ralph computes scores and hard gates locally instead of trusting a free-form verdict.</td>
+    <td align="right" width="33%"><strong>Git before regret</strong><br>Iteration checkpoints, safe interruption, and explicit recovery keep autonomous work reversible without automatic rollback or push.</td>
+  </tr>
+</table>
+
+- **Platform-neutral control plane:** run Ralph from a normal terminal, IDE terminal, tmux, cmux, or orca. Optional agent Skills call the same CLI.
+- **Multi-provider by design:** use stored Codex, Claude Code, Antigravity, or Gemini CLI logins alongside API connections.
+- **Role-aware orchestration:** Contract Planner, Critic, Meta-Prompter, Worker, Verifier, and Adjudicator are routed independently.
+- **Task-aware routing:** planning, visual frontend, backend, TDD/debugging, static review, and delivery evidence receive different model chains.
+- **Bounded tools:** API Workers can inspect and edit project files, inspect Git, and run registered verifiers—but cannot push, deploy, or execute arbitrary shell commands.
+- **Local observability:** project evidence stays under Git's internal Ralph path and is shown through CLI or the local dashboard.
+- **Honest capacity reporting:** exact official subscription percentages or API balances are shown only when a structured provider interface exists.
+
+## Quick start
+
+### Requirements
+
+- Node.js 22 or newer
+- Git
+- A Git repository with a clean working tree
+- At least one supported authenticated CLI or API connection
+
+### Install from npm after the beta is published
 
 ```bash
-cp .antigravity/config.local.json.example .antigravity/config.local.json
-cp .ralph/commands.local.sh.example .ralph/commands.local.sh
-cp .env.example .env
-chmod +x .ralph/*.sh .ralph/*.py
-.ralph/verify-project.sh
+npm install -g @worldclasscitizen/ralph@beta
+ralph --version
 ```
 
-그 다음 AI에게 다음과 같이 요청합니다.
-
-> `START_HERE.md`를 읽고 제 환경에 맞는 Ralph 설정을 순서대로 안내한 뒤, 제가 설명하는 작업을 `.ralph/PROMPT.md`의 실행 계약으로 작성해 주세요. 실행 전에는 반드시 제 승인을 기다려 주세요.
-
-승인 후 실행합니다.
+Run once without a global install:
 
 ```bash
-git add . && git commit -m "chore: initialize project baseline"
-.ralph/ralph-loop.sh --task backend_core
+npx @worldclasscitizen/ralph@beta run --project /absolute/path/to/project "Improve login accessibility and add tests"
 ```
 
-대시보드는 별도 터미널에서 실행합니다.
+### Install from source now
 
 ```bash
-.ralph/ralph-dashboard.sh --open
+git clone https://github.com/worldclasscitizen/hackathon-hackthebeat.git
+cd hackathon-hackthebeat
+npm ci
+npm run build
+npm install -g .
+ralph --version
 ```
 
-기본 주소는 `http://127.0.0.1:7331`입니다.
+For active development, `npm link` is also supported.
 
-## 기존 프로젝트에 설치
-
-이 저장소를 별도로 clone한 뒤 다음 명령을 사용합니다. 대상에 같은 제어 파일이 있으면 덮어쓰지 않고 중단합니다.
+### Initialize and run
 
 ```bash
-./scripts/install.sh /absolute/path/to/your-project
+cd /absolute/path/to/git-project
+ralph init
+ralph doctor
+ralph run "Improve login accessibility and add tests"
 ```
 
-자세한 선택 기준과 충돌 처리 방법은 `docs/ADOPTION.md`를 읽습니다.
+Ralph will:
 
-## 문서 지도
+1. Detect available providers and authentication.
+2. Generate task and role fallback routes without asking an LLM to rank models.
+3. Draft a structured task contract from your request.
+4. Show the scope, exclusions, checks, execution profile, and selected route.
+5. Wait for explicit approval.
+6. Execute and evaluate the loop only after approval.
 
-| 파일 | 용도 |
-|---|---|
-| `START_HERE.md` | 사람과 AI가 함께 수행하는 온보딩 내비게이션 |
-| `.antigravity/REASONING_GUIDE.md` | 공급자·모델·reasoning 설정과 작업별 라우팅 참고 |
-| `.antigravity/config.json` | 공유 가능한 Provider·모델·정책 catalog |
-| `.antigravity/config.local.json.example` | 개인 모델 선택과 fallback chain 예시 |
-| `.ralph/README.md` | 루프 상태, 종료 조건, 안전 경계의 상세 계약 |
-| `.ralph/PROMPT.md` | 현재 단일 작업의 범위·증거·완료 조건 템플릿 |
-| `docs/RALPH_CONTROL_CENTER.md` | 로컬 대시보드 사용법 |
-| `docs/ADOPTION.md` | fork 및 기존 프로젝트 도입 방법 |
+Nothing is written outside a Git project. From another directory, pass an absolute path:
 
-## 안전 원칙
+```bash
+ralph run --project /absolute/path/to/project "Refactor the cache layer"
+```
 
-- `.env`, 개인 설정, 개인 명령, 실행 로그는 Git에 올리지 않습니다.
-- Worker는 `.ralph/**`, `.antigravity/**`, `.git/**` 같은 제어면을 수정할 수 없습니다.
-- 루프는 각 이터레이션을 로컬 커밋하지만 자동 push·배포는 하지 않습니다.
-- 실행은 깨끗한 working tree에서만 시작합니다.
-- 한 번의 run에는 하나의 명확한 작업 계약만 둡니다.
+## How Ralph works
 
-## 라이선스
+```mermaid
+flowchart LR
+    A[Natural-language request] --> B[Contract Planner]
+    B --> C{Operator approval}
+    C -- Decline --> Z[No code changes]
+    C -- Approve --> D[Pre-Critic]
+    D --> E[Meta-Prompter]
+    E --> F[Worker]
+    F --> G[Deterministic Verifier]
+    G --> H[Post-Critic]
+    H --> I{Boundary case?}
+    I -- Yes --> J[Independent Adjudicator]
+    I -- No --> K[Local verdict]
+    J --> K
+    K --> L[Git checkpoint]
+    L --> M{Pass or retry?}
+    M -- Pass --> N[Complete]
+    M -- Retry --> D
+    M -- Operator needed --> O[Needs operator]
+```
 
-MIT License입니다. 프로젝트 요구에 맞게 fork하고 수정할 수 있습니다.
+The TypeScript state machine—not Gemini Flash or any other model—is the operator. The Meta-Prompter may refine the next instruction from evidence, but it cannot expand the approved contract. Meta-Prompter and Worker sessions can continue by exact session ID; Critics remain stateless to reduce anchoring.
+
+### Evaluation and stopping
+
+- Common rubric: 40 points
+- Task-specific rubric: 60 points
+- Default pass threshold: 85
+- Success requires both deterministic verifier success and Post-Critic acceptance
+- Boundary adjudication runs only for scores from 80 to 90 or unclear hard gates
+- Maximum iterations: 6
+- A first-iteration pass ends immediately; six iterations are not mandatory
+- Repeated identical failures or stagnant scores transition to `needs_operator`
+
+Critics return item-level anchors and evidence. Ralph calculates totals, hard gates, and the final state locally. See [the architecture guide](./docs/ARCHITECTURE.md) for session and evidence rules.
+
+## Task-aware routing
+
+| Task type | Optimized for |
+| :--- | :--- |
+| `planning_architecture` | Requirements, trade-offs, system boundaries, and architecture decisions |
+| `frontend_visual` | UI implementation, multimodal inspection, responsive behavior, and accessibility |
+| `backend_core` | APIs, data models, security boundaries, and core business logic |
+| `tdd_debugging` | Reproduction, tests, root-cause isolation, and regression prevention |
+| `static_review` | Lint, type analysis, security review, and maintainability findings |
+| `delivery_evidence` | Screenshots, technical evidence, impact narratives, and submission readiness |
+
+### Execution profiles
+
+| Profile | Priority | Typical use |
+| :--- | :--- | :--- |
+| `balanced` | Fit, reliability, provider diversity, then cost and speed | Default for most work |
+| `quality` | Highest task fit and reliability | Architecture, risky refactors, final review |
+| `fast` | Low latency with adequate task fit | Time-boxed work and quick iterations |
+| `budget` | Lower cost with adequate task fit | Large, low-risk backlogs |
+
+If a request says “avoid heavy models because time is short,” the Contract Planner records `executionProfile: fast`. Ralph recalculates the route before approval; a model never chooses an arbitrary `fallback_2` by itself.
+
+Inspect or override routing:
+
+```bash
+ralph config pipelines
+ralph config explain --profile quality
+ralph config preset fast
+ralph run --model gpt-5.6-sol "Review the authentication boundary"
+```
+
+Priority is deterministic:
+
+```text
+explicit --profile / --model
+→ approved TaskContract
+→ project-local hidden override
+→ generated balanced preset
+```
+
+## Providers and authentication
+
+| Connection family | Adapters | Authentication |
+| :--- | :--- | :--- |
+| Built-in CLI | Codex, Claude Code, Antigravity, Gemini CLI | Reuses that CLI's stored login |
+| Native API | OpenAI, Anthropic, Google Gemini | OS credential store first; environment variable fallback |
+| Compatible API | DeepSeek, Z.AI General, Z.AI Coding Plan, OpenAI-compatible | OS credential store or provider API-key environment variable |
+| Custom process | Any process implementing Ralph's JSON/NDJSON protocol | Defined by the process adapter |
+
+Built-in login and API-key connections are separate identities. For example, `openai:codex-login` and `openai:api` may both exist without silently overriding each other.
+
+```bash
+ralph providers detect
+ralph auth status
+ralph auth login openai:codex-login
+printf '%s' "$DEEPSEEK_API_KEY" | ralph auth add deepseek:api --key-stdin
+```
+
+Authentication failures, policy refusals, and invalid requests require operator action. Ralph only retries or falls back on transient failures such as rate limits, quota exhaustion, timeouts, server errors, empty output, or schema-invalid output. See [Provider support](./docs/PROVIDERS.md) for exact adapters and capacity behavior.
+
+## Command reference
+
+### Core workflow
+
+| Command | Purpose |
+| :--- | :--- |
+| `ralph init [--preset <name>]` | Register the project, detect connections, and generate default routes |
+| `ralph draft "<request>"` | Generate a task contract without executing it |
+| `ralph run "<request>"` | Draft, display, approve, and execute a task |
+| `ralph status [--watch|--json]` | Inspect the current or most recent run |
+| `ralph stop [--force]` | Request a safe stop or force process interruption |
+| `ralph resume [run-id]` | Continue an interrupted, failed, or operator-blocked run |
+| `ralph recover [run-id]` | Keep, checkpoint, or restore partial work explicitly |
+
+### Diagnosis and configuration
+
+| Command | Purpose |
+| :--- | :--- |
+| `ralph doctor [--fix|--offline|--json]` | Diagnose Node, Git, lock, auth, catalog, and route status |
+| `ralph config show|preset|pipelines|explain|export|import` | Inspect or manage project routing configuration |
+| `ralph providers list|detect` | List configured or detected provider connections |
+| `ralph auth status|login|add|remove` | Manage built-in login and API credentials |
+| `ralph catalog status|diff|update` | Inspect or update the signed model catalog |
+| `ralph integrations install|uninstall|status` | Manage optional AI-platform Skills |
+
+### Evidence and observability
+
+| Command | Purpose |
+| :--- | :--- |
+| `ralph dashboard [--open|--all]` | Start the local Control Center |
+| `ralph dashboard status|stop` | Inspect or stop the dashboard server |
+| `ralph logs --follow` | Stream operator-safe event summaries |
+| `ralph usage` | Show Ralph token usage by provider and model |
+| `ralph capacity [--refresh]` | Show exact provider capacity when officially available |
+| `ralph history list|delete|clear` | Inspect or remove completed local run evidence |
+| `ralph show contract|progress|guardrails` | Read the current contract, event ledger, or learned safeguards |
+| `ralph migrate [--cleanup]` | Import the legacy Bash layout; remove it only with explicit approval |
+
+## Structured automation
+
+Skills and external tools can use a stable machine-readable boundary:
+
+```bash
+ralph draft --stdin --json
+ralph run --contract-stdin --events ndjson
+ralph status --json
+```
+
+- JSON or NDJSON is written to stdout.
+- Human guidance and errors are written to stderr.
+- Approved contracts are protected by a content hash.
+- The Ralph runner and evidence can outlive the host AI session.
+
+## Optional AI-platform Skills
+
+The terminal command is canonical. Skills are convenience entry points and do not contain their own orchestration loop.
+
+```bash
+ralph integrations install
+ralph integrations status
+```
+
+| Host | Invocation after installation |
+| :--- | :--- |
+| Codex | `$ralph Improve the login flow` |
+| Claude Code | `/ralph Improve the login flow` |
+| Antigravity | `/ralph Improve the login flow` |
+| Gemini CLI | Use the installed Ralph Skill through Gemini CLI's Skill interface |
+| Terminal, IDE terminal, cmux, tmux, orca | `ralph run "Improve the login flow"` |
+
+Typing `ralph run ...` into an AI chat may be treated as ordinary prose. Run it in a real shell unless the host integration is installed.
+
+## Git-backed state and safety
+
+Ralph does not add `.ralph`, `.antigravity`, `PROMPT.md`, or personal JSON files to a consumer project's root. Project state lives under the worktree-aware path returned by:
+
+```bash
+git rev-parse --git-path ralph
+```
+
+```text
+ralph/
+  config.json
+  contracts/
+  runs/
+  sessions/
+  progress.jsonl
+  guardrails.md
+  locks/
+  dashboard/
+```
+
+Safety defaults:
+
+- A run starts only from a clean working tree.
+- Every iteration exit—pass, failure, or interruption—attempts a local commit.
+- Commit metadata records run ID, task type, iteration, exit codes, score, and verdict.
+- Secret paths, secret-like content, and unresolved conflicts block checkpoint creation.
+- Ralph never pushes, deploys, or rolls back automatically.
+- First `Ctrl+C` requests a safe stop; a second press within three seconds forces interruption.
+- Recovery always asks whether to keep, checkpoint, or restore partial work.
+
+## Ralph Control Center
+
+```bash
+ralph dashboard --open
+```
+
+The dashboard binds to `127.0.0.1` and shows only local evidence. By default it displays the current project; `--all` displays other locally registered Ralph projects. It never collects teammates' runs.
+
+The Control Center provides:
+
+- live node state over Server-Sent Events
+- expandable evidence summaries without exposing private chain-of-thought
+- iteration score, verifier results, and checkpoint state
+- color-coded Git status and line additions/deletions
+- model, provider, reasoning effort, and token usage
+- exact provider capacity when a structured official source exists
+- operator notes, safe stop, and history editing
+- responsive layouts that preserve workspace, branch, start, and end timestamps
+
+See the [Control Center guide](./docs/RALPH_CONTROL_CENTER.md).
+
+## Model catalog and fallback policy
+
+Ralph ships a bootstrap catalog and can refresh a small Ed25519-signed catalog from GitHub Releases.
+
+- No remote catalog request is made when the last check is under 24 hours old.
+- A 24-hour to 7-day cache starts immediately and refreshes in the background.
+- A cache older than 7 days gets one bounded refresh attempt while local checks continue.
+- Signature, schema, monotonic version, rollback, and size checks run before atomic replacement.
+- An approved run pins its catalog version and route for the entire run.
+- Prompts, source code, and execution logs are never sent to the catalog service.
+
+```bash
+ralph catalog status
+ralph catalog diff
+ralph catalog update
+ralph run --refresh-catalog "Review this release"
+```
+
+## Legacy migration
+
+The previous Bash/Python template is retained in `legacy/bash-template/` as a beta migration fixture and is excluded from the npm package.
+
+```bash
+ralph migrate
+ralph migrate --cleanup
+```
+
+Migration imports compatible provider settings, contracts, progress, guardrails, runs, and sessions into Git-internal state. It never copies `.env` secrets and never deletes the source layout without explicit approval.
+
+## Development
+
+```bash
+npm ci
+npm run build
+npm test
+npm run smoke
+```
+
+`npm run smoke` packs the real tarball, installs it into an empty Git repository, verifies the executable, and confirms Git-internal state initialization.
+
+The CI matrix covers macOS, Ubuntu, and Windows on Node.js 22 and 24. Before `1.0.0`, the remaining release gates are live-provider integration validation, remote CI confirmation, migration cleanup validation, beta feedback, signed catalog release validation, and removal of the legacy Bash runtime.
+
+## Documentation
+
+| Document | Audience |
+| :--- | :--- |
+| [Start here](./START_HERE.md) | New users and AI onboarding |
+| [Adoption guide](./docs/ADOPTION.md) | Adding Ralph to another project |
+| [Architecture](./docs/ARCHITECTURE.md) | State machine, sessions, evidence, and storage |
+| [Provider support](./docs/PROVIDERS.md) | Adapters, authentication, models, and capacity |
+| [Control Center](./docs/RALPH_CONTROL_CENTER.md) | Dashboard operation and local history |
+| [Release guide](./docs/RELEASING.md) | npm beta and signed catalog releases |
+
+## Project status
+
+Ralph is in active beta development. The TypeScript runtime covers the primary orchestration path and passes local build, test, package, and smoke checks. It is not yet declared a complete production replacement for the legacy Bash runtime.
+
+Please report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/hackathon-hackthebeat/issues).
+
+## License
+
+[MIT](./LICENSE)
+
+Ralph follows the autonomous iteration pattern popularized by Geoffrey Huntley, extended here with explicit contracts, task-aware multi-provider routing, evidence-calibrated evaluation, local observability, and Git-backed recovery.
