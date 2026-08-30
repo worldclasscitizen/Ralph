@@ -227,7 +227,7 @@ Authentication failures, policy refusals, and invalid requests require operator 
 | `ralph init [--preset <name>]` | Register the project, detect connections, and generate default routes |
 | `ralph draft "<request>"` | Generate a task contract without executing it |
 | `ralph run "<request>"` | Draft, display, approve, and execute a task |
-| `ralph status [--watch|--json]` | Inspect the current or most recent run |
+| <code>ralph status [--watch&#124;--json]</code> | Inspect the current or most recent run |
 | `ralph stop [--force]` | Request a safe stop or force process interruption |
 | `ralph resume [run-id]` | Continue an interrupted, failed, or operator-blocked run |
 | `ralph recover [run-id]` | Keep, checkpoint, or restore partial work explicitly |
@@ -236,24 +236,24 @@ Authentication failures, policy refusals, and invalid requests require operator 
 
 | Command | Purpose |
 | :--- | :--- |
-| `ralph doctor [--fix|--offline|--json]` | Diagnose Node, Git, lock, auth, catalog, and route status |
-| `ralph config show|preset|pipelines|explain|export|import` | Inspect or manage project routing configuration |
-| `ralph providers list|detect` | List configured or detected provider connections |
-| `ralph auth status|login|add|remove` | Manage built-in login and API credentials |
-| `ralph catalog status|diff|update` | Inspect or update the signed model catalog |
-| `ralph integrations install|uninstall|status` | Manage optional AI-platform Skills |
+| <code>ralph doctor [--fix&#124;--offline&#124;--json]</code> | Diagnose Node, Git, lock, auth, catalog, and route status |
+| <code>ralph config show&#124;preset&#124;pipelines&#124;explain&#124;export&#124;import</code> | Inspect or manage project routing configuration |
+| <code>ralph providers list&#124;detect</code> | List configured or detected provider connections |
+| <code>ralph auth status&#124;login&#124;add&#124;remove</code> | Manage built-in login and API credentials |
+| <code>ralph catalog status&#124;diff&#124;update</code> | Inspect or update the signed model catalog |
+| <code>ralph integrations install&#124;uninstall&#124;status</code> | Manage optional AI-platform Skills |
 
 ### Evidence and observability
 
 | Command | Purpose |
 | :--- | :--- |
-| `ralph dashboard [--open|--all]` | Start the local Control Center |
-| `ralph dashboard status|stop` | Inspect or stop the dashboard server |
+| <code>ralph dashboard [--open&#124;--all]</code> | Start the local Control Center |
+| <code>ralph dashboard status&#124;stop</code> | Inspect or stop the dashboard server |
 | `ralph logs --follow` | Stream operator-safe event summaries |
 | `ralph usage` | Show Ralph token usage by provider and model |
 | `ralph capacity [--refresh]` | Show exact provider capacity when officially available |
-| `ralph history list|delete|clear` | Inspect or remove completed local run evidence |
-| `ralph show contract|progress|guardrails` | Read the current contract, event ledger, or learned safeguards |
+| <code>ralph history list&#124;delete&#124;clear</code> | Inspect or remove completed local run evidence |
+| <code>ralph show contract&#124;progress&#124;guardrails</code> | Read the current contract, event ledger, or learned safeguards |
 | `ralph migrate [--cleanup]` | Import the legacy Bash layout; remove it only with explicit approval |
 
 ## Structured automation

@@ -200,15 +200,15 @@ printf '%s' "$DEEPSEEK_API_KEY" | ralph auth add deepseek:api --key-stdin
 | 중단·복구 | `ralph stop [--force]` | 안전 중단 또는 강제 중단 |
 | 중단·복구 | `ralph resume [run-id]` | 중단·실패 실행 재개 |
 | 중단·복구 | `ralph recover [run-id]` | 부분 변경 유지·checkpoint·복구 선택 |
-| 진단 | `ralph doctor [--fix|--offline|--json]` | Node, Git, 인증, 카탈로그, 라우팅 진단 |
-| 설정 | `ralph config show|preset|pipelines|explain|export|import` | 라우팅 설정 관리 |
-| 설정 | `ralph auth status|login|add|remove` | 로그인과 API 자격 증명 관리 |
-| 설정 | `ralph catalog status|diff|update` | 서명된 모델 카탈로그 관리 |
+| 진단 | <code>ralph doctor [--fix&#124;--offline&#124;--json]</code> | Node, Git, 인증, 카탈로그, 라우팅 진단 |
+| 설정 | <code>ralph config show&#124;preset&#124;pipelines&#124;explain&#124;export&#124;import</code> | 라우팅 설정 관리 |
+| 설정 | <code>ralph auth status&#124;login&#124;add&#124;remove</code> | 로그인과 API 자격 증명 관리 |
+| 설정 | <code>ralph catalog status&#124;diff&#124;update</code> | 서명된 모델 카탈로그 관리 |
 | 관제 | `ralph dashboard --open` | Control Center 실행 |
 | 관제 | `ralph logs --follow` | 안전한 이벤트 요약 스트리밍 |
 | 관제 | `ralph usage` | Ralph 토큰 사용량 조회 |
 | 관제 | `ralph capacity --refresh` | 공식 조회가 가능한 Provider 잔여량 조회 |
-| 기록 | `ralph history list|delete|clear` | 종료된 로컬 실행 증거 관리 |
+| 기록 | <code>ralph history list&#124;delete&#124;clear</code> | 종료된 로컬 실행 증거 관리 |
 | 마이그레이션 | `ralph migrate [--cleanup]` | 기존 Bash 구조를 가져오고 선택적으로 정리 |
 
 ## 선택적 AI Skill
