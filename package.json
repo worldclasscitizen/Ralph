@@ -1,0 +1,52 @@
+{
+  "name": "@worldclasscitizen/ralph",
+  "version": "0.1.0-beta.0",
+  "description": "Platform-neutral Ralph loop orchestration CLI",
+  "type": "module",
+  "bin": {
+    "ralph": "dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "assets",
+    "integrations",
+    "docs",
+    "START_HERE.md",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "smoke": "node scripts/smoke-install.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/worldclasscitizen/hackathon-hackthebeat.git"
+  }
+}

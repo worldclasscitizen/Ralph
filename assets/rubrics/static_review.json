@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "task": "static_review",
+  "name": "정적 분석·린트 및 코드 리뷰",
+  "criteria": [
+    {"id": "lint_type_build", "label": "린트·타입·빌드 결과", "weight": 20, "guidance": "지원되는 정적 검사와 빌드가 실제로 실행되고 결과가 해석됐는지 평가합니다."},
+    {"id": "correctness_regression_risk", "label": "정확성·회귀 위험 분석", "weight": 15, "guidance": "변경된 동작과 잠재 회귀를 구체적인 코드·테스트 근거로 평가합니다."},
+    {"id": "security_dependency_risk", "label": "보안·의존성 위험", "weight": 15, "guidance": "입력 경계, 비밀, 권한과 의존성 위험을 평가합니다."},
+    {"id": "actionable_review", "label": "실행 가능한 리뷰 결과", "weight": 10, "guidance": "중요도, 파일 위치, 원인과 검증 가능한 수정 방향을 제공하는지 평가합니다."}
+  ],
+  "hardGates": [
+    {"id": "critical_finding_unresolved", "label": "치명적 리뷰 지적 미해결", "guidance": "재현 가능한 치명적 정확성·보안 문제가 남아 있으면 실패입니다."}
+  ]
+}

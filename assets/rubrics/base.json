@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "name": "Ralph 공통 평가 기준",
+  "anchors": {
+    "absent": {
+      "factor": 0.0,
+      "label": "없음 또는 증거와 모순됨"
+    },
+    "partial": {
+      "factor": 0.5,
+      "label": "일부 구현됐지만 검증이 불충분함"
+    },
+    "verified": {
+      "factor": 0.8,
+      "label": "검증됐으며 경미한 부족만 남음"
+    },
+    "complete": {
+      "factor": 1.0,
+      "label": "요구사항과 증거를 완전히 충족함"
+    }
+  },
+  "criteria": [
+    {
+      "id": "contract_evidence",
+      "label": "작업 계약과 증거 추적성",
+      "weight": 15,
+      "guidance": "승인된 TaskContract의 목표·허용 범위·완료 조건이 실제 변경 파일과 증거로 연결되는지 평가합니다."
+    },
+    {
+      "id": "deterministic_verification",
+      "label": "결정적 검증 결과",
+      "weight": 15,
+      "guidance": "테스트·린트·타입 검사·빌드처럼 반복 가능한 검증이 실제로 실행되고 통과했는지 평가합니다."
+    },
+    {
+      "id": "regression_scope_safety",
+      "label": "회귀·범위·안전성",
+      "weight": 5,
+      "guidance": "기존 동작을 약화하지 않았고 요청 범위와 비밀 보호 규칙을 지켰는지 평가합니다."
+    },
+    {
+      "id": "reproducibility",
+      "label": "재현성과 인수인계",
+      "weight": 5,
+      "guidance": "다른 개발자가 명령·경로·알려진 제한을 따라 결과를 재현할 수 있는지 평가합니다."
+    }
+  ],
+  "hardGates": [
+    {
+      "id": "worker_execution_failed",
+      "label": "Worker 실행 실패",
+      "guidance": "Worker가 정상 종료하지 못했다면 실패입니다."
+    },
+    {
+      "id": "deterministic_verifier_failed",
+      "label": "결정적 검증 실패 또는 미실행",
+      "guidance": "필수 검증이 실패했거나 실행되지 않았다면 실패입니다."
+    },
+    {
+      "id": "secret_or_user_data_exposure",
+      "label": "비밀값 또는 실제 사용자 데이터 노출",
+      "guidance": "키·토큰·비밀번호·실사용자 데이터가 코드, 로그, 문서에 노출되면 실패입니다."
+    },
+    {
+      "id": "core_placeholder_claimed_complete",
+      "label": "핵심 Mock·placeholder를 완성으로 주장",
+      "guidance": "핵심 기능이 가짜 구현인데 완료로 주장하면 실패입니다."
+    },
+    {
+      "id": "tests_weakened",
+      "label": "테스트 삭제 또는 약화",
+      "guidance": "실패를 숨기기 위해 테스트나 검증을 삭제·완화하면 실패입니다."
+    },
+    {
+      "id": "destructive_out_of_scope_change",
+      "label": "파괴적이거나 범위를 벗어난 변경",
+      "guidance": "승인 없는 외부 상태 변경, 데이터 손실 또는 범위 밖 변경이 있으면 실패입니다."
+    }
+  ]
+}
