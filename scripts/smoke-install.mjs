@@ -5,16 +5,17 @@ import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 const exec = promisify(execFile);
+const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const source = resolve(import.meta.dirname, "..");
 const temp = await mkdtemp(join(tmpdir(), "ralph-pack-smoke-"));
 const project = join(temp, "project");
 await import("node:fs/promises").then(({ mkdir }) => mkdir(project));
 
-await exec("npm", ["pack", "--pack-destination", temp], { cwd: source });
+await exec(npmCommand, ["pack", "--pack-destination", temp], { cwd: source });
 const archive = (await readdir(temp)).find((name) => name.endsWith(".tgz"));
 if (!archive) throw new Error("npm pack archive가 생성되지 않았습니다.");
-await exec("npm", ["init", "-y"], { cwd: project });
-await exec("npm", ["install", join(temp, archive)], { cwd: project });
+await exec(npmCommand, ["init", "-y"], { cwd: project });
+await exec(npmCommand, ["install", join(temp, archive)], { cwd: project });
 await exec("git", ["init"], { cwd: project });
 await exec("git", ["config", "user.email", "ralph@example.invalid"], { cwd: project });
 await exec("git", ["config", "user.name", "Ralph Smoke"], { cwd: project });
