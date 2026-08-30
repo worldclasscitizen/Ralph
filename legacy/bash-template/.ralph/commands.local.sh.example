@@ -33,21 +33,17 @@ ralph_command_for() {
         printf '%s\n' '.ralph/antigravity-agent.sh gemini-3.7-flash-high accept-edits high'
       fi
       ;;
-    critic:claude-fable|metaPrompter:claude-fable)
-      printf '%s\n' '.ralph/claude-builtin-agent.sh claude-fable-5 max plan'
-      ;;
     critic:claude-opus|metaPrompter:claude-opus)
-      printf '%s\n' '.ralph/claude-builtin-agent.sh claude-opus-5 max plan'
+      printf '%s\n' '.ralph/claude-builtin-agent.sh claude-opus-4-6 max plan'
       ;;
     critic:claude-sonnet|metaPrompter:claude-sonnet)
-      printf '%s\n' '.ralph/claude-builtin-agent.sh claude-sonnet-5 high plan'
+      printf '%s\n' '.ralph/claude-builtin-agent.sh claude-sonnet-4-6 high plan'
       ;;
-    worker:claude-fable|worker:claude-opus|worker:claude-sonnet)
+    worker:claude-opus|worker:claude-sonnet)
       model_id="$(
         case "${model_alias}" in
-          claude-fable) printf '%s' 'claude-fable-5' ;;
-          claude-opus) printf '%s' 'claude-opus-5' ;;
-          claude-sonnet) printf '%s' 'claude-sonnet-5' ;;
+          claude-opus) printf '%s' 'claude-opus-4-6' ;;
+          claude-sonnet) printf '%s' 'claude-sonnet-4-6' ;;
         esac
       )"
       if [[ "${model_alias}" == "claude-sonnet" ]]; then

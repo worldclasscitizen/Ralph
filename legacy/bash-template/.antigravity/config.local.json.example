@@ -32,10 +32,6 @@
       "catalogModel": "gemini-flash",
       "reasoningEffort": "high"
     },
-    "claude-fable": {
-      "catalogModel": "claude-fable",
-      "reasoningEffort": "max"
-    },
     "claude-opus": {
       "catalogModel": "claude-opus",
       "reasoningEffort": "max"
@@ -46,17 +42,17 @@
     }
   },
   "taskPipelines": {
-    "planning_architecture": ["claude-fable", "claude-opus", "gemini-flash"],
+    "planning_architecture": ["claude-opus", "claude-sonnet", "gemini-flash"],
     "frontend_visual": ["gemini-flash", "claude-sonnet", "claude-opus"],
-    "backend_core": ["claude-opus", "claude-fable", "claude-sonnet"],
-    "tdd_debugging": ["claude-opus", "claude-fable", "claude-sonnet"],
-    "static_review": ["claude-opus", "claude-fable", "claude-sonnet"],
-    "delivery_evidence": ["gemini-flash", "claude-fable", "claude-sonnet"]
+    "backend_core": ["claude-opus", "claude-sonnet", "gemini-flash"],
+    "tdd_debugging": ["claude-opus", "claude-sonnet", "gemini-flash"],
+    "static_review": ["claude-opus", "claude-sonnet", "gemini-flash"],
+    "delivery_evidence": ["gemini-flash", "claude-opus", "claude-sonnet"]
   },
   "ralph": {
     "fallbackChains": {
-      "critic": ["gemini-flash", "claude-fable", "claude-sonnet"],
-      "metaPrompter": ["claude-fable", "claude-opus", "gemini-flash"]
+      "critic": ["gemini-flash", "claude-opus", "claude-sonnet"],
+      "metaPrompter": ["claude-opus", "claude-sonnet", "gemini-flash"]
     },
     "defaults": {
       "task": "backend_core",

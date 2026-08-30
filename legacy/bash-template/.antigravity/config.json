@@ -173,31 +173,21 @@
     }
   },
   "modelCatalog": {
-    "claude-fable": {
-      "provider": "anthropic",
-      "modelId": "claude-fable-5",
-      "reasoningSpec": {
-        "parameter": "output_config.effort",
-        "allowedValues": ["low", "medium", "high", "xhigh", "max"],
-        "recommendedValue": "max"
-      },
-      "note": "Adaptive thinking이 항상 켜져 있으므로 thinking 필드를 생략한다."
-    },
     "claude-opus": {
       "provider": "anthropic",
-      "modelId": "claude-opus-5",
+      "modelId": "claude-opus-4-6",
       "reasoningSpec": {
-        "parameter": "output_config.effort",
-        "allowedValues": ["low", "medium", "high", "xhigh", "max"],
-        "recommendedValue": "xhigh"
+        "parameter": "--effort",
+        "allowedValues": ["low", "medium", "high", "max"],
+        "recommendedValue": "max"
       }
     },
     "claude-sonnet": {
       "provider": "anthropic",
-      "modelId": "claude-sonnet-5",
+      "modelId": "claude-sonnet-4-6",
       "reasoningSpec": {
-        "parameter": "output_config.effort",
-        "allowedValues": ["low", "medium", "high", "xhigh", "max"],
+        "parameter": "--effort",
+        "allowedValues": ["low", "medium", "high", "max"],
         "recommendedValue": "high"
       }
     },
