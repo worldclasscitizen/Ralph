@@ -18,7 +18,7 @@
   </p>
   <p>
     <img alt="Release" src="https://img.shields.io/badge/release-v0.1.0--beta.0-f59e0b?style=flat-square">
-    <a href="https://github.com/worldclasscitizen/hackathon-hackthebeat/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/hackathon-hackthebeat/ci.yml?branch=main&style=flat-square&label=CI"></a>
+    <a href="https://github.com/worldclasscitizen/ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 or newer" src="https://img.shields.io/badge/Node.js-%3E%3D22-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
     <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-2563eb?style=flat-square"></a>
@@ -86,8 +86,8 @@ npx @worldclasscitizen/ralph@beta run --project /absolute/path/to/project "Impro
 ### Install from source now
 
 ```bash
-git clone https://github.com/worldclasscitizen/hackathon-hackthebeat.git
-cd hackathon-hackthebeat
+git clone https://github.com/worldclasscitizen/ralph.git
+cd ralph
 npm ci
 npm run build
 npm install -g .
@@ -398,7 +398,7 @@ The CI matrix covers macOS, Ubuntu, and Windows on Node.js 22 and 24. Before `1.
 
 Ralph is in active beta development. The TypeScript runtime covers the primary orchestration path and passes local build, test, package, and smoke checks. It is not yet declared a complete production replacement for the legacy Bash runtime.
 
-Please report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/hackathon-hackthebeat/issues).
+Please report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/ralph/issues).
 
 ## License
 
