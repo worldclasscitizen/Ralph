@@ -2,6 +2,7 @@ const $ = (selector) => document.querySelector(selector);
 const state = { snapshot: null, selectedRun: null, projectRoot: null, usageScope: "run", edit: false, selected: new Set(), source: null };
 const nodes = [
   ["pre-critic", "Pre-Critic", "현재 상태와 누락 증거를 독립적으로 평가합니다."],
+  ["online-router", "Online Router", "승인된 후보 중 품질 우선 Worker·effort·session·검증 강도를 선택합니다."],
   ["meta-prompter", "Meta-Prompter", "실패 증거를 다음 Worker의 실행 지시로 바꿉니다."],
   ["worker", "Worker", "승인된 범위 안에서 코드와 문서를 수정합니다."],
   ["verifier", "Verifier", "AI가 아닌 로컬 명령으로 테스트·린트·타입·빌드를 검사합니다."],
@@ -53,11 +54,14 @@ function renderExecution(snapshot) {
   const run = snapshot.selected; const events = snapshot.events || [];
   $("#iteration-title").textContent = run ? `${run.taskType} · Iteration ${run.iteration}` : "실행을 선택해 주세요";
   $("#score").textContent = Number.isFinite(run?.score) ? `${run.score}점` : "";
-  const modelAttempt = [...events].reverse().find((event) => event.type === "model_attempt");
+  const modelAttempt = [...events].reverse().find((event) => event.type === "model_attempt" && event.node === "worker");
   const checkpoint = [...events].reverse().find((event) => event.type === "checkpoint");
+  const evidence = [...events].reverse().find((event) => event.type === "evidence_packet");
+  const route = run?.lastRouteDecision;
   $("#iteration-facts").innerHTML = [
-    ["실행 주체", modelAttempt?.data?.modelId ? `${modelAttempt.data.displayName || modelAttempt.data.modelId} · ${modelAttempt.data.modelId} · ${modelAttempt.data.effort}` : "—"],
-    ["시도", modelAttempt?.data?.attempt ?? "—"], ["증거 파일", `events.jsonl · ${events.length}개`], ["판단 상태", run?.verdict ?? run?.status ?? "—"], ["Git checkpoint", checkpoint?.data?.commit?.slice?.(0,12) ?? "—"],
+    ["실행 주체", route ? `${route.displayName} · ${route.modelId} · ${route.reasoningEffort}` : modelAttempt?.data?.modelId ? `${modelAttempt.data.displayName || modelAttempt.data.modelId} · ${modelAttempt.data.modelId} · ${modelAttempt.data.effort}` : "—"],
+    ["위험도·세션", route ? `${route.riskTier} · ${route.sessionPolicy}` : run?.riskTier ?? "—"],
+    ["시도", modelAttempt?.data?.attempt ?? "—"], ["증거 파일", evidence?.data?.path || `events.jsonl · ${events.length}개`], ["판단 상태", run?.verdict ?? run?.status ?? "—"], ["Git checkpoint", checkpoint?.data?.commit?.slice?.(0,12) ?? "—"],
   ].map(([label,value]) => `<div class="fact"><small>${label}</small><strong>${escapeHtml(value)}</strong></div>`).join("");
   $("#execution").innerHTML = nodes.map(([id,title,description]) => {
     const value = nodeState(id, events, run); const last = value.last;
