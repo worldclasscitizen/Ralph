@@ -29,7 +29,7 @@ const binary = join(project, "node_modules", ".bin", process.platform === "win32
 await stat(binary);
 const cli = join(project, "node_modules", "@worldclasscitizen", "ralph", "dist", "cli.js");
 const version = await exec(process.execPath, [cli, "--version"], { cwd: project });
-if (!version.stdout.includes("0.1.0-beta.0")) throw new Error("설치된 binary 버전이 올바르지 않습니다.");
+if (!version.stdout.includes("0.2.0-beta.0")) throw new Error("설치된 binary 버전이 올바르지 않습니다.");
 await exec(process.execPath, [cli, "init", "--project", project, "--json"], {
   cwd: temp,
   env: { ...process.env, RALPH_CATALOG_URL: "http://127.0.0.1:1/catalog.json" },
