@@ -15,8 +15,12 @@ const gateIds = [
 let text = "";
 if (request.role === "contractPlanner") {
   text = JSON.stringify({ taskType: "backend_core", goal: "Create a smoke artifact", include: ["ralph-smoke.txt"], exclude: [".git/**"], requirements: ["Write the artifact"], acceptanceCriteria: ["ralph-smoke.txt exists"], verifierCommands: ["test -f ralph-smoke.txt", "git diff --check"], requiredArtifacts: ["ralph-smoke.txt"], attachments: [], constraints: [], executionProfile: "balanced" });
+} else if (request.nodeId === "contract-critic") {
+  text = JSON.stringify({ status: "pass", issues: [], evidence: ["The mock contract is bounded and verifiable."] });
 } else if (request.role === "critic" || request.role === "adjudicator") {
   text = JSON.stringify({ criteria: criterionIds.map((id) => ({ id, level: "complete", evidence: ["mock evidence"] })), hardGates: gateIds.map((id) => ({ id, status: "pass", evidence: ["mock evidence"] })), findings: [] });
+} else if (request.role === "router") {
+  text = JSON.stringify({ connectionId: "mock:process", modelId: "mock-1", reasoningEffort: "high", sessionPolicy: "fresh", rationale: "Use the only verified candidate." });
 } else if (request.role === "metaPrompter") {
   text = JSON.stringify({ workerInstructions: "Write ralph-smoke.txt.", guardrailCandidate: "" });
 } else if (request.role === "worker") {

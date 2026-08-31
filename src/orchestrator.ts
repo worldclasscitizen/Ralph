@@ -2,10 +2,12 @@ import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { approveContract, assertApproved, validateContract } from "./contracts.js";
 import { refreshProjectConfig } from "./config.js";
-import { evaluateAssessment, validateAssessment } from "./evaluator.js";
+import { appendGuardrailRecord, makeEvidencePacket, saveEvidencePacket } from "./evidence.js";
+import { evaluateAssessment, needsBoundaryAdjudication, validateAssessment } from "./evaluator.js";
 import { assertSafeGitStart, checkpoint, gitHead, gitStatus } from "./git.js";
+import { candidateRoutes, classifyRisk, deterministicRouteDecision, orderRoutesForDecision, roleRoutes } from "./policy.js";
 import { adapterMap } from "./providers/index.js";
-import { contractPlannerPrompt, criticPrompt, metaPrompt, workerPrompt } from "./prompts.js";
+import { contractCriticPrompt, contractPlannerPrompt, criticPrompt, metaPrompt, routerPrompt, workerPrompt } from "./prompts.js";
 import {
   activeRun,
   emitEvent,
@@ -24,9 +26,12 @@ import type {
   AgentResult,
   AgentUsage,
   CriticAssessment,
+  EvidencePacket,
   ProjectConfig,
+  RouteDecision,
   RouteEntry,
   RunState,
+  SessionPolicy,
   TaskContract,
 } from "./types.js";
 import { atomicWrite, makeId, now, parseJsonObject, RalphError, redact, sleep } from "./util.js";
@@ -75,6 +80,7 @@ async function cumulativeUsageDelta(projectRoot: string, runId: string, node: st
   for (const key of ["inputTokens", "outputTokens", "cachedTokens", "reasoningTokens", "totalTokens", "estimatedCostUsd"] as const) {
     if (current[key] !== undefined) delta[key] = Math.max(0, current[key]! - (previous[key] ?? 0));
   }
+  if (current.contextWindowTokens !== undefined) delta.contextWindowTokens = current.contextWindowTokens;
   return delta;
 }
 
@@ -89,16 +95,22 @@ async function invokeWithFallback(
   projectRoot: string,
   config: ProjectConfig,
   run: RunState,
-  node: "contractPlanner" | "critic" | "metaPrompter" | "worker" | "adjudicator",
+  node: "contractPlanner" | "router" | "critic" | "metaPrompter" | "worker" | "adjudicator",
   prompt: string,
   controller: AbortController,
   excludedProviders: string[] = [],
   validateText?: (text: string) => void,
   eventNode?: string,
+  sessionPolicy: SessionPolicy = "fresh",
 ): Promise<InvokeOutcome> {
   const degraded = CIRCUIT_BREAKERS.get(run.id) ?? new Set<string>();
   CIRCUIT_BREAKERS.set(run.id, degraded);
-  const available = config.routes[node].filter((route) => !degraded.has(`${route.connectionId}:${route.modelId}`));
+  const breakerKey = (route: RouteEntry) => `${node}:${route.connectionId}:${route.modelId}`;
+  const configuredRoutes = roleRoutes(config, node);
+  if (!configuredRoutes.length && config.routePolicies?.[node]?.hardPin) {
+    throw new RalphError(`${node}에 지정한 Hard Pin 모델을 현재 연결에서 사용할 수 없습니다.`, "model_unavailable", 5);
+  }
+  const available = configuredRoutes.filter((route) => !degraded.has(breakerKey(route)));
   const preferredRoutes = available.filter((route) => !excludedProviders.includes(route.provider));
   const routes = preferredRoutes.length ? preferredRoutes : available;
   if (!routes.length) throw new RalphError(`${node}에 실행 가능한 모델 경로가 없습니다. ralph init 또는 config pipelines를 확인해 주세요.`, "no_route", 5);
@@ -111,20 +123,20 @@ async function invokeWithFallback(
     const adapter = adapters.get(route.connectionId);
     if (!adapter) continue;
     if (await knownCapacityExhausted(projectRoot, route.connectionId)) {
-      degraded.add(`${route.connectionId}:${route.modelId}`);
+      degraded.add(breakerKey(route));
       await emitEvent(projectRoot, { runId: run.id, type: "capacity_skip", node: eventNode ?? node, status: "warning", message: `${route.connectionId}의 정확한 잔여량이 0이어서 호출을 건너뜁니다.`, data: { connectionId: route.connectionId, modelId: route.modelId } });
       continue;
     }
     const auth = await adapter.authStatus();
     if (auth.status === "unauthenticated") throw new RalphError(`${route.connectionId} 로그인이 필요합니다. ralph auth login을 실행해 주세요.`, "authentication", 77);
     for (let attempt = 1; attempt <= 2; attempt += 1) {
-      await emitEvent(projectRoot, { runId: run.id, type: "model_attempt", node: eventNode ?? node, status: "running", message: `${route.displayName} 호출을 시작했습니다.`, data: { attempt, connectionId: route.connectionId, modelId: route.modelId, displayName: route.displayName, effort: route.reasoningEffort } });
-      const persistent = node === "worker" || node === "metaPrompter";
+      const persistent = node === "worker" && sessionPolicy === "continue";
+      await emitEvent(projectRoot, { runId: run.id, type: "model_attempt", node: eventNode ?? node, status: "running", message: `${route.displayName} 호출을 시작했습니다.`, data: { attempt, connectionId: route.connectionId, modelId: route.modelId, displayName: route.displayName, effort: route.reasoningEffort, sessionPolicy: persistent ? "continue" : "fresh" } });
       const result = await adapter.invoke({ runId: run.id, nodeId: eventNode ?? node, role: node, model: modelFor(route, adapter.mode), projectRoot, prompt, ...(persistent ? { sessionId: await sessionId(projectRoot, run.id, node, route) } : {}) }, controller.signal);
       const cumulativeUsage = result.usageCumulative ? result.usage : undefined;
       if (result.usageCumulative && result.usage) result.usage = await cumulativeUsageDelta(projectRoot, run.id, node, route, result.usage);
       await appendUsage(projectRoot, run.id, eventNode ?? node, route, result);
-      if (result.sessionId && persistent) await saveSession(projectRoot, run.id, node, route, result.sessionId, cumulativeUsage);
+      if (result.sessionId && node === "worker") await saveSession(projectRoot, run.id, node, route, result.sessionId, cumulativeUsage);
       if (result.exitCode === 0 && result.text.trim()) {
         try {
           validateText?.(result.text);
@@ -142,7 +154,7 @@ async function invokeWithFallback(
       if (attempt < 2) await sleep(Math.min(8_000, 2_000 * 2 ** (attempt - 1)) + Math.floor(Math.random() * 350), controller.signal);
     }
     await emitEvent(projectRoot, { runId: run.id, type: "fallback", node: eventNode ?? node, status: "warning", message: `${route.displayName}을 현재 실행에서 격리하고 다음 모델로 전환합니다.`, data: { error: lastError?.kind } });
-    degraded.add(`${route.connectionId}:${route.modelId}`);
+    degraded.add(breakerKey(route));
   }
   throw new RalphError(`모든 ${node} 폴백 경로가 실패했습니다: ${lastError?.message ?? "unknown"}`, "fallback_exhausted", 6);
 }
@@ -179,26 +191,78 @@ async function checkSafeStop(projectRoot: string): Promise<void> {
   if (await isStopRequested(projectRoot)) throw new RalphError("사용자가 안전 중단을 요청했습니다.", "safe_stop", 130);
 }
 
-async function appendGuardrail(projectRoot: string, runId: string, candidate: string): Promise<void> {
-  const normalized = candidate.replace(/\s+/g, " ").trim().slice(0, 1_000);
-  if (!normalized) return;
-  const paths = await ensureState(projectRoot);
-  const current = await readFile(paths.guardrails, "utf8").catch(() => "");
-  if (current.includes(normalized)) return;
-  await appendFile(paths.guardrails, `\n- ${now()} · ${runId}: ${normalized}\n`);
+async function onlineRouteDecision(
+  projectRoot: string,
+  config: ProjectConfig,
+  run: RunState,
+  contract: TaskContract,
+  boundary: RouteDecision["boundary"],
+  controller: AbortController,
+  evidence?: EvidencePacket,
+  previous?: RouteDecision,
+  runtime: { measurableImprovement?: boolean; contextUtilization?: number; continuationCount?: number } = {},
+): Promise<RouteDecision> {
+  const local = deterministicRouteDecision(config, contract, boundary, { previous, ...runtime });
+  let decision = local;
+  if (local.source !== "hard_pin" && config.routePolicies?.[contract.taskType]?.mode !== "fixed" && (config.routes.router?.length ?? 0) > 0) {
+    try {
+      const candidates = candidateRoutes(config, contract);
+      const outcome = await invokeWithFallback(
+        projectRoot,
+        config,
+        run,
+        "router",
+        routerPrompt(contract, candidates, boundary, evidence),
+        controller,
+        [],
+        (text) => {
+          const parsed = parseJsonObject<Record<string, unknown>>(text);
+          if (typeof parsed.connectionId !== "string" || typeof parsed.modelId !== "string" || !["fresh", "continue"].includes(String(parsed.sessionPolicy))) throw new Error("Router decision schema가 올바르지 않습니다.");
+          if (!candidates.some((item) => item.connectionId === parsed.connectionId && item.modelId === parsed.modelId)) throw new Error("Router가 허용되지 않은 후보를 선택했습니다.");
+        },
+        "online-router",
+      );
+      const suggested = parseJsonObject<{ connectionId: string; modelId: string; reasoningEffort?: string; sessionPolicy?: SessionPolicy; rationale?: string }>(outcome.result.text);
+      decision = deterministicRouteDecision(config, contract, boundary, { suggested, previous, ...runtime });
+    } catch (error) {
+      if (error instanceof RalphError && ["authentication", "invalid_request", "policy_denial"].includes(error.code)) throw error;
+      await emitEvent(projectRoot, { runId: run.id, type: "router_fallback", node: "online-router", status: "warning", message: "온라인 Router 판단을 사용할 수 없어 결정적 품질 우선 경로를 적용했습니다.", data: { error: redact(error instanceof Error ? error.message : String(error)) } });
+    }
+  }
+  run.lastRouteDecision = decision;
+  run.riskTier = decision.riskTier;
+  await saveRun(projectRoot, run);
+  await emitEvent(projectRoot, { runId: run.id, type: "route_decision", node: "online-router", status: "completed", message: `${decision.displayName} · ${decision.reasoningEffort} · ${decision.sessionPolicy}로 결정했습니다.`, data: { ...decision } });
+  return decision;
 }
 
 export async function draftContract(projectRoot: string, request: string, controller = new AbortController()): Promise<TaskContract> {
   const storedConfig = await loadConfig(projectRoot);
   const config = await refreshProjectConfig(storedConfig, storedConfig.preset);
   const run: RunState = { id: makeId("draft"), projectRoot, contractId: "pending", taskType: "planning_architecture", status: "running", iteration: 0, maxIterations: 0, startedAt: now(), pid: process.pid, catalogVersion: config.catalogVersion, routes: config.routes };
-  const outcome = await invokeWithFallback(projectRoot, config, run, "contractPlanner", contractPlannerPrompt(request, projectRoot), controller, [], (text) => {
-    validateContract(parseJsonObject<unknown>(text), projectRoot);
-  });
-  const parsed = parseJsonObject<unknown>(outcome.result.text);
-  const contract = validateContract(parsed, projectRoot);
-  await saveContract(projectRoot, contract);
-  return contract;
+  try {
+    const outcome = await invokeWithFallback(projectRoot, config, run, "contractPlanner", contractPlannerPrompt(request, projectRoot), controller, [], (text) => {
+      validateContract(parseJsonObject<unknown>(text), projectRoot);
+    });
+    const parsed = parseJsonObject<unknown>(outcome.result.text);
+    let contract = validateContract(parsed, projectRoot);
+    const review = await invokeWithFallback(projectRoot, config, run, "critic", contractCriticPrompt(contract), controller, [outcome.route.provider], (text) => {
+      const value = parseJsonObject<{ status?: string; issues?: unknown; evidence?: unknown }>(text);
+      if (!['pass','revise'].includes(value.status ?? "") || !Array.isArray(value.issues) || !Array.isArray(value.evidence)) throw new Error("Contract Critic schema가 올바르지 않습니다.");
+    }, "contract-critic");
+    const critique = parseJsonObject<{ status: "pass" | "revise"; issues: string[]; evidence: string[] }>(review.result.text);
+    if (critique.status === "revise") {
+      const revised = await invokeWithFallback(projectRoot, config, run, "contractPlanner", `${contractPlannerPrompt(request, projectRoot)}\n\nContract Critic이 확인한 결함만 수정하세요:\n${JSON.stringify(critique)}`, controller, [], (text) => {
+        validateContract(parseJsonObject<unknown>(text), projectRoot);
+      }, "contract-revision");
+      contract = validateContract(parseJsonObject<unknown>(revised.result.text), projectRoot);
+    }
+    contract = { ...contract, riskTier: classifyRisk(contract) };
+    await saveContract(projectRoot, contract);
+    return contract;
+  } finally {
+    CIRCUIT_BREAKERS.delete(run.id);
+  }
 }
 
 export async function executeContract(projectRoot: string, contract: TaskContract, resumeState?: RunState): Promise<RunState> {
@@ -208,12 +272,13 @@ export async function executeContract(projectRoot: string, contract: TaskContrac
   let config = await refreshProjectConfig(await loadConfig(projectRoot), contract.executionProfile);
   config = applyModelOverride(config, contract);
   if (resumeState) config = { ...config, routes: resumeState.routes, catalogVersion: resumeState.catalogVersion };
-  else if (contract.routeSnapshot) config = { ...config, routes: contract.routeSnapshot, catalogVersion: contract.approvedCatalogVersion ?? config.catalogVersion };
+  else if (contract.routeSnapshot) config = { ...config, routes: contract.routeSnapshot, routePolicies: contract.routePolicySnapshot ?? config.routePolicies, catalogVersion: contract.approvedCatalogVersion ?? config.catalogVersion };
+  const riskTier = classifyRisk(contract);
   const startIteration = resumeState ? resumeState.iteration + 1 : 1;
   if (startIteration > 6) throw new RalphError("최대 Iteration 6회에 도달해 재개할 수 없습니다. 새 계약을 작성해 주세요.", "iteration_limit", 10);
   const run: RunState = resumeState
     ? { ...resumeState, status: "running", verdict: "running", iteration: startIteration, currentNode: "pre-critic", pid: process.pid, endedAt: undefined }
-    : { id: makeId("run"), projectRoot, contractId: contract.id, taskType: contract.taskType, status: "running", iteration: 1, maxIterations: 6, currentNode: "pre-critic", startedAt: now(), pid: process.pid, catalogVersion: config.catalogVersion, routes: config.routes };
+    : { id: makeId("run"), projectRoot, contractId: contract.id, taskType: contract.taskType, status: "running", iteration: 1, maxIterations: 6, currentNode: "pre-critic", startedAt: now(), pid: process.pid, catalogVersion: config.catalogVersion, routes: config.routes, riskTier };
   await saveContract(projectRoot, contract);
   await saveRun(projectRoot, run);
   await writeLock(projectRoot, run);
@@ -233,7 +298,7 @@ export async function executeContract(projectRoot: string, contract: TaskContrac
   process.on("SIGINT", requestSafeStop);
   process.on("SIGTERM", () => controller.abort(new Error("강제 중단")));
 
-  let progress = resumeState ? await recentProgress(projectRoot, run.id) : "";
+  let previousEvidence: EvidencePacket | undefined;
   let previousScores: number[] = resumeState ? (await readEvents(projectRoot, run.id)).filter((event) => event.type === "evaluation" && typeof event.data?.score === "number").map((event) => Number(event.data!.score)) : [];
   let previousFingerprints: string[] = resumeState ? (await readEvents(projectRoot, run.id)).filter((event) => event.type === "evaluation" && typeof event.data?.fingerprint === "string").map((event) => String(event.data!.fingerprint)) : [];
   try {
@@ -244,8 +309,10 @@ export async function executeContract(projectRoot: string, contract: TaskContrac
       let finalScore: number | undefined;
       let iterationVerdict = "failed";
       let workerProvider = "";
+      let iterationDecision: RouteDecision | undefined;
+      let iterationHead = await gitHead(projectRoot);
       try {
-        const head = await gitHead(projectRoot);
+        const head = iterationHead;
         run.currentNode = "pre-critic";
         await saveRun(projectRoot, run);
         const pre = await invokeWithFallback(projectRoot, config, run, "critic", `${await criticPrompt(contract, "pre", { head, status: await gitStatus(projectRoot), diff: await diffText(projectRoot) })}${await operatorNote(projectRoot)}`, controller, [], (text) => {
@@ -255,9 +322,29 @@ export async function executeContract(projectRoot: string, contract: TaskContrac
         if (!validateAssessment(preAssessment)) throw new RalphError("Pre-Critic JSON이 평가 schema와 맞지 않습니다.", "schema_error");
         await checkSafeStop(projectRoot);
 
+        run.currentNode = "online-router";
+        await saveRun(projectRoot, run);
+        const routeDecision = run.lastRouteDecision?.boundary === "failure"
+          ? run.lastRouteDecision
+          : await onlineRouteDecision(projectRoot, config, run, contract, "iteration_start", controller, previousEvidence, run.lastRouteDecision);
+        iterationDecision = routeDecision;
+        const prePacket = await makeEvidencePacket({
+          projectRoot,
+          runId: run.id,
+          iteration,
+          contract,
+          routeDecision,
+          baseHead: head,
+          currentHead: await gitHead(projectRoot),
+          gitStatus: await gitStatus(projectRoot),
+          diff: await diffText(projectRoot),
+          critic: preAssessment,
+        });
+        await saveEvidencePacket(projectRoot, prePacket, "pre");
+
         run.currentNode = "meta-prompter";
         await saveRun(projectRoot, run);
-        const meta = await invokeWithFallback(projectRoot, config, run, "metaPrompter", `${metaPrompt(contract, preAssessment, progress)}${await operatorNote(projectRoot)}`, controller, [], (text) => {
+        const meta = await invokeWithFallback(projectRoot, config, run, "metaPrompter", `${metaPrompt(contract, preAssessment, prePacket)}${await operatorNote(projectRoot)}`, controller, [], (text) => {
           const parsed = parseJsonObject<{ workerInstructions?: string }>(text);
           if (!parsed.workerInstructions) throw new Error("workerInstructions가 없습니다.");
         });
@@ -267,20 +354,29 @@ export async function executeContract(projectRoot: string, contract: TaskContrac
 
         run.currentNode = "worker";
         await saveRun(projectRoot, run);
-        const workerRoutes = config.routes[contract.taskType].length ? config.routes[contract.taskType] : config.routes.worker;
-        const workerConfig = { ...config, routes: { ...config.routes, worker: workerRoutes } };
-        const worker = await invokeWithFallback(projectRoot, workerConfig, run, "worker", `${workerPrompt(contract, metaResult.workerInstructions, head)}${await operatorNote(projectRoot)}`, controller);
+        const workerRoutes = orderRoutesForDecision(candidateRoutes(config, contract), routeDecision);
+        const workerConfig = {
+          ...config,
+          routes: { ...config.routes, worker: workerRoutes },
+          routePolicies: { ...config.routePolicies, worker: { mode: "fixed" as const, candidates: workerRoutes } },
+        };
+        const worker = await invokeWithFallback(projectRoot, workerConfig, run, "worker", `${workerPrompt(contract, metaResult.workerInstructions, head, prePacket)}${await operatorNote(projectRoot)}`, controller, [], undefined, undefined, routeDecision.sessionPolicy);
         workerExit = worker.result.exitCode;
         workerProvider = worker.route.provider;
+        run.lastWorkerContextUtilization = worker.result.usage?.contextWindowTokens && worker.result.usage.inputTokens !== undefined
+          ? worker.result.usage.inputTokens / worker.result.usage.contextWindowTokens
+          : undefined;
+        run.workerContinuationCount = routeDecision.sessionPolicy === "continue" ? (run.workerContinuationCount ?? 0) + 1 : 0;
+        await saveRun(projectRoot, run);
         if (await gitHead(projectRoot) !== head) throw new RalphError("Worker가 허용되지 않은 Git commit 또는 HEAD 변경을 수행했습니다. 변경 상태를 사용자가 확인해야 합니다.", "worker_git_mutation", 9);
         await checkSafeStop(projectRoot);
 
         run.currentNode = "verifier";
         await saveRun(projectRoot, run);
         await emitEvent(projectRoot, { runId: run.id, type: "node", node: "verifier", status: "running", message: "결정적 테스트·린트·타입·빌드 검증을 실행합니다." });
-        const verifier = await runVerifier(projectRoot, config, contract.verifierCommands, contract.requiredArtifacts);
+        const verifier = await runVerifier(projectRoot, config, contract.verifierCommands, contract.requiredArtifacts, { riskTier, contract });
         verifierExit = verifier.exitCode;
-        await emitEvent(projectRoot, { runId: run.id, type: "node", node: "verifier", status: verifier.ok ? "completed" : "failed", message: verifier.ok ? "결정적 검증을 통과했습니다." : "결정적 검증이 실패했습니다.", data: { exitCode: verifier.exitCode, commands: verifier.commands.map((item) => ({ command: item.command, exitCode: item.exitCode })) } });
+        await emitEvent(projectRoot, { runId: run.id, type: "node", node: "verifier", status: verifier.ok ? "completed" : "failed", message: verifier.ok ? "결정적 검증과 위험도별 강한 검증을 통과했습니다." : "결정적 검증 또는 강한 검증이 실패했습니다.", data: { exitCode: verifier.exitCode, riskTier, commands: verifier.commands.map((item) => ({ command: item.command, exitCode: item.exitCode })), gates: verifier.gates } });
         await checkSafeStop(projectRoot);
 
         run.currentNode = "post-critic";
@@ -293,7 +389,7 @@ export async function executeContract(projectRoot: string, contract: TaskContrac
         let assessment: CriticAssessment = parsedAssessment;
         let evaluation = await evaluateAssessment(contract.taskType, assessment, { workerOk: workerExit === 0, verifierOk: verifier.ok, threshold: 85 });
 
-        if ((evaluation.score >= 80 && evaluation.score <= 90) || evaluation.hardGateUnknown.length) {
+        if (needsBoundaryAdjudication(evaluation)) {
           run.currentNode = "adjudicator";
           await saveRun(projectRoot, run);
           const adjudication = await invokeWithFallback(projectRoot, config, run, "adjudicator", await criticPrompt(contract, "adjudication", { head: await gitHead(projectRoot), status: await gitStatus(projectRoot), diff: await diffText(projectRoot), verifier: verifier.summary }), controller, [workerProvider, post.route.provider], (text) => {
@@ -308,18 +404,50 @@ export async function executeContract(projectRoot: string, contract: TaskContrac
 
         finalScore = evaluation.score;
         iterationVerdict = evaluation.verdict;
+        if (riskTier === "T3" && iterationVerdict === "pass") {
+          iterationVerdict = "needs_operator";
+          evaluation = { ...evaluation, verdict: "needs_operator", reason: "T3 고위험 작업은 모든 자동 검증을 통과해도 사용자의 최종 확인이 필요합니다." };
+        }
         const fingerprint = `${evaluation.hardGateFailures.sort().join(",")}|${assessment.findings.map((item) => item.summary).sort().join("|")}`;
         previousFingerprints.push(fingerprint);
         previousScores.push(evaluation.score);
         if (previousFingerprints.length >= 2 && previousFingerprints.at(-1) === previousFingerprints.at(-2)) {
-          await appendGuardrail(projectRoot, run.id, metaResult.guardrailCandidate ?? "");
+          await appendGuardrailRecord(projectRoot, {
+            timestamp: now(),
+            runId: run.id,
+            taskType: contract.taskType,
+            lesson: metaResult.guardrailCandidate ?? "",
+            evidence: [evaluation.reason, ...assessment.findings.flatMap((item) => item.evidence).slice(0, 10)],
+            failureFingerprint: fingerprint,
+          });
           iterationVerdict = "needs_operator";
         }
         if (previousScores.length >= 3 && previousScores.at(-1)! - previousScores.at(-2)! < 3 && previousScores.at(-2)! - previousScores.at(-3)! < 3) {
           iterationVerdict = "needs_operator";
         }
-        progress = evaluation.reason;
+        const finalPacket = await makeEvidencePacket({
+          projectRoot,
+          runId: run.id,
+          iteration,
+          contract,
+          routeDecision,
+          baseHead: head,
+          currentHead: await gitHead(projectRoot),
+          gitStatus: await gitStatus(projectRoot),
+          diff: await diffText(projectRoot),
+          verifier: { ok: verifier.ok, exitCode: verifier.exitCode, summary: verifier.summary, gates: verifier.gates },
+          critic: assessment,
+          failureFingerprint: fingerprint,
+        });
+        const evidencePath = await saveEvidencePacket(projectRoot, finalPacket, "final");
+        previousEvidence = finalPacket;
+        if (iterationVerdict === "retry") {
+          const prior = previousScores.at(-2);
+          const measurableImprovement = prior !== undefined && evaluation.score - prior >= 3 && verifier.ok && evaluation.hardGateFailures.length === 0;
+          await onlineRouteDecision(projectRoot, config, run, contract, "failure", controller, finalPacket, routeDecision, { measurableImprovement, contextUtilization: run.lastWorkerContextUtilization, continuationCount: run.workerContinuationCount });
+        }
         await emitEvent(projectRoot, { runId: run.id, type: "evaluation", node: "post-critic", status: iterationVerdict, message: evaluation.reason, data: { score: evaluation.score, verdict: iterationVerdict, fingerprint, criterionScores: evaluation.criterionScores, hardGateFailures: evaluation.hardGateFailures, hardGateUnknown: evaluation.hardGateUnknown } });
+        await emitEvent(projectRoot, { runId: run.id, type: "evidence_packet", node: "post-critic", status: "completed", message: "이번 Iteration의 복구 가능한 증거 패킷을 저장했습니다.", data: { path: evidencePath } });
 
         run.currentNode = "git-checkpoint";
         await saveRun(projectRoot, run);
@@ -341,6 +469,23 @@ export async function executeContract(projectRoot: string, contract: TaskContrac
         const safeStop = error instanceof RalphError && error.code === "safe_stop";
         iterationVerdict = forced ? "interrupted_partial" : safeStop ? "interrupted" : "failed";
         await emitEvent(projectRoot, { runId: run.id, type: "failure", node: run.currentNode, status: iterationVerdict, message: redact(error instanceof Error ? error.message : String(error)), data: { code: error instanceof RalphError ? error.code : "unknown" } });
+        if (iterationDecision) {
+          try {
+            const failurePacket = await makeEvidencePacket({
+              projectRoot,
+              runId: run.id,
+              iteration,
+              contract,
+              routeDecision: iterationDecision,
+              baseHead: iterationHead,
+              currentHead: await gitHead(projectRoot),
+              gitStatus: await gitStatus(projectRoot),
+              diff: await diffText(projectRoot),
+              failureFingerprint: `${run.currentNode ?? "unknown"}:${error instanceof RalphError ? error.code : "unknown"}`,
+            });
+            await saveEvidencePacket(projectRoot, failurePacket, "failure");
+          } catch { /* Failure evidence must not hide the original error. */ }
+        }
         try {
           const commit = await checkpoint(projectRoot, { runId: run.id, task: contract.taskType, iteration, status: iterationVerdict, workerExit, verifierExit, score: finalScore, verdict: iterationVerdict });
           run.lastCheckpoint = commit;

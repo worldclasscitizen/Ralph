@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { evaluateAssessment, loadRubric } from "../src/evaluator.js";
+import { evaluateAssessment, loadRubric, needsBoundaryAdjudication } from "../src/evaluator.js";
 import type { CriticAssessment, TaskType } from "../src/types.js";
 
 interface Profile {
@@ -13,9 +13,9 @@ interface Profile {
   expectedBoundaryAdjudication: boolean;
 }
 
-describe("critic calibration", () => {
-  it("matches all 24 fixed calibration cases", async () => {
-    const fixture = JSON.parse(await readFile(resolve("assets/evals/critic-calibration-cases.json"), "utf8")) as { tasks: TaskType[]; profiles: Profile[] };
+describe("critic synthetic unit fixtures", () => {
+  it("matches all 24 synthetic scoring cases", async () => {
+    const fixture = JSON.parse(await readFile(resolve("assets/evals/critic-synthetic-unit-cases.json"), "utf8")) as { tasks: TaskType[]; profiles: Profile[] };
     let count = 0;
     for (const task of fixture.tasks) {
       const rubric = await loadRubric(task);
@@ -27,7 +27,7 @@ describe("critic calibration", () => {
         };
         const result = await evaluateAssessment(task, assessment, { workerOk: true, verifierOk: true, threshold: 85 });
         expect(result.verdict, `${task}/${profile.id}`).toBe(profile.expectedDecision);
-        expect((result.score >= 80 && result.score <= 90) || result.hardGateUnknown.length > 0, `${task}/${profile.id} boundary`).toBe(profile.expectedBoundaryAdjudication);
+        expect(needsBoundaryAdjudication(result), `${task}/${profile.id} boundary`).toBe(profile.expectedBoundaryAdjudication);
         count += 1;
       }
     }

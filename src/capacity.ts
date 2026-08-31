@@ -45,7 +45,7 @@ async function codexCapacity(): Promise<CapacitySnapshot> {
       }
     });
     child.on("error", (error) => { clearTimeout(timer); finish({ kind: "subscription", status: "unavailable", fetchedAt: new Date().toISOString(), source: "Codex App Server account/rateLimits/read", detail: error.message }); });
-    child.stdin.write(`${JSON.stringify({ id: 1, method: "initialize", params: { clientInfo: { name: "ralph", title: "Ralph CLI", version: "0.1.0-beta.0" }, capabilities: null } })}\n`);
+    child.stdin.write(`${JSON.stringify({ id: 1, method: "initialize", params: { clientInfo: { name: "ralph", title: "Ralph CLI", version: "0.2.0-beta.0" }, capabilities: null } })}\n`);
     child.stdin.write(`${JSON.stringify({ id: 2, method: "account/rateLimits/read", params: null })}\n`);
   });
 }

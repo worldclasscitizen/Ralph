@@ -2,5 +2,8 @@ export * from "./types.js";
 export * from "./contracts.js";
 export * from "./evaluator.js";
 export * from "./router.js";
+export * from "./policy.js";
+export * from "./evidence.js";
+export * from "./benchmark.js";
 export * from "./orchestrator.js";
 export * from "./providers/index.js";

@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "name": "ralph-quality-24-v1",
+  "cases": [
+    {
+      "id": "planning-low-boundaries",
+      "taskType": "planning_architecture",
+      "difficulty": "low",
+      "riskTier": "T0",
+      "request": "Document the module boundary and three acceptance checks for the greeting utility in ARCHITECTURE.md.",
+      "acceptanceCriteria": ["ARCHITECTURE.md names the public function, input, output, and three checks"],
+      "seedFiles": {"README.md": "# Greeting fixture\n", "src/greet.js": "export const greet = (name) => `Hello ${name}`;\n"},
+      "verifierCommands": ["test -f ARCHITECTURE.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -qi 'greet' ARCHITECTURE.md", "grep -qi 'acceptance' ARCHITECTURE.md"]
+    },
+    {
+      "id": "planning-medium-api",
+      "taskType": "planning_architecture",
+      "difficulty": "medium",
+      "riskTier": "T2",
+      "request": "Design a backwards-compatible pagination migration and record invariants, rollout, rollback, and verification in ARCHITECTURE.md without changing openapi.yaml.",
+      "acceptanceCriteria": ["Plan includes compatibility, rollout, rollback, observability, and invariants"],
+      "seedFiles": {"README.md": "# API fixture\n", "openapi.yaml": "openapi: 3.0.0\ninfo: {title: Fixture, version: 1.0.0}\n"},
+      "verifierCommands": ["test -f ARCHITECTURE.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'rollback|roll back' ARCHITECTURE.md", "git diff HEAD^ --exit-code -- openapi.yaml"],
+      "frozenInvariants": ["openapi.yaml"]
+    },
+    {
+      "id": "planning-high-data",
+      "taskType": "planning_architecture",
+      "difficulty": "high",
+      "riskTier": "T3",
+      "request": "Produce a failure-safe data retention architecture covering authorization, deletion auditability, restore boundaries, and operator approval.",
+      "acceptanceCriteria": ["Architecture identifies destructive boundaries and mandatory human approvals"],
+      "seedFiles": {"README.md": "# Retention fixture\n", "POLICY.md": "Retention: 30 days\n"},
+      "verifierCommands": ["test -f ARCHITECTURE.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -qi 'approval' ARCHITECTURE.md", "grep -Eqi 'audit|restore|recover' ARCHITECTURE.md"]
+    },
+    {
+      "id": "planning-critical-threat",
+      "taskType": "planning_architecture",
+      "difficulty": "critical",
+      "riskTier": "T3",
+      "request": "Write a threat-model-driven architecture for rotating authentication credentials without downtime, including frozen invariants and incident recovery.",
+      "acceptanceCriteria": ["Plan contains threats, mitigations, invariants, staged rollout, and recovery evidence"],
+      "seedFiles": {"README.md": "# Auth fixture\n", "AUTH_CONTRACT.md": "Tokens expire after 15 minutes.\n"},
+      "verifierCommands": ["test -f ARCHITECTURE.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'threat|위협' ARCHITECTURE.md", "git diff HEAD^ --exit-code -- AUTH_CONTRACT.md"],
+      "frozenInvariants": ["AUTH_CONTRACT.md"]
+    },
+
+    {
+      "id": "frontend-low-a11y",
+      "taskType": "frontend_visual",
+      "difficulty": "low",
+      "riskTier": "T1",
+      "request": "Make the button accessible with a stable label and visible keyboard focus while preserving its click behavior.",
+      "acceptanceCriteria": ["Button has an accessible name and focus-visible styling"],
+      "seedFiles": {"index.html": "<button class=save>Save</button>\n", "style.css": ".save{color:#333}\n"},
+      "verifierCommands": ["git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'aria-label|>Save<' index.html", "grep -qi 'focus-visible' style.css"]
+    },
+    {
+      "id": "frontend-medium-state",
+      "taskType": "frontend_visual",
+      "difficulty": "medium",
+      "riskTier": "T1",
+      "request": "Implement explicit loading, empty, error, and populated render states in src/view.js with accessible status messaging.",
+      "acceptanceCriteria": ["All four states render deterministically and status text is announced"],
+      "seedFiles": {"package.json": "{\"type\":\"module\"}\n", "src/view.js": "export function render(state){ return '<main></main>'; }\n"},
+      "verifierCommands": ["node --check src/view.js", "git diff --check"],
+      "hiddenVerifierCommands": ["node -e \"import('./src/view.js').then(m=>{for(const s of ['loading','empty','error','ready'])if(!m.render({kind:s}).length)process.exit(1)})\""]
+    },
+    {
+      "id": "frontend-high-responsive",
+      "taskType": "frontend_visual",
+      "difficulty": "high",
+      "riskTier": "T1",
+      "request": "Build a responsive dashboard shell that does not clip timestamps or workspace names at 320px and retains semantic navigation.",
+      "acceptanceCriteria": ["320px layout wraps without horizontal clipping and navigation remains semantic"],
+      "seedFiles": {"index.html": "<main id=app></main>\n", "style.css": "body{margin:0}\n"},
+      "verifierCommands": ["git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'nav|role=.navigation' index.html", "grep -Eqi '@media|overflow-wrap|minmax' style.css"]
+    },
+    {
+      "id": "frontend-critical-security-ui",
+      "taskType": "frontend_visual",
+      "difficulty": "critical",
+      "riskTier": "T3",
+      "request": "Implement a destructive account-deletion confirmation UI requiring an exact typed phrase, clear irreversible-impact copy, and no implicit submission.",
+      "acceptanceCriteria": ["Deletion cannot submit without exact confirmation and the warning is accessible"],
+      "seedFiles": {"index.html": "<form id=delete-account></form>\n", "delete.js": "export const canDelete = () => true;\n"},
+      "verifierCommands": ["node --check delete.js", "git diff --check"],
+      "hiddenVerifierCommands": ["node -e \"import('./delete.js').then(m=>{if(m.canDelete('wrong'))process.exit(1);if(!m.canDelete('DELETE'))process.exit(1)})\"", "grep -Eqi 'irreversible|되돌릴 수' index.html"]
+    },
+
+    {
+      "id": "backend-low-validation",
+      "taskType": "backend_core",
+      "difficulty": "low",
+      "riskTier": "T1",
+      "request": "Validate that normalizeName rejects blank values and trims valid names without changing its export.",
+      "acceptanceCriteria": ["Blank input throws and valid input is trimmed"],
+      "seedFiles": {"package.json": "{\"type\":\"module\"}\n", "src/name.js": "export const normalizeName = value => value;\n"},
+      "verifierCommands": ["node --check src/name.js", "git diff --check"],
+      "hiddenVerifierCommands": ["node -e \"import('./src/name.js').then(m=>{if(m.normalizeName(' x ')!=='x')process.exit(1);try{m.normalizeName('   ');process.exit(1)}catch{}})\""]
+    },
+    {
+      "id": "backend-medium-idempotency",
+      "taskType": "backend_core",
+      "difficulty": "medium",
+      "riskTier": "T2",
+      "request": "Make applyCommand idempotent by command ID while preserving deterministic state transitions and add tests.",
+      "acceptanceCriteria": ["Duplicate command IDs do not apply state twice and tests prove it"],
+      "seedFiles": {"package.json": "{\"type\":\"module\",\"scripts\":{\"test\":\"node --test\"}}\n", "src/command.js": "export function applyCommand(state, command){ return {...state,count:state.count+1}; }\n", "test/command.test.js": "import test from 'node:test';\n"},
+      "verifierCommands": ["npm test", "git diff --check"],
+      "hiddenVerifierCommands": ["npm test", "node -e \"import('./src/command.js').then(m=>{let s={count:0,seen:[]};s=m.applyCommand(s,{id:'a'});s=m.applyCommand(s,{id:'a'});if(s.count!==1)process.exit(1)})\""]
+    },
+    {
+      "id": "backend-high-concurrency",
+      "taskType": "backend_core",
+      "difficulty": "high",
+      "riskTier": "T2",
+      "request": "Implement a bounded async queue that preserves FIFO order, rejects invalid capacity, and never exceeds configured concurrency; add deterministic tests.",
+      "acceptanceCriteria": ["FIFO, capacity validation, and concurrency bounds are tested"],
+      "seedFiles": {"package.json": "{\"type\":\"module\",\"scripts\":{\"test\":\"node --test\"}}\n", "src/queue.js": "export class Queue {}\n", "test/queue.test.js": "import test from 'node:test';\n"},
+      "verifierCommands": ["npm test", "git diff --check"],
+      "hiddenVerifierCommands": ["npm test", "grep -Eqi 'capacity|concurrency' src/queue.js"]
+    },
+    {
+      "id": "backend-critical-authorization",
+      "taskType": "backend_core",
+      "difficulty": "critical",
+      "riskTier": "T3",
+      "request": "Implement deny-by-default project authorization without changing policy.json, including owner, member, and anonymous tests.",
+      "acceptanceCriteria": ["Unknown roles and missing identity are denied; owner/member rules are covered"],
+      "seedFiles": {"package.json": "{\"type\":\"module\",\"scripts\":{\"test\":\"node --test\"}}\n", "src/auth.js": "export const authorize = () => true;\n", "test/auth.test.js": "import test from 'node:test';\n", "policy.json": "{\"owner\":[\"read\",\"write\"],\"member\":[\"read\"]}\n"},
+      "verifierCommands": ["npm test", "git diff --check"],
+      "hiddenVerifierCommands": ["npm test", "node -e \"import('./src/auth.js').then(m=>{if(m.authorize(null,'read'))process.exit(1);if(m.authorize({role:'unknown'},'read'))process.exit(1)})\"", "git diff HEAD^ --exit-code -- policy.json"],
+      "frozenInvariants": ["policy.json"]
+    },
+
+    {
+      "id": "tdd-low-regression",
+      "taskType": "tdd_debugging",
+      "difficulty": "low",
+      "riskTier": "T1",
+      "request": "Reproduce and fix the off-by-one bug in lastIndex and add a regression test.",
+      "acceptanceCriteria": ["Regression test fails on the old implementation and lastIndex returns length minus one"],
+      "seedFiles": {"package.json": "{\"type\":\"module\",\"scripts\":{\"test\":\"node --test\"}}\n", "src/index.js": "export const lastIndex = items => items.length;\n", "test/index.test.js": "import test from 'node:test';\n"},
+      "verifierCommands": ["npm test", "git diff --check"],
+      "hiddenVerifierCommands": ["npm test", "node -e \"import('./src/index.js').then(m=>{if(m.lastIndex([1,2])!==1||m.lastIndex([])!==-1)process.exit(1)})\""]
+    },
+    {
+      "id": "tdd-medium-timeout",
+      "taskType": "tdd_debugging",
+      "difficulty": "medium",
+      "riskTier": "T1",
+      "request": "Reproduce the timeout cleanup leak, fix it, and add a deterministic fake-timer-free regression test.",
+      "acceptanceCriteria": ["Cleanup is idempotent and no timer remains after cancellation"],
+      "seedFiles": {"package.json": "{\"type\":\"module\",\"scripts\":{\"test\":\"node --test\"}}\n", "src/timer.js": "export function schedule(fn){const id=setTimeout(fn,10);return ()=>{};}\n", "test/timer.test.js": "import test from 'node:test';\n"},
+      "verifierCommands": ["npm test", "git diff --check"],
+      "hiddenVerifierCommands": ["npm test", "grep -q 'clearTimeout' src/timer.js"]
+    },
+    {
+      "id": "tdd-high-parser",
+      "taskType": "tdd_debugging",
+      "difficulty": "high",
+      "riskTier": "T2",
+      "request": "Fix the parser so malformed and deeply nested input fails predictably without changing valid output; add boundary and regression tests.",
+      "acceptanceCriteria": ["Valid, malformed, empty, and depth-limit behavior is deterministic"],
+      "seedFiles": {"package.json": "{\"type\":\"module\",\"scripts\":{\"test\":\"node --test\"}}\n", "src/parser.js": "export const parse = text => JSON.parse(text);\n", "test/parser.test.js": "import test from 'node:test';\n"},
+      "verifierCommands": ["npm test", "git diff --check"],
+      "hiddenVerifierCommands": ["npm test", "grep -Eqi 'depth|limit' src/parser.js"]
+    },
+    {
+      "id": "tdd-critical-recovery",
+      "taskType": "tdd_debugging",
+      "difficulty": "critical",
+      "riskTier": "T3",
+      "request": "Fix interrupted journal recovery so committed entries survive, partial entries are ignored, and replay remains idempotent; add corruption tests.",
+      "acceptanceCriteria": ["Recovery handles committed, partial, duplicate, and corrupt entries without data loss"],
+      "seedFiles": {"package.json": "{\"type\":\"module\",\"scripts\":{\"test\":\"node --test\"}}\n", "src/journal.js": "export const recover = lines => lines.map(JSON.parse);\n", "test/journal.test.js": "import test from 'node:test';\n"},
+      "verifierCommands": ["npm test", "git diff --check"],
+      "hiddenVerifierCommands": ["npm test", "grep -Eqi 'partial|committed|corrupt|try' src/journal.js"]
+    },
+
+    {
+      "id": "review-low-diff",
+      "taskType": "static_review",
+      "difficulty": "low",
+      "riskTier": "T0",
+      "request": "Review src/math.js for correctness and maintainability and write evidence-linked findings to REVIEW.md without modifying source.",
+      "acceptanceCriteria": ["Every finding cites a file location or states that no issue was found"],
+      "seedFiles": {"src/math.js": "export const divide = (a,b) => a/b;\n"},
+      "verifierCommands": ["test -f REVIEW.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -q 'src/math.js' REVIEW.md", "git diff HEAD^ --exit-code -- src/math.js"]
+    },
+    {
+      "id": "review-medium-security",
+      "taskType": "static_review",
+      "difficulty": "medium",
+      "riskTier": "T2",
+      "request": "Perform an evidence-only security review of the request handler and record severity, exploit condition, and remediation in REVIEW.md.",
+      "acceptanceCriteria": ["Findings distinguish evidence from uncertainty and include severity"],
+      "seedFiles": {"src/handler.js": "export const handler = req => eval(req.body.code);\n"},
+      "verifierCommands": ["test -f REVIEW.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'critical|high|severity' REVIEW.md", "grep -Eqi 'eval|code execution|injection' REVIEW.md"]
+    },
+    {
+      "id": "review-high-system",
+      "taskType": "static_review",
+      "difficulty": "high",
+      "riskTier": "T2",
+      "request": "Review queue, retry, and shutdown behavior across the three modules and produce prioritized cross-module findings with reproducible evidence.",
+      "acceptanceCriteria": ["Review covers ordering, duplicate work, backoff, and shutdown loss"],
+      "seedFiles": {"src/queue.js": "export const enqueue = x => x;\n", "src/retry.js": "export const retry = fn => fn();\n", "src/shutdown.js": "export const shutdown = () => process.exit(0);\n"},
+      "verifierCommands": ["test -f REVIEW.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -qi 'queue' REVIEW.md", "grep -qi 'shutdown' REVIEW.md", "grep -qi 'retry' REVIEW.md"]
+    },
+    {
+      "id": "review-critical-auth",
+      "taskType": "static_review",
+      "difficulty": "critical",
+      "riskTier": "T3",
+      "request": "Independently review authentication and authorization boundaries for fail-open behavior, confused deputy risk, token leakage, and missing tests; do not modify code.",
+      "acceptanceCriteria": ["Review has evidence, severity, affected boundary, and blocking recommendation"],
+      "seedFiles": {"src/auth.js": "export const allow = user => user?.role !== 'blocked';\n", "src/log.js": "export const log = token => console.log(token);\n"},
+      "verifierCommands": ["test -f REVIEW.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'fail.open|default deny|deny.by.default' REVIEW.md", "grep -Eqi 'token|secret|credential' REVIEW.md"]
+    },
+
+    {
+      "id": "delivery-low-readme",
+      "taskType": "delivery_evidence",
+      "difficulty": "low",
+      "riskTier": "T0",
+      "request": "Create DELIVERY.md with setup, one verification command, expected result, and known limitation grounded only in repository evidence.",
+      "acceptanceCriteria": ["A new developer can reproduce the verification"],
+      "seedFiles": {"README.md": "# Delivery fixture\n", "package.json": "{\"scripts\":{\"test\":\"node --test\"}}\n"},
+      "verifierCommands": ["test -f DELIVERY.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -qi 'npm test' DELIVERY.md", "grep -Eqi 'limitation|제한' DELIVERY.md"]
+    },
+    {
+      "id": "delivery-medium-impact",
+      "taskType": "delivery_evidence",
+      "difficulty": "medium",
+      "riskTier": "T0",
+      "request": "Write a quantified impact brief that clearly separates measured repository evidence, assumptions, and future targets.",
+      "acceptanceCriteria": ["Measured facts, assumptions, and targets are labeled separately"],
+      "seedFiles": {"metrics.json": "{\"beforeMs\":200,\"afterMs\":120,\"samples\":30}\n"},
+      "verifierCommands": ["test -f IMPACT.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'measured|측정' IMPACT.md", "grep -Eqi 'assumption|가정' IMPACT.md", "grep -Eqi 'target|목표' IMPACT.md"]
+    },
+    {
+      "id": "delivery-high-ui-evidence",
+      "taskType": "delivery_evidence",
+      "difficulty": "high",
+      "riskTier": "T1",
+      "request": "Produce an evaluator-ready UI evidence manifest mapping every acceptance criterion to a screenshot placeholder, route, viewport, and reproducible capture step without claiming uncaptured evidence.",
+      "acceptanceCriteria": ["Manifest has criterion, route, viewport, capture step, and honest missing-evidence state"],
+      "seedFiles": {"acceptance.json": "{\"criteria\":[\"mobile navigation\",\"error recovery\",\"empty state\"]}\n"},
+      "verifierCommands": ["test -f UI_EVIDENCE.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'viewport' UI_EVIDENCE.md", "grep -Eqi 'missing|pending|미확보|대기' UI_EVIDENCE.md"]
+    },
+    {
+      "id": "delivery-critical-audit",
+      "taskType": "delivery_evidence",
+      "difficulty": "critical",
+      "riskTier": "T3",
+      "request": "Create a release evidence dossier linking security-sensitive requirements to immutable Git, verifier, reviewer, rollback, and operator-approval evidence without exposing secrets.",
+      "acceptanceCriteria": ["Every security requirement has reproducible evidence and an explicit approval owner"],
+      "seedFiles": {"SECURITY_REQUIREMENTS.md": "- Authentication must deny unknown identities.\n- Secrets must never be logged.\n"},
+      "verifierCommands": ["test -f RELEASE_EVIDENCE.md", "git diff --check"],
+      "hiddenVerifierCommands": ["grep -Eqi 'commit|git' RELEASE_EVIDENCE.md", "grep -Eqi 'rollback|recover' RELEASE_EVIDENCE.md", "grep -Eqi 'approval|owner' RELEASE_EVIDENCE.md"]
+    }
+  ]
+}

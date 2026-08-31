@@ -12,6 +12,7 @@ export interface StatePaths {
   sessions: string;
   progress: string;
   guardrails: string;
+  guardrailsLedger: string;
   locks: string;
   dashboard: string;
 }
@@ -26,6 +27,7 @@ export async function statePaths(projectRoot: string): Promise<StatePaths> {
     sessions: join(root, "sessions"),
     progress: join(root, "progress.jsonl"),
     guardrails: join(root, "guardrails.md"),
+    guardrailsLedger: join(root, "guardrails.jsonl"),
     locks: join(root, "locks"),
     dashboard: join(root, "dashboard"),
   };

@@ -9,8 +9,12 @@ export const TASK_TYPES = [
 
 export type TaskType = (typeof TASK_TYPES)[number];
 export type ExecutionProfile = "balanced" | "quality" | "fast" | "budget";
+export type RiskTier = "T0" | "T1" | "T2" | "T3";
+export type SessionPolicy = "fresh" | "continue";
+export type RouteMode = "adaptive" | "fixed";
 export type AgentRole =
   | "contractPlanner"
+  | "router"
   | "critic"
   | "metaPrompter"
   | "worker"
@@ -30,8 +34,11 @@ export interface TaskContract {
   constraints: string[];
   executionProfile: ExecutionProfile;
   projectRoot: string;
+  riskTier?: RiskTier;
   modelOverride?: string;
+  initialRouteDecision?: RouteDecision;
   routeSnapshot?: ProjectConfig["routes"];
+  routePolicySnapshot?: ProjectConfig["routePolicies"];
   approvedCatalogVersion?: number;
   approvedHash?: string;
   approvedAt?: string;
@@ -78,6 +85,7 @@ export interface AgentUsage {
   reasoningTokens?: number;
   totalTokens?: number;
   estimatedCostUsd?: number;
+  contextWindowTokens?: number;
 }
 
 export interface AgentResult {
@@ -213,8 +221,73 @@ export interface RouteEntry {
   displayName: string;
   reasoningEffort: string;
   score: number;
+  qualityScore?: number;
+  latencyScore?: number;
+  costScore?: number;
   source: "automatic" | "override";
   degradedCapabilities?: string[];
+}
+
+export interface RoutePolicy {
+  mode: RouteMode;
+  candidates?: RouteEntry[];
+  hardPin?: {
+    connectionId: string;
+    modelId: string;
+    reasoningEffort?: string;
+  };
+}
+
+export interface RouteDecision {
+  boundary: "contract_approval" | "iteration_start" | "failure" | "boundary_adjudication";
+  taskType: TaskType;
+  riskTier: RiskTier;
+  connectionId: string;
+  provider: string;
+  modelId: string;
+  displayName: string;
+  reasoningEffort: string;
+  sessionPolicy: SessionPolicy;
+  verificationTier: RiskTier;
+  rationale: string;
+  source: "hard_pin" | "online_router" | "deterministic_fallback";
+  decidedAt: string;
+  policyHash: string;
+}
+
+export interface GuardrailRecord {
+  timestamp: string;
+  runId: string;
+  taskType: TaskType;
+  lesson: string;
+  evidence: string[];
+  failureFingerprint?: string;
+}
+
+export interface EvidencePacket {
+  schemaVersion: 1;
+  runId: string;
+  iteration: number;
+  taskType: TaskType;
+  riskTier: RiskTier;
+  contractHash: string;
+  policyHash: string;
+  baseHead: string;
+  currentHead: string;
+  gitStatus: string;
+  diffSummary: string;
+  routeDecision: RouteDecision;
+  verifier?: {
+    ok: boolean;
+    exitCode: number;
+    summary: string;
+    gates?: Array<{ id: string; status: "pass" | "fail" | "not_applicable"; evidence: string[] }>;
+  };
+  critic?: CriticAssessment;
+  failureFingerprint?: string;
+  guardrails: GuardrailRecord[];
+  unresolvedItems: string[];
+  createdAt: string;
 }
 
 export interface ProjectConfig {
@@ -225,7 +298,16 @@ export interface ProjectConfig {
   connections: ConnectionConfig[];
   routes: Record<TaskType | AgentRole, RouteEntry[]>;
   overrides: Partial<Record<TaskType | AgentRole, RouteEntry[]>>;
+  routePolicies?: Partial<Record<TaskType | AgentRole, RoutePolicy>>;
   verifierCommands: string[];
+  verification?: {
+    frozenInvariants: string[];
+    coverageBaseline?: {
+      lines?: number;
+      branches?: number;
+      functions?: number;
+    };
+  };
   catalogVersion: number;
 }
 
@@ -249,6 +331,10 @@ export interface RunState {
   verdict?: RunVerdict;
   lastCheckpoint?: string;
   stopRequested?: boolean;
+  riskTier?: RiskTier;
+  lastRouteDecision?: RouteDecision;
+  lastWorkerContextUtilization?: number;
+  workerContinuationCount?: number;
 }
 
 export interface RalphEvent {

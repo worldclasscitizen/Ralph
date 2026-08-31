@@ -12,6 +12,7 @@ import { TASK_TYPES } from "./types.js";
 
 const ROLE_TASK: Record<AgentRole, TaskType> = {
   contractPlanner: "planning_architecture",
+  router: "planning_architecture",
   critic: "static_review",
   metaPrompter: "planning_architecture",
   worker: "backend_core",
@@ -25,14 +26,11 @@ const WEIGHTS: Record<ExecutionProfile, { fit: number; reliability: number; dive
   budget: { fit: 0.35, reliability: 0.15, diversity: 0, speed: 0.05, cost: 0.45 },
 };
 
-function scoreModel(model: CatalogModel, task: TaskType, preset: ExecutionProfile): number {
-  const weights = WEIGHTS[preset];
+function scoreModel(model: CatalogModel, task: TaskType): { quality: number; speed: number; cost: number } {
   const fit = model.taskAffinity[task] ?? (model.capabilities.coding + model.capabilities.reasoning) / 2;
   const speed = Math.max(0, 100 - model.latencyTier * 20);
   const cost = Math.max(0, 100 - model.costTier * 20);
-  return Number(
-    (fit * weights.fit + model.reliabilityBaseline * weights.reliability + speed * weights.speed + cost * weights.cost).toFixed(2),
-  );
+  return { quality: Number((fit * 0.75 + model.reliabilityBaseline * 0.25).toFixed(2)), speed, cost };
 }
 
 function supportsTask(model: CatalogModel, task: TaskType): boolean {
@@ -62,16 +60,21 @@ function routeFor(
       connections
         .filter((connection) => connection.enabled && connectionSupportsModel(connection, model))
         .filter((connection) => !connection.models || connection.models.includes(model.modelId))
-        .map((connection) => ({
+        .map((connection) => {
+          const metrics = scoreModel(model, task);
+          return ({
           connectionId: connection.id,
           provider: model.provider,
           modelId: model.modelId,
           displayName: model.displayName,
           reasoningEffort: model.recommendedEffort,
-          score: scoreModel(model, task, preset),
+          score: metrics.quality,
+          qualityScore: metrics.quality,
+          latencyScore: metrics.speed,
+          costScore: metrics.cost,
           source: "automatic" as const,
           ...(supportsTask(model, task) ? {} : { degradedCapabilities: ["vision"] }),
-        })),
+        });}),
     );
   const capable = allCandidates.filter((candidate) => !candidate.degradedCapabilities?.length);
   const candidates = capable.length ? capable : allCandidates;
@@ -79,16 +82,26 @@ function routeFor(
   const chosen: RouteEntry[] = [];
   const usedProviders = new Set<string>();
   const remaining = [...candidates];
+  const maximumQuality = Math.max(...remaining.map((item) => item.qualityScore ?? item.score));
   while (chosen.length < 3 && remaining.length) {
     const diversityWeight = WEIGHTS[preset].diversity * 100;
     remaining.sort((a, b) => {
-      const aScore = a.score + (chosen.length > 0 && !usedProviders.has(a.provider) ? diversityWeight : 0);
-      const bScore = b.score + (chosen.length > 0 && !usedProviders.has(b.provider) ? diversityWeight : 0);
-      return bScore - aScore || a.connectionId.localeCompare(b.connectionId) || a.modelId.localeCompare(b.modelId);
+      const aBand = Math.max(0, Math.ceil((maximumQuality - (a.qualityScore ?? a.score)) / 2) - 1);
+      const bBand = Math.max(0, Math.ceil((maximumQuality - (b.qualityScore ?? b.score)) / 2) - 1);
+      if (aBand !== bBand) return aBand - bBand;
+      const secondary = (item: RouteEntry) => preset === "fast"
+        ? item.latencyScore ?? 0
+        : preset === "budget"
+          ? item.costScore ?? 0
+          : preset === "quality"
+            ? item.qualityScore ?? item.score
+            : (item.qualityScore ?? item.score) * 0.8 + (item.latencyScore ?? 0) * 0.1 + (item.costScore ?? 0) * 0.1;
+      const aScore = secondary(a) + (chosen.length > 0 && !usedProviders.has(a.provider) ? diversityWeight : 0);
+      const bScore = secondary(b) + (chosen.length > 0 && !usedProviders.has(b.provider) ? diversityWeight : 0);
+      return bScore - aScore || (b.qualityScore ?? b.score) - (a.qualityScore ?? a.score) || a.connectionId.localeCompare(b.connectionId) || a.modelId.localeCompare(b.modelId);
     });
     const candidate = remaining.shift()!;
-    const effectiveScore = candidate.score + (chosen.length > 0 && !usedProviders.has(candidate.provider) ? diversityWeight : 0);
-    chosen.push({ ...candidate, score: Number(effectiveScore.toFixed(2)) });
+    chosen.push(candidate);
     usedProviders.add(candidate.provider);
   }
   return chosen;
@@ -102,7 +115,7 @@ export function buildRoutes(
 ): ProjectConfig["routes"] {
   const routes = {} as ProjectConfig["routes"];
   for (const task of TASK_TYPES) routes[task] = overrides[task] ?? routeFor(catalog, connections, task, preset);
-  for (const role of ["contractPlanner", "critic", "metaPrompter", "worker", "adjudicator"] as AgentRole[]) {
+  for (const role of ["contractPlanner", "router", "critic", "metaPrompter", "worker", "adjudicator"] as AgentRole[]) {
     routes[role] = overrides[role] ?? routeFor(catalog, connections, ROLE_TASK[role], preset);
   }
   return routes;
@@ -118,7 +131,9 @@ export function explainRoutes(config: ProjectConfig): Record<string, unknown> {
         model: entry.modelId,
         displayName: entry.displayName,
         effort: entry.reasoningEffort,
-        score: entry.score,
+        qualityScore: entry.qualityScore ?? entry.score,
+        latencyScore: entry.latencyScore,
+        costScore: entry.costScore,
         source: entry.source,
         ...(entry.degradedCapabilities?.length ? { degradedCapabilities: entry.degradedCapabilities } : {}),
       })),

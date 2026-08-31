@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import type { ConnectionConfig, ExecutionProfile, ProjectConfig } from "./types.js";
 import { commandExists } from "./util.js";
 import { buildRoutes } from "./router.js";
@@ -100,7 +100,9 @@ export async function createProjectConfig(
     connections,
     routes: buildRoutes(catalog, connections, preset),
     overrides: {},
+    routePolicies: {},
     verifierCommands: await inferVerifierCommands(projectRoot),
+    verification: { frozenInvariants: await inferFrozenInvariants(projectRoot) },
     catalogVersion: catalog.version,
   };
   config = { ...config, connections: await syncAuthentication(config) };
@@ -108,6 +110,16 @@ export async function createProjectConfig(
   config = { ...config, connections: discoveredConnections, routes: buildRoutes(catalog, discoveredConnections, preset) };
   await saveConfig(projectRoot, config);
   return config;
+}
+
+async function inferFrozenInvariants(projectRoot: string): Promise<string[]> {
+  const candidates = ["openapi.json", "openapi.yaml", "openapi.yml", "schema.prisma", "prisma/schema.prisma"];
+  const found: string[] = [];
+  for (const candidate of candidates) {
+    try { await access(join(projectRoot, candidate)); found.push(candidate); }
+    catch { /* Optional invariant file. */ }
+  }
+  return found;
 }
 
 async function inferVerifierCommands(projectRoot: string): Promise<string[]> {
@@ -122,6 +134,7 @@ async function inferVerifierCommands(projectRoot: string): Promise<string[]> {
 }
 
 export async function setPreset(config: ProjectConfig, preset: ExecutionProfile): Promise<ProjectConfig> {
+  config = normalizeProjectConfig(config);
   const catalog = await loadCatalog();
   return {
     ...config,
@@ -132,6 +145,7 @@ export async function setPreset(config: ProjectConfig, preset: ExecutionProfile)
 }
 
 export async function refreshProjectConfig(config: ProjectConfig, preset: ExecutionProfile): Promise<ProjectConfig> {
+  config = normalizeProjectConfig(config);
   const catalog = await loadCatalog();
   const connections = await syncAuthentication(config);
   const authChanged = connections.some((connection, index) => connection.enabled !== config.connections[index]?.enabled);
@@ -142,5 +156,16 @@ export async function refreshProjectConfig(config: ProjectConfig, preset: Execut
     connections,
     routes: buildRoutes(catalog, connections, preset, config.overrides),
     catalogVersion: catalog.version,
+  };
+}
+
+export function normalizeProjectConfig(config: ProjectConfig): ProjectConfig {
+  const routes = config.routes as ProjectConfig["routes"] & { router?: ProjectConfig["routes"]["contractPlanner"] };
+  if (!routes.router) routes.router = routes.contractPlanner ?? routes.metaPrompter ?? [];
+  return {
+    ...config,
+    routes,
+    routePolicies: config.routePolicies ?? {},
+    verification: config.verification ?? { frozenInvariants: [] },
   };
 }

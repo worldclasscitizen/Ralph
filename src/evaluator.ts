@@ -7,7 +7,7 @@ const ASSET_ROOT = fileURLToPath(new URL("../assets", import.meta.url));
 const FACTORS = { absent: 0, partial: 0.5, verified: 0.8, complete: 1 } as const;
 
 interface Rubric {
-  criteria: Array<{ id: string; label: string; weight: number; guidance: string }>;
+  criteria: Array<{ id: string; label: string; weight: number; guidance: string; anchors?: Record<"absent" | "partial" | "verified" | "complete", string> }>;
   hardGates: Array<{ id: string; label: string; guidance: string }>;
 }
 
@@ -16,7 +16,19 @@ export async function loadRubric(task: TaskType): Promise<{ base: Rubric; task: 
     readFile(join(ASSET_ROOT, "rubrics", "base.json"), "utf8"),
     readFile(join(ASSET_ROOT, "rubrics", `${task}.json`), "utf8"),
   ]);
-  return { base: JSON.parse(base) as Rubric, task: JSON.parse(taskRubric) as Rubric };
+  const addAnchors = (rubric: Rubric): Rubric => ({
+    ...rubric,
+    criteria: rubric.criteria.map((criterion) => ({
+      ...criterion,
+      anchors: criterion.anchors ?? {
+        absent: `${criterion.label}을 뒷받침하는 구현 또는 증거가 없거나 증거와 모순됩니다.`,
+        partial: `${criterion.label}의 일부가 구현됐지만 핵심 경로 또는 결정적 증거가 부족합니다.`,
+        verified: `${criterion.label}의 핵심 경로가 결정적 증거로 확인됐고 경미한 부족만 남았습니다.`,
+        complete: `${criterion.label}이 승인 범위·경계 조건·재현 가능한 증거까지 완전히 충족됩니다.`,
+      },
+    })),
+  });
+  return { base: addAnchors(JSON.parse(base) as Rubric), task: addAnchors(JSON.parse(taskRubric) as Rubric) };
 }
 
 export async function evaluateAssessment(
@@ -79,4 +91,9 @@ export function validateAssessment(value: unknown): value is CriticAssessment {
   return input.criteria.every((item) => item && typeof item.id === "string" && ["absent", "partial", "verified", "complete"].includes(item.level) && evidence(item.evidence))
     && input.hardGates.every((item) => item && typeof item.id === "string" && ["pass", "fail", "unknown"].includes(item.status) && evidence(item.evidence))
     && input.findings.every((item) => item && ["low", "medium", "high", "critical"].includes(item.severity) && typeof item.summary === "string" && item.summary.trim().length > 0 && evidence(item.evidence));
+}
+
+export function needsBoundaryAdjudication(result: EvaluationResult): boolean {
+  if (result.hardGateUnknown.length > 0) return true;
+  return result.hardGateFailures.length === 0 && result.score >= 80 && result.score <= 90;
 }

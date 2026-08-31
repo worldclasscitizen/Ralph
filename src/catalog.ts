@@ -9,9 +9,9 @@ const ASSET_ROOT = fileURLToPath(new URL("../assets", import.meta.url));
 const BUNDLED_CATALOG = join(ASSET_ROOT, "catalog.json");
 const BUNDLED_SIGNATURE = join(ASSET_ROOT, "catalog.sig");
 const DEFAULT_CATALOG_URL =
-  "https://github.com/worldclasscitizen/ralph/releases/latest/download/catalog.json";
+  "https://github.com/worldclasscitizen/multi-agent-ralph/releases/latest/download/catalog.json";
 const DEFAULT_SIGNATURE_URL =
-  "https://github.com/worldclasscitizen/ralph/releases/latest/download/catalog.sig";
+  "https://github.com/worldclasscitizen/multi-agent-ralph/releases/latest/download/catalog.sig";
 const MAX_CATALOG_BYTES = 500_000;
 
 // 릴리스 서명 전용 private key는 저장소에 두지 않습니다.
