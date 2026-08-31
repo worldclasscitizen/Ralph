@@ -1,0 +1,3 @@
+Run the platform-neutral Ralph CLI for this request: `$ARGUMENTS`.
+
+Resolve the absolute Git project root, run `ralph doctor`, and pipe the request to `ralph draft --stdin --json`. Run `ralph config explain --profile <contract.executionProfile>` to obtain the exact model routes. Show the task contract and relevant route, then wait for my explicit approval. Only after approval, pipe the unchanged JSON contract to `ralph run --contract-stdin --yes --events ndjson`. Do not approve for me, do not duplicate the loop inside Claude Code, and report only observable events, verifier evidence, Git checkpoints, and the final verdict.

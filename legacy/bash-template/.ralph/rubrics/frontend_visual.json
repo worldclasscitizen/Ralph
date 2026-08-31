@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "task": "frontend_visual",
+  "name": "UI/UX 프론트엔드 및 시각 검증",
+  "criteria": [
+    {"id": "visual_requirement_fidelity", "label": "시각 요구사항 정합성", "weight": 20, "guidance": "실제 UI가 명세와 디자인 의도를 충족하는지 평가합니다."},
+    {"id": "core_flow_states", "label": "핵심 흐름과 상태", "weight": 15, "guidance": "정상·로딩·빈 상태·오류 상태와 핵심 사용자 경로를 평가합니다."},
+    {"id": "responsive_accessibility", "label": "반응형과 접근성", "weight": 15, "guidance": "지정 viewport, 키보드 접근, 의미 구조와 읽기 가능성을 평가합니다."},
+    {"id": "capture_manifest", "label": "실제 캡처와 재현 정보", "weight": 10, "guidance": "route, viewport, seed, 사용자 역할, commit이 연결된 실제 캡처 증거를 평가합니다."}
+  ],
+  "hardGates": [
+    {"id": "required_ui_evidence_missing", "label": "필수 UI 캡처 또는 재현 route 누락", "guidance": "UI 완료를 평가해야 하는데 실제 캡처나 재현 가능한 route가 없으면 실패입니다."}
+  ]
+}

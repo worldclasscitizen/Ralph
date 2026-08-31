@@ -1,62 +1,71 @@
-# 다른 프로젝트에 도입하기
+# 프로젝트 도입과 일상 사용
 
-이 템플릿은 두 가지 방식으로 사용할 수 있습니다.
-
-## 1. 새 프로젝트의 기반으로 사용
-
-저장소를 fork하거나 template repository에서 새 저장소를 만든 뒤 제품 코드를 추가합니다. 이 방식은 루프 제어 파일과 Git 안전 정책을 처음부터 유지하기 가장 쉽습니다.
-
-1. 개인 설정 예제를 실제 파일로 복사합니다.
-2. 사용할 Provider와 모델만 남깁니다.
-3. builtin CLI에 로그인하거나 직접 API 키를 `.env`에 넣습니다.
-4. 프로젝트 검증 명령을 연결합니다.
-5. `PROMPT.md`를 AI와 함께 작성하고 기준 커밋을 만듭니다.
-6. `--check`, `--smoke`, 실제 run 순서로 확인합니다.
-
-## 2. 기존 Git 프로젝트에 설치
-
-템플릿 저장소 밖에서 다음 명령을 실행합니다.
+## 처음 한 번
 
 ```bash
-./scripts/install.sh /absolute/path/to/existing-project
+npm install -g @worldclasscitizen/ralph
+cd /absolute/path/to/git-project
+ralph init
+ralph doctor
 ```
 
-설치기는 다음 원칙을 지킵니다.
+`ralph init`은 프로젝트 루트에 제어 파일을 복사하지 않습니다. `git rev-parse --git-path ralph`로 찾은 Git 내부 경로에 프로젝트 설정과 실행 증거를 만듭니다. 전역 Provider 연결 정보는 운영체제 사용자 설정과 자격 증명 저장소에 둡니다.
 
-- 대상이 Git 저장소인지 확인합니다.
-- 기존 `.ralph` 또는 `.antigravity`가 있으면 덮어쓰지 않고 중단합니다.
-- 오케스트레이션 디렉터리와 대시보드 문서만 복사합니다.
-- 대상의 `README.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`는 건드리지 않습니다.
-- 대상에 `.env.example`이 이미 있으면 Provider 예시를 `.env.ralph.example`로 복사합니다.
-- 필요한 ignore 규칙은 구분된 블록으로 `.gitignore`에 한 번만 추가합니다.
-- `RALPH_START_HERE.md`를 설치해 대상 프로젝트의 AI가 온보딩을 시작할 위치를 제공합니다.
+팀원은 저장소를 clone한 뒤 각자의 컴퓨터에서 `ralph init`과 Provider 로그인을 수행합니다. 모델 접근 권한과 구독은 공유되지 않으며 팀 저장소에 개인 fallback JSON을 커밋하지 않습니다.
 
-설치 후 프로젝트의 기존 에이전트 안내 파일에는 다음 한 줄만 사람이 맞는 위치에 추가합니다.
-
-> Ralph 작업을 준비하거나 실행할 때는 먼저 `RALPH_START_HERE.md`를 읽습니다.
-
-## 프로젝트 검증 명령 연결
-
-기본 `.ralph/verify-project.sh`는 루프 자체를 검증한 뒤 루트 `package.json`에 존재하는 `test`, `lint`, `typecheck`, `build` 스크립트를 실행합니다.
-
-다른 스택이나 별도 명령은 개인 `.ralph/commands.local.sh`에 다음처럼 지정할 수 있습니다.
+## 새 작업
 
 ```bash
-export RALPH_VERIFY_CMD='make verify'
+ralph run "자연어 작업 요청"
 ```
 
-검증 명령은 비대화형이어야 하고 실패할 때 0이 아닌 종료 코드를 반환해야 합니다. 테스트가 없는 프로젝트에서 단순히 성공하는 명령을 넣으면 Critic의 근거가 약해지고 불필요한 반복 또는 잘못된 통과가 생깁니다.
+1. `contractPlanner`가 자연어를 한 작업의 계약으로 만들고 독립 Contract Critic이 범위·완료 기준·검증 가능성을 확인합니다.
+2. Ralph가 포함·제외 범위, 완료 기준, 위험도, verifier와 모델 경로를 표시합니다.
+3. 사용자가 승인하면 코드를 수정합니다.
+4. Pre-Critic → Online Router → EvidencePacket → Meta → Worker → 위험도별 Verifier → Post-Critic이 실행됩니다.
+5. 통과선 경계에서만 다른 Provider 재심을 시도합니다.
+6. 매 Iteration의 상태를 로컬 Git checkpoint로 남깁니다.
+7. `pass`, `needs_operator`, `failed`, `interrupted` 중 하나로 끝납니다.
 
-## 도입 직후 체크리스트
+한 run에는 하나의 독립적으로 검증 가능한 작업만 넣습니다. 목표가 크게 바뀌면 현재 run을 안전 중단하고 새 자연어 요청으로 새 계약을 만듭니다.
 
-- [ ] `.antigravity/config.local.json`에 실제 모델만 있습니다.
-- [ ] `.ralph/commands.local.sh`의 모든 선택 alias가 실행 가능합니다.
-- [ ] `.env`는 Git에서 제외되고 비밀값이 다른 파일에 없습니다.
-- [ ] `.ralph/verify-project.sh` 또는 `RALPH_VERIFY_CMD`가 실제 프로젝트를 검사합니다.
-- [ ] `.ralph/PROMPT.md`에는 절대 프로젝트 경로와 단일 작업이 있습니다.
-- [ ] 기준 커밋 뒤 working tree가 깨끗합니다.
-- [ ] 대시보드가 `127.0.0.1`에서만 열립니다.
+연결한 모델이 많아도 여섯 체인을 직접 작성할 필요는 없습니다. `ralph config route set`으로 후보만 제한하거나 fixed 순서를 지정할 수 있고, `ralph config route pin`으로 정확한 연결·모델·effort를 강제할 수 있습니다.
 
-## 업데이트 전략
+## AI 환경에서 시작
 
-이미 도입한 프로젝트는 설치기를 다시 실행해 덮어쓰지 않습니다. 템플릿의 새 버전을 별도 clone한 뒤 `.ralph`, `.antigravity`, 문서 변경을 diff로 검토하고 프로젝트 고유 verifier·model alias·guardrail을 보존하면서 선택적으로 병합합니다.
+```bash
+ralph integrations install
+```
+
+Codex `$ralph`, Claude Code `/ralph`, Antigravity `/ralph`, Gemini CLI Skill은 모두 같은 CLI를 호출합니다. AI는 자연어와 현재 절대 경로를 전달하고 계약을 설명하지만 사용자 대신 승인하지 않습니다.
+
+## CI와 비대화형 프로토콜
+
+```bash
+printf '%s' "$REQUEST" | ralph draft --project /abs/project --stdin --json
+printf '%s' "$APPROVED_CONTRACT" | ralph run --project /abs/project --contract-stdin --yes --events ndjson
+ralph status --project /abs/project --json
+```
+
+JSON·NDJSON 모드에서 stdout은 기계 판독 데이터 전용이고 사람용 안내와 오류는 stderr로 분리됩니다. `--yes`는 사용자가 외부 UI에서 이미 승인했음을 전달하는 명시적 승인 신호입니다.
+
+## 업데이트
+
+```bash
+npm update -g @worldclasscitizen/ralph
+ralph doctor
+ralph catalog diff
+```
+
+Ralph는 매 실행마다 원격 카탈로그를 기다리지 않습니다. 24시간 이내에는 네트워크를 사용하지 않고, 오래된 cache는 최대 3초의 제한된 확인 뒤 검증된 이전 카탈로그로 계속 동작합니다.
+
+## 제거
+
+npm 패키지를 지워도 프로젝트 코드에는 영향이 없습니다.
+
+```bash
+ralph integrations uninstall
+npm uninstall -g @worldclasscitizen/ralph
+```
+
+Git 내부 `ralph/` 상태는 실행 증거와 복구 정보이므로 필요 여부를 확인한 뒤 직접 보관하거나 삭제합니다.

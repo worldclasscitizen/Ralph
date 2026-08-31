@@ -1,3 +1,3 @@
 # Claude entry point
 
-먼저 `START_HERE.md`를 읽고 그 순서대로 사용자를 온보딩합니다. Claude builtin 연결은 `.ralph/claude-builtin-agent.sh`가 Claude Code의 저장된 Claude.ai 로그인을 사용하며, 실제 모델 선택과 fallback chain은 `.antigravity/config.local.json`에 둡니다. 작업 계약과 실행 승인을 받기 전에는 Ralph Loop를 시작하지 않습니다.
+먼저 `START_HERE.md`를 읽습니다. Claude Code는 Ralph의 선택적 입력·표시 계층이며 루프 오퍼레이터가 아닙니다. `/ralph` 통합을 쓸 때도 사용자 요청을 동일한 `ralph draft`와 `ralph run` CLI에 전달하고, 계약을 보여준 뒤 명시적 승인을 기다립니다. Claude.ai 저장 로그인과 Anthropic API 연결은 서로 다른 connection ID로 취급합니다.

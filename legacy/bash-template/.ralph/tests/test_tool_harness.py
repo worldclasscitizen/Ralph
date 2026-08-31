@@ -357,7 +357,7 @@ class ToolHarnessTests(unittest.TestCase):
                 "assert 'ANTHROPIC_AUTH_TOKEN' not in os.environ\n"
                 "assert 'ANTHROPIC_BASE_URL' not in os.environ\n"
                 "assert 'ANTHROPIC_DEFAULT_OPUS_MODEL' not in os.environ\n"
-                "assert '--model' in sys.argv and 'claude-opus-5' in sys.argv\n"
+                "assert '--model' in sys.argv and 'claude-opus-4-6' in sys.argv\n"
                 "assert '--effort' in sys.argv and 'max' in sys.argv\n"
                 "sys.stdin.read()\n"
                 "print(json.dumps({'result':'CLAUDE_BUILTIN_OK','usage':{'input_tokens':21,'output_tokens':8,'total_tokens':29}}))\n",
@@ -379,7 +379,7 @@ class ToolHarnessTests(unittest.TestCase):
                 }
             )
             completed = subprocess.run(
-                [str(RALPH_DIR / "claude-builtin-agent.sh"), "claude-opus-5", "max", "plan"],
+                [str(RALPH_DIR / "claude-builtin-agent.sh"), "claude-opus-4-6", "max", "plan"],
                 input="smoke",
                 text=True,
                 capture_output=True,

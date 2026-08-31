@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "task": "delivery_evidence",
+  "name": "배포·인수 증거 및 결과 문서",
+  "criteria": [
+    {"id": "artifact_consistency", "label": "산출물 정합성", "weight": 15, "guidance": "제공한 산출물이 실제 구현, 실행 환경, 버전과 일치하는지 평가합니다."},
+    {"id": "quantitative_impact", "label": "정량 Impact 근거", "weight": 15, "guidance": "baseline, 표본수, 측정일, 계산식과 한계가 명시됐는지 평가합니다."},
+    {"id": "claim_evidence_traceability", "label": "주장과 증거 추적성", "weight": 15, "guidance": "각 핵심 주장이 코드·테스트·캡처·측정 자료와 연결되는지 평가합니다."},
+    {"id": "delivery_clarity", "label": "문서 구조와 결과 전달", "weight": 15, "guidance": "검토자가 문제, 해결, 범위, 기술, 결과를 빠르게 검증할 수 있는지 평가합니다."}
+  ],
+  "hardGates": [
+    {"id": "unsupported_quantitative_claim", "label": "근거 없는 정량 주장", "guidance": "출처·표본수·계산식 없는 수치를 사실처럼 주장하면 실패입니다."},
+    {"id": "delivery_artifact_missing", "label": "필수 산출물 누락", "guidance": "완료를 주장하면서 핵심 실행 결과나 manifest가 없으면 실패입니다."},
+    {"id": "scope_incomplete", "label": "승인 범위 미완성", "guidance": "PROMPT.md의 필수 범위 중 하나를 임시 구현으로 두고 완성이라 주장하면 실패입니다."}
+  ]
+}
