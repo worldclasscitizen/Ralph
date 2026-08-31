@@ -19,15 +19,17 @@ ralph doctor
 ralph run "자연어 작업 요청"
 ```
 
-1. `contractPlanner`가 자연어를 한 작업의 계약으로 만듭니다.
-2. Ralph가 포함·제외 범위, 완료 기준, verifier와 모델 경로를 표시합니다.
+1. `contractPlanner`가 자연어를 한 작업의 계약으로 만들고 독립 Contract Critic이 범위·완료 기준·검증 가능성을 확인합니다.
+2. Ralph가 포함·제외 범위, 완료 기준, 위험도, verifier와 모델 경로를 표시합니다.
 3. 사용자가 승인하면 코드를 수정합니다.
-4. Critic → Meta → Worker → Verifier → Post-Critic이 실행됩니다.
+4. Pre-Critic → Online Router → EvidencePacket → Meta → Worker → 위험도별 Verifier → Post-Critic이 실행됩니다.
 5. 통과선 경계에서만 다른 Provider 재심을 시도합니다.
 6. 매 Iteration의 상태를 로컬 Git checkpoint로 남깁니다.
 7. `pass`, `needs_operator`, `failed`, `interrupted` 중 하나로 끝납니다.
 
 한 run에는 하나의 독립적으로 검증 가능한 작업만 넣습니다. 목표가 크게 바뀌면 현재 run을 안전 중단하고 새 자연어 요청으로 새 계약을 만듭니다.
+
+연결한 모델이 많아도 여섯 체인을 직접 작성할 필요는 없습니다. `ralph config route set`으로 후보만 제한하거나 fixed 순서를 지정할 수 있고, `ralph config route pin`으로 정확한 연결·모델·effort를 강제할 수 있습니다.
 
 ## AI 환경에서 시작
 

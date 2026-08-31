@@ -2,7 +2,7 @@
 
 ## 서명 bootstrap 카탈로그
 
-아래 ID만 현재 `0.1.0-beta`의 자동 경로 후보입니다. 카탈로그는 출시 후 GitHub Releases의 서명된 JSON으로 갱신되며, 출시일로부터 6개월이 지난 모델은 자동 후보에서 제외됩니다.
+아래 ID만 현재 `0.2.0-beta`의 자동 경로 후보입니다. 카탈로그는 출시 후 GitHub Releases의 서명된 JSON으로 갱신되며, 출시일로부터 6개월이 지난 모델은 자동 후보에서 제외됩니다.
 
 | Provider·연결 | 공식 Model ID | 기본 effort | 용도 |
 |---|---|---|---|
@@ -23,10 +23,10 @@ Anthropic 최신 공개 라인업과 effort는 [Claude Models overview](https://
 
 | Adapter | 인증 | 실행 방식 | 잔여량·잔액 |
 |---|---|---|---|
-| `codex-builtin` | Codex 저장 로그인 | `codex exec` exact session | Codex App Server 구조화 rate limit |
-| `claude-code-builtin` | Claude.ai 저장 로그인 | `claude --print` exact session | 정확한 자동 조회 미지원 |
-| `antigravity-builtin` | Antigravity 저장 로그인 | `agy` exact conversation | `/usage`에서 직접 확인, TUI 스크래핑 금지 |
-| `gemini-cli-builtin` | Gemini CLI 저장 로그인 | headless JSON + exact session resume | 정확한 자동 조회 미지원 |
+| `codex-builtin` | Codex 저장 로그인 | `codex exec`; 정책이 허용할 때만 exact session resume | Codex App Server 구조화 rate limit |
+| `claude-code-builtin` | Claude.ai 저장 로그인 | `claude --print`; 정책이 허용할 때만 exact session resume | 정확한 자동 조회 미지원 |
+| `antigravity-builtin` | Antigravity 저장 로그인 | `agy`; 정책이 허용할 때만 exact conversation resume | `/usage`에서 직접 확인, TUI 스크래핑 금지 |
+| `gemini-cli-builtin` | Gemini CLI 저장 로그인 | headless JSON; 정책이 허용할 때만 exact session resume | 정확한 자동 조회 미지원 |
 | `openai-api` | OS 저장소 또는 `OPENAI_API_KEY` | Responses API + 제한 도구 | 공식 잔액 API 없으면 조회 불가 |
 | `anthropic-api` | OS 저장소 또는 `ANTHROPIC_API_KEY` | Messages API + 제한 도구 | 공식 잔액 API 없으면 조회 불가 |
 | `gemini-api` | OS 저장소 또는 `GEMINI_API_KEY` | generateContent + 제한 도구 | 공식 잔액 API 없으면 조회 불가 |
@@ -56,6 +56,8 @@ builtin 로그인과 API key는 별도 연결이므로 동시에 있어도 섞�
 - 자동 우회 금지: 알 수 없는 오류
 
 재시도는 2초에서 최대 8초 사이의 jitter 지수 backoff를 사용합니다. 실패한 모델은 현재 run에서 격리합니다.
+
+Circuit breaker는 `role + connection + model` 단위입니다. Router 실패가 같은 모델의 Worker나 Critic까지 잘못 격리하지 않습니다. Worker는 EvidencePacket에서 fresh context를 복원하는 것이 기본이고, 구조화된 context 사용량이 없으면 저장 session이 존재해도 자동 resume하지 않습니다.
 
 ## Generic process 계약
 

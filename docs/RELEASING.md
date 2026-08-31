@@ -6,11 +6,15 @@
 npm ci
 npm run build
 npm test
+npm run test:coverage
+npm run docs:build
 npm run smoke
+npm audit --audit-level=moderate
+npm pack --dry-run
 npm publish --access public --tag beta
 ```
 
-배포 tarball에는 `dist/`, `assets/`, `integrations/`, 범용 `docs/`, `START_HERE.md`, `README.md`, `LICENSE`만 포함됩니다. `legacy/`, 테스트, 실행 상태와 비밀값은 포함되지 않습니다.
+배포 tarball에는 `dist/`, `assets/`, `integrations/`, 범용 `docs/`, `START_HERE.md`, `README.md`, `README.ko.md`, `LICENSE`만 포함됩니다. VitePress 빌드 결과, `legacy/`, 테스트, 실행 상태와 비밀값은 포함되지 않습니다.
 
 ## 모델 카탈로그 서명
 

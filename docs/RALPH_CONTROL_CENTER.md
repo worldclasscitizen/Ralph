@@ -17,8 +17,8 @@ ralph dashboard stop
 - Header: 작업공간 절대 경로, Git branch, 시작·종료 시각을 각각 표시합니다.
 - LOOP HISTORY: 이 컴퓨터·이 프로젝트의 실행 기록입니다. `편집`을 누른 뒤 체크한 종료 기록을 한 번에 삭제하거나 전체 삭제할 수 있습니다.
 - 작업 계약: 승인된 목표, 포함·제외, 구현 요구, 완료 기준, 검증과 산출물을 보여줍니다. 백틱 텍스트는 code UI로 표시합니다.
-- ITERATION: 실행 주체의 정확한 model ID·effort, 시도, 증거, 판정, checkpoint를 보여줍니다.
-- EXECUTION: 각 노드는 접힌 상태에서 완료·실행 중·주의·실패·대기만 보여주고 누르면 판단 요약과 증거가 열립니다.
+- ITERATION: 실행 주체의 정확한 model ID·effort, 위험도·session 정책, EvidencePacket, 판정과 checkpoint를 보여줍니다.
+- EXECUTION: Online Router를 포함한 각 노드는 접힌 상태에서 완료·실행 중·주의·실패·대기만 보여주고 누르면 판단 요약과 증거가 열립니다.
 - 모델·토큰: Ralph 호출에서 Provider가 반환한 입력·출력·cache·reasoning·총 token과 모델 비율을 보여줍니다.
 - Provider 사용 가능량: 계정 잔여량 또는 API 잔액을 Ralph token 사용량과 분리해 보여줍니다.
 

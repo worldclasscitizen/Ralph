@@ -17,8 +17,8 @@
     <a href="./docs/ARCHITECTURE.md">Architecture</a>
   </p>
   <p>
-    <img alt="Release" src="https://img.shields.io/badge/release-v0.1.0--beta.0-f59e0b?style=flat-square">
-    <a href="https://github.com/worldclasscitizen/ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
+    <img alt="Release" src="https://img.shields.io/badge/release-v0.2.0--beta.0-f59e0b?style=flat-square">
+    <a href="https://github.com/worldclasscitizen/multi-agent-ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/multi-agent-ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 or newer" src="https://img.shields.io/badge/Node.js-%3E%3D22-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
     <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-2563eb?style=flat-square"></a>
@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Beta release:** `v0.1.0-beta.0` is available from npm under the `beta` dist-tag. It is an actively tested preview, not yet a production-stable replacement for the legacy runtime.
+> **Beta release:** `v0.2.0-beta.0` is published under the npm `beta` dist-tag. It is an actively tested preview, not yet a production-stable replacement for the legacy runtime.
 
 ## Why Ralph?
 
@@ -41,6 +41,7 @@ Most autonomous coding loops repeatedly call one model and hope the next attempt
 | A runaway loop leaves an unrecoverable working tree | Every completed, failed, or interrupted iteration attempts a local Git checkpoint. |
 | Progress lives only in an LLM context window | Files, verifier output, append-only events, and Git history are the source of truth. |
 | Model routing requires hand-written chains | `ralph init` detects usable connections and builds task-aware fallback chains from a signed catalog. |
+| A static chain cannot react to risk or failed attempts | The Online Router proposes a route at recorded runtime boundaries, while local policy keeps quality and operator constraints authoritative. |
 | Operators can only stare at a terminal marked “running” | The local Control Center streams node state, evidence, Git changes, usage, and safe-stop controls. |
 
 ## What makes it different?
@@ -55,6 +56,8 @@ Most autonomous coding loops repeatedly call one model and hope the next attempt
 
 - **Platform-neutral control plane:** run Ralph from a normal terminal, IDE terminal, tmux, cmux, or orca. Optional agent Skills call the same CLI.
 - **Multi-provider by design:** use stored Codex, Claude Code, Antigravity, or Gemini CLI logins alongside API connections.
+- **Your subscriptions as a model portfolio:** connect as many supported subscriptions and API accounts as you own, then let each task route within the exact candidate pool you authorize.
+- **Quality-first triple optimization:** Ralph maximizes qualified quality first, then prefers faster and cheaper routes only when quality remains equivalent.
 - **Role-aware orchestration:** Contract Planner, Critic, Meta-Prompter, Worker, Verifier, and Adjudicator are routed independently.
 - **Task-aware routing:** planning, visual frontend, backend, TDD/debugging, static review, and delivery evidence receive different model chains.
 - **Bounded tools:** API Workers can inspect and edit project files, inspect Git, and run registered verifiers—but cannot push, deploy, or execute arbitrary shell commands.
@@ -86,7 +89,7 @@ npx @worldclasscitizen/ralph@beta run --project /absolute/path/to/project "Impro
 ### Install from source
 
 ```bash
-git clone https://github.com/worldclasscitizen/ralph.git
+git clone https://github.com/worldclasscitizen/multi-agent-ralph.git
 cd ralph
 npm ci
 npm run build
@@ -125,12 +128,15 @@ ralph run --project /absolute/path/to/project "Refactor the cache layer"
 ```mermaid
 flowchart LR
     A[Natural-language request] --> B[Contract Planner]
-    B --> C{Operator approval}
+    B --> BC[Independent Contract Critic]
+    BC --> C{Operator approval}
     C -- Decline --> Z[No code changes]
     C -- Approve --> D[Pre-Critic]
-    D --> E[Meta-Prompter]
+    D --> R[Online Router]
+    R --> P[EvidencePacket]
+    P --> E[Meta-Prompter]
     E --> F[Worker]
-    F --> G[Deterministic Verifier]
+    F --> G[Risk-tier Verifier]
     G --> H[Post-Critic]
     H --> I{Boundary case?}
     I -- Yes --> J[Independent Adjudicator]
@@ -143,7 +149,9 @@ flowchart LR
     M -- Operator needed --> O[Needs operator]
 ```
 
-The TypeScript state machine—not Gemini Flash or any other model—is the operator. The Meta-Prompter may refine the next instruction from evidence, but it cannot expand the approved contract. Meta-Prompter and Worker sessions can continue by exact session ID; Critics remain stateless to reduce anchoring.
+The TypeScript state machine—not Gemini Flash or any other model—is the operator. The Meta-Prompter may refine the next instruction from evidence, but it cannot expand the approved contract. Router, Meta-Prompter, Critics, and Reviewers are stateless. Workers rehydrate from an EvidencePacket by default; exact-session continuation is allowed only when the same attempt is measurably improving and structured context usage proves it remains below 40%.
+
+“Online” means runtime-aware, not Internet-controlled. The Router model may propose only an approved candidate. Local TypeScript policy applies Hard Pins and fixed routes first, rejects candidates outside the authorized portfolio, refuses suggestions more than two catalog quality points below the best candidate, and permits one adjacent Worker-session continuation only when measurable improvement and context telemetry make it safe. If the Router returns an invalid result or encounters a retryable failure, Ralph uses its deterministic quality-first decision instead.
 
 ### Evaluation and stopping
 
@@ -157,6 +165,17 @@ The TypeScript state machine—not Gemini Flash or any other model—is the oper
 - Repeated identical failures or stagnant scores transition to `needs_operator`
 
 Critics return item-level anchors and evidence. Ralph calculates totals, hard gates, and the final state locally. See [the architecture guide](./docs/ARCHITECTURE.md) for session and evidence rules.
+
+### Risk-tier verification
+
+| Tier | Typical scope | Additional protection |
+| :--- | :--- | :--- |
+| `T0` | Documentation and low-risk planning | Artifact, scope, and independent evidence checks |
+| `T1` | Normal code changes | Project tests, lint, types, build, and configured coverage ratchet |
+| `T2` | Public API, schema, or large refactor | Disposable-worktree re-verification and conditional mutation bite |
+| `T3` | Authentication, payment, permissions, migration, deletion, or secrets | All T2 checks plus mandatory final operator confirmation |
+
+Strong gates are local checks rather than model opinions. Coverage Ratchet prevents a stored coverage baseline from decreasing, Frozen Invariants require explicit approval for protected contracts or schemas, Test Tampering detects newly added validation bypasses, and Mutation Bite confirms that changed tests fail when a changed implementation is deliberately removed in an isolated worktree.
 
 ## Task-aware routing
 
@@ -173,10 +192,10 @@ Critics return item-level anchors and evidence. Ralph calculates totals, hard ga
 
 | Profile | Priority | Typical use |
 | :--- | :--- | :--- |
-| `balanced` | Fit, reliability, provider diversity, then cost and speed | Default for most work |
-| `quality` | Highest task fit and reliability | Architecture, risky refactors, final review |
-| `fast` | Low latency with adequate task fit | Time-boxed work and quick iterations |
-| `budget` | Lower cost with adequate task fit | Large, low-risk backlogs |
+| `balanced` | Maximize qualified quality, then balance reliability, diversity, time, and cost | Default for most work |
+| `quality` | Maximize verified task fit and reliability regardless of extra cost | Architecture, risky refactors, final review |
+| `fast` | Preserve required quality while preferring lower latency among equivalent candidates | Time-boxed work and quick iterations |
+| `budget` | Preserve required quality while preferring lower cost among equivalent candidates | Large, low-risk backlogs |
 
 If a request says “avoid heavy models because time is short,” the Contract Planner records `executionProfile: fast`. Ralph recalculates the route before approval; a model never chooses an arbitrary `fallback_2` by itself.
 
@@ -187,6 +206,12 @@ ralph config pipelines
 ralph config explain --profile quality
 ralph config preset fast
 ralph run --model gpt-5.6-sol "Review the authentication boundary"
+
+ralph config route set backend_core --mode adaptive \
+  --candidate 'openai:codex-login=gpt-5.6-sol@xhigh' \
+  --candidate 'anthropic:claude-login=claude-opus-5@max'
+ralph config route pin worker --connection openai:codex-login --model gpt-5.6-sol --effort xhigh
+ralph config route unpin worker
 ```
 
 Priority is deterministic:
@@ -238,6 +263,9 @@ Authentication failures, policy refusals, and invalid requests require operator 
 | :--- | :--- |
 | <code>ralph doctor [--fix&#124;--offline&#124;--json]</code> | Diagnose Node, Git, lock, auth, catalog, and route status |
 | <code>ralph config show&#124;preset&#124;pipelines&#124;explain&#124;export&#124;import</code> | Inspect or manage project routing configuration |
+| <code>ralph config route list&#124;set&#124;pin&#124;unpin&#124;reset&#124;explain</code> | Manage adaptive candidates, fixed fallback order, and Hard Pins |
+| <code>ralph config coverage show&#124;capture&#124;reset</code> | Inspect or update the project coverage ratchet baseline |
+| <code>ralph config invariant list&#124;add&#124;remove</code> | Manage files or patterns that require explicit change approval |
 | <code>ralph providers list&#124;detect</code> | List configured or detected provider connections |
 | <code>ralph auth status&#124;login&#124;add&#124;remove</code> | Manage built-in login and API credentials |
 | <code>ralph catalog status&#124;diff&#124;update</code> | Inspect or update the signed model catalog |
@@ -254,6 +282,7 @@ Authentication failures, policy refusals, and invalid requests require operator 
 | `ralph capacity [--refresh]` | Show exact provider capacity when officially available |
 | <code>ralph history list&#124;delete&#124;clear</code> | Inspect or remove completed local run evidence |
 | <code>ralph show contract&#124;progress&#124;guardrails</code> | Read the current contract, event ledger, or learned safeguards |
+| <code>ralph benchmark run&#124;compare&#124;report&#124;baseline set&#124;calibrate</code> | Measure qualified quality, elapsed time, token use, official cost evidence, and sampled human calibration |
 | `ralph migrate [--cleanup]` | Import the legacy Bash layout; remove it only with explicit approval |
 
 ## Structured automation
@@ -305,6 +334,7 @@ ralph/
   runs/
   sessions/
   progress.jsonl
+  guardrails.jsonl
   guardrails.md
   locks/
   dashboard/
@@ -349,7 +379,7 @@ Ralph ships a bootstrap catalog and can refresh a small Ed25519-signed catalog f
 - A 24-hour to 7-day cache starts immediately and refreshes in the background.
 - A cache older than 7 days gets one bounded refresh attempt while local checks continue.
 - Signature, schema, monotonic version, rollback, and size checks run before atomic replacement.
-- An approved run pins its catalog version and route for the entire run.
+- An approved run pins its catalog version, policy hash, and candidate portfolio. The Online Router may change the active Worker only at recorded decision boundaries.
 - Prompts, source code, and execution logs are never sent to the catalog service.
 
 ```bash
@@ -376,10 +406,13 @@ Migration imports compatible provider settings, contracts, progress, guardrails,
 npm ci
 npm run build
 npm test
+npm run test:coverage
+npm run docs:build
 npm run smoke
+npm audit --audit-level=moderate
 ```
 
-`npm run smoke` packs the real tarball, installs it into an empty Git repository, verifies the executable, and confirms Git-internal state initialization.
+`npm run smoke` packs the real tarball, installs it into an empty Git repository, verifies the executable, and confirms Git-internal state initialization. The current honest baseline is 31 passing tests and 47.93% line coverage; CI enforces a non-decreasing initial floor while the roadmap raises it toward the v1 release gate.
 
 The CI matrix covers macOS, Ubuntu, and Windows on Node.js 22 and 24. Before `1.0.0`, the remaining release gates are live-provider integration validation, remote CI confirmation, migration cleanup validation, beta feedback, signed catalog release validation, and removal of the legacy Bash runtime.
 
@@ -390,6 +423,11 @@ The CI matrix covers macOS, Ubuntu, and Windows on Node.js 22 and 24. Before `1.
 | [Start here](./START_HERE.md) | New users and AI onboarding |
 | [Adoption guide](./docs/ADOPTION.md) | Adding Ralph to another project |
 | [Architecture](./docs/ARCHITECTURE.md) | State machine, sessions, evidence, and storage |
+| [Quality-first routing](./docs/concepts/quality-routing.md) | Adaptive candidates, fixed routes, Hard Pins, and optimization order |
+| [Verification](./docs/reliability/verification.md) | Risk tiers, mutation bite, coverage ratchet, and frozen invariants |
+| [Benchmarks](./docs/reliability/benchmarks.md) | 24-case live suite, qualified success, time, token, and cost comparisons |
+| [Roadmap](./docs/project/roadmap.md) | Quality, time, cost, coverage, and v1 release gates |
+| [Maturity matrix](./docs/project/maturity.md) | What is implemented, beta-limited, provider-dependent, or planned |
 | [Provider support](./docs/PROVIDERS.md) | Adapters, authentication, models, and capacity |
 | [Control Center](./docs/RALPH_CONTROL_CENTER.md) | Dashboard operation and local history |
 | [Release guide](./docs/RELEASING.md) | npm beta and signed catalog releases |
@@ -398,7 +436,7 @@ The CI matrix covers macOS, Ubuntu, and Windows on Node.js 22 and 24. Before `1.
 
 Ralph is in active beta development. The TypeScript runtime covers the primary orchestration path and passes local build, test, package, and smoke checks. It is not yet declared a complete production replacement for the legacy Bash runtime.
 
-Please report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/ralph/issues).
+Please report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/multi-agent-ralph/issues).
 
 ## License
 

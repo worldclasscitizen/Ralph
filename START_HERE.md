@@ -60,6 +60,8 @@ ralph config explain
 ralph config preset balanced
 ```
 
+기본값은 품질 우선 adaptive 라우팅입니다. 여러 구독과 API 연결을 후보로 제한하려면 `ralph config route set`, 순서를 고정하려면 `--mode fixed`, 정확한 모델과 effort를 강제하려면 `ralph config route pin`을 사용합니다. Hard Pin이 불가능하면 Ralph는 몰래 다른 모델로 바꾸지 않고 중단합니다.
+
 자동 경로보다 직접 지정한 override가 우선합니다. export한 config에는 비밀값이 없으며, 수정본을 가져올 때는 같은 프로젝트 절대 경로와 schema version을 유지합니다.
 
 ```bash
@@ -82,10 +84,15 @@ ralph show guardrails
 - Worker가 정상 종료합니다.
 - 등록된 결정적 verifier가 모두 통과합니다.
 - Post-Critic이 모든 항목과 증거를 반환합니다.
+- 작업 위험도에 맞는 strong gate가 통과합니다. T3는 자동 검증 뒤에도 사용자 최종 확인이 필요합니다.
 - Hard Gate 실패·미확인이 없습니다.
 - 로컬 엔진 점수가 기본 85점 이상입니다.
 
 최대 Iteration 6회는 고정 횟수가 아니라 상한입니다. 첫 회에 통과하면 즉시 끝납니다. 같은 실패가 두 번 반복되거나 점수가 두 번 연속 3점 미만으로만 개선되면 `needs_operator`로 멈춥니다.
+
+각 Iteration은 Git 내부 `ralph/runs/<run-id>/evidence/`에 EvidencePacket을 남깁니다. 새 모델 세션은 이 파일, Git diff, verifier 결과와 구조화된 `guardrails.jsonl`에서 작업 기억을 복원하며 세션 기억만을 진실로 사용하지 않습니다.
+
+라우팅 변경 전후의 품질·시간·토큰을 비교하려면 `ralph benchmark run`, `ralph benchmark compare`를 사용합니다. 기본 suite는 여섯 작업 유형별 네 사례, 총 24개 실제 저장소 작업으로 구성됩니다.
 
 ## 기존 Bash 템플릿 사용자
 

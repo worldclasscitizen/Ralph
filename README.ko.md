@@ -17,8 +17,8 @@
     <a href="./docs/ARCHITECTURE.md">아키텍처</a>
   </p>
   <p>
-    <img alt="릴리스" src="https://img.shields.io/badge/release-v0.1.0--beta.0-f59e0b?style=flat-square">
-    <a href="https://github.com/worldclasscitizen/ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
+    <img alt="릴리스" src="https://img.shields.io/badge/release-v0.2.0--beta.0-f59e0b?style=flat-square">
+    <a href="https://github.com/worldclasscitizen/multi-agent-ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/multi-agent-ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 이상" src="https://img.shields.io/badge/Node.js-%3E%3D22-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
     <a href="./LICENSE"><img alt="MIT 라이선스" src="https://img.shields.io/badge/license-MIT-2563eb?style=flat-square"></a>
@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **베타 릴리스:** `v0.1.0-beta.0`은 npm의 `beta` dist-tag로 설치할 수 있습니다. 지속적으로 검증 중인 프리뷰이며, 아직 기존 런타임을 대체하는 프로덕션 안정 버전은 아닙니다.
+> **베타 릴리스:** `v0.2.0-beta.0`은 npm의 `beta` dist-tag로 배포됩니다. 지속적으로 검증 중인 프리뷰이며, 아직 기존 런타임을 대체하는 프로덕션 안정 버전은 아닙니다.
 
 > 영어 [README.md](./README.md)가 기준 문서입니다. 번역과 내용이 다르면 영어 문서를 우선합니다.
 
@@ -43,6 +43,7 @@
 | 루프 폭주 후 작업 트리를 되돌리기 어려움 | 완료·실패·중단된 모든 Iteration마다 로컬 Git checkpoint를 시도합니다. |
 | 진행 상황이 LLM Context Window에만 남음 | 파일, 검증 결과, append-only 이벤트, Git history를 최종 진실의 원천으로 사용합니다. |
 | 모델 폴백 체인을 직접 작성해야 함 | `ralph init`이 연결 상태와 서명된 카탈로그로 작업별 체인을 자동 계산합니다. |
+| 정적 체인이 작업 위험도나 반복 실패에 대응하지 못함 | Online Router가 기록된 실행 경계에서 모델을 제안하고, 로컬 정책이 품질과 사용자 제약을 최종 통제합니다. |
 | 터미널의 `running` 문구 외에는 알기 어려움 | Control Center에서 노드 상태, 증거, Git 변경, 사용량, 안전 중단을 실시간으로 확인합니다. |
 
 ## 차별점
@@ -53,6 +54,8 @@
 - **플랫폼 중립:** 일반 터미널, IDE Terminal, tmux, cmux, orca에서 동일하게 실행되며 Skill도 같은 CLI를 호출합니다.
 - **멀티 Provider:** Codex, Claude Code, Antigravity, Gemini CLI 저장 로그인과 여러 API 연결을 함께 사용할 수 있습니다.
 - **역할·작업별 라우팅:** 계약 작성, 비평, 메타 프롬프팅, 구현, 검증, 재심을 독립적으로 라우팅합니다.
+- **사용자 소유 모델 포트폴리오:** 본인이 구독하거나 API로 연결한 모델들을 후보 풀로 묶고 작업별로 허용한 범위 안에서 선택합니다.
+- **품질 우선 삼중 최적화:** 검증된 결과 품질을 먼저 극대화하고, 품질이 동등한 후보끼리만 시간과 비용을 차례로 최적화합니다.
 - **제한된 API Worker 도구:** 프로젝트 파일과 Git 증거, 등록된 검증기는 사용할 수 있지만 임의 shell, push, 배포는 할 수 없습니다.
 - **정직한 잔여량 표시:** 공식 구조화 인터페이스가 있을 때만 정확한 구독 잔여 퍼센트 또는 API 잔액을 표시합니다.
 
@@ -81,7 +84,7 @@ npx @worldclasscitizen/ralph@beta run --project /absolute/path/to/project "로�
 ### 소스에서 설치
 
 ```bash
-git clone https://github.com/worldclasscitizen/ralph.git
+git clone https://github.com/worldclasscitizen/multi-agent-ralph.git
 cd ralph
 npm ci
 npm run build
@@ -120,18 +123,23 @@ ralph run --project /absolute/path/to/project "캐시 계층을 리팩터링해�
 ```text
 자연어 요청
 → Contract Planner
+→ 독립 Contract Critic
 → 사용자 승인
 → Pre-Critic
+→ Online Router
+→ EvidencePacket
 → Meta-Prompter
 → Worker
-→ 결정적 Verifier
+→ 위험도별 Verifier
 → Post-Critic
 → 필요한 경우 경계 재심
 → 로컬 Git checkpoint
 → 통과 | 재시도 | 사용자 확인 필요 | 실패 | 중단
 ```
 
-오퍼레이터는 Gemini Flash 같은 특정 모델이 아니라 TypeScript 상태 머신입니다. Meta-Prompter는 실패 증거를 다음 지시로 구체화할 수 있지만 승인된 계약 범위를 넓힐 수 없습니다. Meta-Prompter와 Worker는 정확한 Session ID로 이어갈 수 있고, Critic은 anchoring을 줄이기 위해 stateless로 실행됩니다.
+오퍼레이터는 Gemini Flash 같은 특정 모델이 아니라 TypeScript 상태 머신입니다. Meta-Prompter는 실패 증거를 다음 지시로 구체화할 수 있지만 승인된 계약 범위를 넓힐 수 없습니다. Router, Meta-Prompter, Critic과 Reviewer는 이전 대화에 끌려가지 않도록 매번 새로운 상태로 실행합니다. Worker도 기본적으로 EvidencePacket에서 작업 상태를 복원하며, 같은 시도가 실제로 개선되고 구조화된 Context 사용률이 40% 이하일 때만 인접한 한 번의 Session 연속 사용을 허용합니다.
+
+Online은 인터넷이 시스템을 통제한다는 뜻이 아니라 실행 시점의 상황을 반영한다는 뜻입니다. Router 모델은 승인된 후보 중 하나만 제안할 수 있습니다. 로컬 TypeScript 정책은 Hard Pin과 고정 경로를 먼저 적용하고, 승인되지 않은 후보와 최고 후보보다 카탈로그 품질 점수가 2점 넘게 낮은 제안을 거부합니다. Router가 잘못된 결과를 반환하거나 일시적으로 실패하면 Ralph가 결정적인 품질 우선 경로를 대신 선택합니다.
 
 ### 평가와 종료
 
@@ -143,6 +151,17 @@ ralph run --project /absolute/path/to/project "캐시 계층을 리팩터링해�
 - 동일 실패나 점수 정체가 반복되면 `needs_operator`로 전환
 
 Critic은 항목별 앵커와 증거만 반환하고 Ralph가 총점과 Hard Gate를 계산합니다.
+
+### 위험도별 검증
+
+| 등급 | 대표 작업 | 추가 안전장치 |
+| :--- | :--- | :--- |
+| `T0` | 문서와 저위험 기획 | 산출물·범위·독립 증거 검사 |
+| `T1` | 일반 코드 변경 | 프로젝트 테스트·린트·타입·빌드와 설정된 Coverage Ratchet |
+| `T2` | 공개 API·Schema·대규모 리팩터링 | 격리된 Worktree 재검증과 조건부 Mutation Bite |
+| `T3` | 인증·결제·권한·마이그레이션·삭제·비밀정보 | 모든 T2 검사와 사용자의 최종 확인 강제 |
+
+강한 검증은 AI의 의견이 아니라 로컬 코드로 수행합니다. Coverage Ratchet은 저장된 테스트 커버리지 기준이 낮아지는 것을 막고, Frozen Invariant는 보호된 API 명세나 Schema 변경에 명시적 승인을 요구합니다. Test Tampering은 새 테스트의 강제 통과나 비활성화 같은 우회를 탐지하고, Mutation Bite는 격리된 Worktree에서 구현 변경을 일부 제거했을 때 새 테스트가 실제로 실패하는지 확인합니다.
 
 ## 작업별 라우팅
 
@@ -157,16 +176,18 @@ Critic은 항목별 앵커와 증거만 반환하고 Ralph가 총점과 Hard Gat
 
 | 프로필 | 우선순위 | 권장 상황 |
 | :--- | :--- | :--- |
-| `balanced` | 적합성·신뢰성·Provider 다양성·비용/속도 | 기본값 |
-| `quality` | 작업 적합성과 신뢰성 | 아키텍처, 위험한 변경, 최종 검토 |
-| `fast` | 속도와 충분한 적합성 | 시간이 부족한 작업 |
-| `budget` | 비용과 충분한 적합성 | 위험도가 낮고 양이 많은 작업 |
+| `balanced` | 검증 품질을 우선하고 신뢰성·다양성·시간·비용을 균형화 | 기본값 |
+| `quality` | 추가 비용과 무관하게 검증 가능한 품질 극대화 | 아키텍처, 위험한 변경, 최종 검토 |
+| `fast` | 품질이 동등한 후보 중 낮은 지연 우선 | 시간이 부족한 작업 |
+| `budget` | 품질이 동등한 후보 중 낮은 비용 우선 | 위험도가 낮고 양이 많은 작업 |
 
 ```bash
 ralph config pipelines
 ralph config explain --profile quality
 ralph config preset fast
 ralph run --model gpt-5.6-sol "인증 경계를 검토해줘"
+ralph config route set backend_core --mode adaptive --candidate 'openai:codex-login=gpt-5.6-sol@xhigh'
+ralph config route pin worker --connection openai:codex-login --model gpt-5.6-sol --effort xhigh
 ```
 
 ## Provider와 인증
@@ -202,6 +223,9 @@ printf '%s' "$DEEPSEEK_API_KEY" | ralph auth add deepseek:api --key-stdin
 | 중단·복구 | `ralph recover [run-id]` | 부분 변경 유지·checkpoint·복구 선택 |
 | 진단 | <code>ralph doctor [--fix&#124;--offline&#124;--json]</code> | Node, Git, 인증, 카탈로그, 라우팅 진단 |
 | 설정 | <code>ralph config show&#124;preset&#124;pipelines&#124;explain&#124;export&#124;import</code> | 라우팅 설정 관리 |
+| 설정 | <code>ralph config route list&#124;set&#124;pin&#124;unpin&#124;reset&#124;explain</code> | adaptive 후보, fixed 순서와 Hard Pin 관리 |
+| 설정 | <code>ralph config coverage show&#124;capture&#124;reset</code> | 프로젝트 Coverage Ratchet 기준 관리 |
+| 설정 | <code>ralph config invariant list&#124;add&#124;remove</code> | 변경 승인이 필요한 파일이나 패턴 관리 |
 | 설정 | <code>ralph auth status&#124;login&#124;add&#124;remove</code> | 로그인과 API 자격 증명 관리 |
 | 설정 | <code>ralph catalog status&#124;diff&#124;update</code> | 서명된 모델 카탈로그 관리 |
 | 관제 | `ralph dashboard --open` | Control Center 실행 |
@@ -209,6 +233,7 @@ printf '%s' "$DEEPSEEK_API_KEY" | ralph auth add deepseek:api --key-stdin
 | 관제 | `ralph usage` | Ralph 토큰 사용량 조회 |
 | 관제 | `ralph capacity --refresh` | 공식 조회가 가능한 Provider 잔여량 조회 |
 | 기록 | <code>ralph history list&#124;delete&#124;clear</code> | 종료된 로컬 실행 증거 관리 |
+| 평가 | <code>ralph benchmark run&#124;compare&#124;report&#124;baseline set&#124;calibrate</code> | 검증 품질, 시간, 토큰, 공식 비용과 표본 사람 평가 비교 |
 | 마이그레이션 | `ralph migrate [--cleanup]` | 기존 Bash 구조를 가져오고 선택적으로 정리 |
 
 ## 선택적 AI Skill
@@ -245,6 +270,7 @@ ralph/
   runs/
   sessions/
   progress.jsonl
+  guardrails.jsonl
   guardrails.md
   locks/
   dashboard/
@@ -282,12 +308,15 @@ ralph dashboard --open
 npm ci
 npm run build
 npm test
+npm run test:coverage
+npm run docs:build
 npm run smoke
+npm audit --audit-level=moderate
 ```
 
-`npm run smoke`는 실제 tarball을 만들어 빈 Git 저장소에 설치하고 실행 파일과 Git 내부 상태 초기화를 검증합니다.
+`npm run smoke`는 실제 tarball을 만들어 빈 Git 저장소에 설치하고 실행 파일과 Git 내부 상태 초기화를 검증합니다. 현재 정직하게 측정된 기준은 테스트 31개 통과와 전체 Line Coverage 47.93%이며, CI는 초기 하한이 낮아지지 않게 막고 로드맵에서 v1 목표까지 단계적으로 높입니다.
 
-현재는 `0.1.0-beta`입니다. TypeScript 런타임의 핵심 경로는 로컬 빌드·테스트·패키징·smoke 검증을 통과했지만, 다음 조건을 완료해야 `1.0.0`으로 승격합니다.
+현재는 `0.2.0-beta`입니다. TypeScript 런타임의 핵심 경로는 로컬 빌드·테스트·패키징·smoke 검증을 통과했지만, 다음 조건을 완료해야 `1.0.0`으로 승격합니다.
 
 - macOS·Ubuntu·Windows, Node.js 22·24 원격 CI 통과
 - 실제 Provider 로그인·API·폴백·중단·복구 통합 검증
@@ -303,6 +332,11 @@ npm run smoke
 | [시작 안내](./START_HERE.md) | 사용자와 AI 온보딩 |
 | [도입 안내](./docs/ADOPTION.md) | 다른 프로젝트에 Ralph 적용 |
 | [아키텍처](./docs/ARCHITECTURE.md) | 상태 머신, Session, 증거, 저장 구조 |
+| [품질 우선 라우팅](./docs/concepts/quality-routing.md) | Adaptive 후보, Fixed 경로, Hard Pin과 최적화 순서 |
+| [검증](./docs/reliability/verification.md) | 위험도, Mutation Bite, Coverage Ratchet과 Frozen Invariant |
+| [벤치마크](./docs/reliability/benchmarks.md) | 24개 실제 작업, 검증 품질, 시간, 토큰과 비용 비교 |
+| [로드맵](./docs/project/roadmap.md) | 품질·시간·비용·커버리지와 v1 조건 |
+| [성숙도 표](./docs/project/maturity.md) | 구현 완료, 베타 제한, Provider 의존과 계획 구분 |
 | [Provider](./docs/PROVIDERS.md) | Adapter, 인증, 모델, 잔여량 |
 | [Control Center](./docs/RALPH_CONTROL_CENTER.md) | 대시보드와 로컬 기록 |
 | [릴리스](./docs/RELEASING.md) | npm beta와 서명된 카탈로그 배포 |
