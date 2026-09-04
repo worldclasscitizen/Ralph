@@ -1,6 +1,6 @@
 {
   "name": "@worldclasscitizen/ralph",
-  "version": "0.2.0-beta.0",
+  "version": "0.3.0",
   "description": "Graph-native local agent orchestration with isolated Ralph loops",
   "type": "module",
   "bin": {
@@ -23,7 +23,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build:runtime && npm run build:ui",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -33,7 +33,18 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "build:runtime": "tsc -p tsconfig.json",
+    "build:ui": "tsc -p ui/tsconfig.json && vite build ui --config ui/vite.config.ts",
+    "test:e2e": "node scripts/test-ui.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
+    "check:release": "node scripts/check-release.mjs",
+    "check:core": "node scripts/check-release.mjs --local",
+    "release": "node scripts/release.mjs",
+    "test:operational": "node scripts/test-operational.mjs",
+    "test:live:release": "node scripts/live-release.mjs",
+    "catalog:audit": "node scripts/audit-catalog.mjs",
+    "support:sync": "node scripts/sync-provider-support.mjs"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.52",
@@ -60,7 +71,7 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public",
-    "tag": "beta"
+    "tag": "latest"
   },
   "overrides": {
     "vite": "6.4.3"
