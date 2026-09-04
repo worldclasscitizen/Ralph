@@ -180,31 +180,34 @@ export interface ToolDefinition {
 }
 
 export interface CatalogModel {
+  qualityTier?: "unrated" | "measured";
+  checkedAt?: string;
   provider: string;
   adapter: string;
   modelId: string;
   displayName: string;
-  releasedAt: string;
+  releasedAt?: string;
   expiresAt: string;
   capabilities: {
-    reasoning: number;
-    coding: number;
+    reasoning: number | null;
+    coding: number | null;
     structuredOutput: boolean;
     vision: boolean;
     toolUse: boolean;
     longContext: boolean;
   };
-  taskAffinity: Record<TaskType, number>;
-  costTier: number;
-  latencyTier: number;
-  reliabilityBaseline: number;
+  taskAffinity: Record<TaskType, number | null>;
+  costTier: number | null;
+  latencyTier: number | null;
+  reliabilityBaseline: number | null;
   supportedEfforts: string[];
   recommendedEffort: string;
   evidence: Array<{ source: string; checkedAt: string }>;
 }
 
 export interface ModelCatalog {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
+  keyId?: string;
   version: number;
   generatedAt: string;
   models: CatalogModel[];

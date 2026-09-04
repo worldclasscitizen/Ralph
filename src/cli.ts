@@ -46,6 +46,7 @@ import { cleanupLegacy, migrateLegacy } from "./migrate.js";
 import { draftContract, executeContract, resumeRun } from "./orchestrator.js";
 import { classifyRisk, deterministicRouteDecision } from "./policy.js";
 import { createAdapter } from "./providers/index.js";
+import { probeProvider } from "./gateway/capabilities.js";
 import { registerProject } from "./registry.js";
 import { buildRoutes, explainRoutes } from "./router.js";
 import {
@@ -996,7 +997,19 @@ async function commandProviders(args: string[]): Promise<void> {
     return;
   }
   if (sub === "list") {
-    print((await loadConfig(root)).connections, true);
+    const config = await loadConfig(root);
+    print(
+      await Promise.all(
+        config.connections.map(async (connection) => ({
+          ...connection,
+          capability: await probeProvider(
+            connection,
+            createAdapter(connection, config),
+          ),
+        })),
+      ),
+      true,
+    );
     return;
   }
   throw new RalphError(
