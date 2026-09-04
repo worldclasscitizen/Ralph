@@ -318,6 +318,21 @@ it("resume refuses unconfirmed invocations and exhausted active budgets", async 
     expect(state.nodes.work?.status).toBe("pending");
   }
 });
+it("resumes explicitly reconciled calls without resetting attempt accounting", async () => {
+  const { root, contract } = await fixture();
+  const plan = approvePlan(await planRun(root, contract.goal, { contract, mode: "single" }));
+  const store = await storeFor(root, plan.runId);
+  await writeFile(join(store.directory, "plan.json"), JSON.stringify(plan));
+  await store.acquire();
+  await store.append({ type: "invocation.started", payload: { invocationId: "logical", attemptId: "inspected", nodeId: "work", connectionId: "mock:process", modelId: "mock-1", role: "worker" } }, 1);
+  const artifactId = await store.putArtifact({ inspection: "Fixture process outcome explicitly inspected" });
+  await store.append({ type: "invocation.reconciled", payload: { attemptId: "inspected", artifactId, processStopped: true, inspectionDigest: "a".repeat(64) } }, 1);
+  await store.release();
+  const state = await resumeGraphRun(root, plan.runId);
+  expect(state.status).toBe("completed");
+  expect(state.attempts).toBe(4);
+  expect((await store.readAfter()).filter(e => e.type === "invocation.finished")).toHaveLength(3);
+}, 30000);
 it("requires final T3 confirmation after validation and applies it exactly once", async () => {
   const { root, contract } = await fixture();
   contract.riskTier = "T3";
