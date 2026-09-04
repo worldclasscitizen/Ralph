@@ -5,6 +5,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fixture, oracle } from "./live-fixture.mjs";
 import { LiveBudget } from "./lib/live-budget.mjs";
+import { assertLiveCampaignReady } from "./lib/live-preflight.mjs";
 import { atomicJson, json, report, subject, BASELINE } from "./lib/release.mjs";
 const exec = promisify(execFile), source = resolve(".");
 const args = process.argv.slice(2), live = args.includes("--live");
@@ -36,6 +37,7 @@ if (live) {
   const providerPath = resolve("docs/project/evidence/live-provider.json");
   let provider;
   try { provider = await json(providerPath); } catch (e) { if (e.code !== "ENOENT") throw e; }
+  console.log(JSON.stringify({ preflight: assertLiveCampaignReady(await budget.load(), observations, preflight.observations, !provider) }));
   if (!provider) {
     await exec(process.execPath, [resolve("scripts/provider-conformance.mjs"), "--live", "--provider", "codex", "--model", model, "--budget", budgetPath, "--output", resolve(".release/conformance.json")], { windowsHide: true, timeout: 400_000, maxBuffer: 2_000_000 });
     const raw = await json(resolve(".release/conformance.json"));
@@ -48,6 +50,8 @@ for (const version of ["baseline", "candidate", "baseline", "candidate"]) {
   const index = observations.length;
   if (index >= 4) break;
   const expected = ["baseline", "candidate", "baseline", "candidate"][index];
+  const stageSubject = await subject();
+  if (stageSubject.runtimeDigest !== target.runtimeDigest || stageSubject.testDigest !== target.testDigest) throw new Error("Source changed during campaign; do not mix verification targets");
   const root = await mkdtemp(join(tmpdir(), `ralph-${live ? "live" : "mock"}-${expected}-`));
   await fixture(root);
   const before = await budget.load(), start = Date.now(), output = join(root, ".git", "outcome.json");
@@ -56,9 +60,14 @@ for (const version of ["baseline", "candidate", "baseline", "candidate"]) {
     await exec(process.execPath, [resolve("scripts/live-run.mjs"), expected, root, expected === "baseline" ? baseline : source,
       live ? "live" : "mock", budgetPath, `${expected}-${index + 1}`, String(before.calls), model, output], { cwd: source, windowsHide: true, timeout: 650_000, maxBuffer: 2_000_000 });
     state = await json(output); await oracle(root);
-  } catch (e) { failure = String(e.message).slice(0, 1500); }
+  } catch (e) {
+    failure = String(e.message).slice(0, 1500);
+    try { state = await json(output); } catch { /* Preserve the execution failure if no terminal state was written. */ }
+  }
+  const endSubject = await subject();
+  if (endSubject.runtimeDigest !== stageSubject.runtimeDigest || endSubject.testDigest !== stageSubject.testDigest) failure = "Source changed during comparison; evidence cannot qualify";
   const after = await budget.load();
-  const observation = { version: expected, repetition: Math.floor(index / 2) + 1, passed: !failure, status: state?.status ?? "failed", durationMs: Date.now() - start, calls: after.calls - before.calls, ...(failure ? { error: failure, fixture: root } : {}) };
+  const observation = { version: expected, repetition: Math.floor(index / 2) + 1, passed: !failure, status: state?.status ?? "failed", durationMs: Date.now() - start, calls: after.calls - before.calls, subject: stageSubject, ...(failure ? { error: failure, fixture: root } : {}) };
   observations.push(observation);
   await atomicJson(campaign, { runtimeDigest: target.runtimeDigest, testDigest: target.testDigest, model, observations, totalCalls: after.calls });
   console.log(JSON.stringify(observation));
@@ -67,7 +76,12 @@ for (const version of ["baseline", "candidate", "baseline", "candidate"]) {
 if (live) {
   const allowance = await budget.load();
   const checks = [{ name: "four frozen comparisons", passed: observations.length === 4 }, { name: "independent acceptance and runtime completion", passed: observations.every(o => o.passed) }, { name: "fixed allowance", passed: allowance.calls <= 24 && allowance.activeMs <= 1800000 && !allowance.pending }];
-  await atomicJson(resolve("docs/project/evidence/live-comparison.json"), await report("comparison", checks, { baselineCommit: BASELINE, model, observations, allowance,
-    methodology: "Same frozen two-module task, model, low reasoning effort and fresh Codex CLI transport. Baseline pre-review/meta/worker/post-review; candidate two scoped workers, independent reviews, Git integration and final review. Explicit DAG isolates execution effects from planning variance. Oracle remains outside workspaces. Two paired trials cannot establish general performance superiority." }));
+  // Keep local reproduction paths in the private campaign. Public reports contain
+  // aggregate results and source identities, never command lines or workspaces.
+  const publicObservations = observations.map(({ fixture, error, ...o }) => ({ ...o, ...(error ? { error: "Runtime completion, external acceptance, or source consistency failed; inspect the retained local campaign" } : {}) }));
+  const value = await report("comparison", checks, { baselineCommit: BASELINE, model, observations: publicObservations, allowance,
+    methodology: "Same frozen two-module task, model, low reasoning effort and fresh Codex CLI transport. Baseline pre-review/meta/worker/post-review; candidate two scoped workers, independent reviews, Git integration and final review. Explicit DAG isolates execution effects from planning variance. Oracle remains outside workspaces. Two paired trials cannot establish general performance superiority." });
+  value.subject = target;
+  await atomicJson(resolve("docs/project/evidence/live-comparison.json"), value);
 }
 if (observations.length !== 4 || observations.some(o => !o.passed)) process.exitCode = 1;

@@ -1,5 +1,5 @@
 import { it, expect } from "vitest";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -24,6 +24,17 @@ import {
 // @ts-ignore release-only script
 import { LiveBudget } from "../scripts/lib/live-budget.mjs";
 import { providerVerification } from "../src/providers/verification.js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+// @ts-ignore release-only script
+import { assertLiveCampaignReady } from "../scripts/lib/live-preflight.mjs";
+// @ts-ignore release-only fixture shared by baseline and candidate
+import {
+  fixture,
+  solutions,
+  graphFor,
+  task,
+} from "../scripts/live-fixture.mjs";
 
 const hash = "a".repeat(64);
 const subject = {
@@ -249,4 +260,79 @@ it("keeps old signatures valid while rejecting tampered v2 catalogs", async () =
 });
 it("does not fabricate live verification for an untested adapter", async () => {
   expect(await providerVerification("unknown", "1")).toEqual([]);
+});
+it("blocks unaffordable campaigns before spending and never discards a failed trial", () => {
+  const mock = [4, 5, 4, 5].map((calls) => ({ calls, passed: true }));
+  const allowance = {
+    calls: 0,
+    maxCalls: 24,
+    activeMs: 0,
+    maxActiveMs: 1800000,
+    pending: null,
+  };
+  expect(assertLiveCampaignReady(allowance, [], mock, true)).toEqual({
+    minimumCalls: 22,
+    remainingCalls: 24,
+    retryReserve: 2,
+  });
+  expect(() =>
+    assertLiveCampaignReady({ ...allowance, calls: 15 }, [], mock, false),
+  ).toThrow(/18 calls required, 9 available/);
+  expect(() =>
+    assertLiveCampaignReady(allowance, [{ passed: false }], mock, false),
+  ).toThrow(/prior comparison failed/);
+  expect(() =>
+    assertLiveCampaignReady({ ...allowance, pending: {} }, [], mock, false),
+  ).toThrow(/Unconfirmed/);
+  expect(() =>
+    assertLiveCampaignReady(allowance, [], mock.slice(1), true),
+  ).toThrow(/Four/);
+  expect(() =>
+    assertLiveCampaignReady(
+      { ...allowance, activeMs: 1800000 },
+      [],
+      mock,
+      true,
+    ),
+  ).toThrow(/time/);
+});
+it("records behavioral evidence per branch without requiring an unfinished sibling", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ralph-acceptance-"));
+  await fixture(root);
+  const exec = promisify(execFile);
+  const check = (file: string) =>
+    exec(process.execPath, ["--test", file], { cwd: root, windowsHide: true });
+  await expect(check("left.test.mjs")).rejects.toThrow();
+  await writeFile(join(root, "left.mjs"), solutions["left.mjs"]);
+  await expect(check("left.test.mjs")).resolves.toBeDefined();
+  await expect(check("right.test.mjs")).rejects.toThrow();
+  await writeFile(join(root, "right.mjs"), solutions["right.mjs"]);
+  await expect(check("right.test.mjs")).resolves.toBeDefined();
+  await expect(
+    exec(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "import { oracle } from './scripts/live-fixture.mjs'; await oracle(process.argv[1]);",
+        root,
+      ],
+      { windowsHide: true },
+    ),
+  ).resolves.toBeDefined();
+  const graph = graphFor(task);
+  expect(
+    graph.nodes.find((n: any) => n.nodeId === "left").verifierIds,
+  ).toContain("node --test left.test.mjs");
+  expect(
+    graph.nodes.find((n: any) => n.nodeId === "left").verifierIds,
+  ).not.toContain("node --test right.test.mjs");
+  expect(
+    graph.nodes.find((n: any) => n.kind === "validate").verifierIds,
+  ).toEqual(task.verifierCommands);
+  await writeFile(
+    join(root, "left.mjs"),
+    "export function sumNonNegative() { return 0; }\n",
+  );
+  await expect(check("left.test.mjs")).rejects.toThrow();
 });

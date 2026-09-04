@@ -36,7 +36,7 @@ export async function subject(root = process.cwd()) {
     sourceCommit: await git(root, ["rev-parse", "HEAD"]), sourceTree: await git(root, ["rev-parse", "HEAD^{tree}"]),
     runtimeDigest: await hashes((n) => n.startsWith("src/") || /^assets\/catalog-v2\./.test(n) || n === "package-lock.json"),
     dependencyDigest: sha256((await readFile(join(root, "package-lock.json"), "utf8")).replaceAll("\r\n", "\n")),
-    testDigest: await hashes((n) => /^(tests\/fixtures\/live-|scripts\/(live-|provider-conformance|lib\/live-budget))/.test(n)),
+    testDigest: await hashes((n) => /^(tests\/fixtures\/live-|scripts\/(live-|provider-conformance|lib\/live-))/.test(n)),
   };
 }
 export async function report(kind, checks, details = {}, root = process.cwd()) {
