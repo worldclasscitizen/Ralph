@@ -124,11 +124,53 @@ export class RunStore {
     this.directory = join(root, "runs", safeId(runId));
     this.journal = new Journal(join(this.directory, "events.jsonl"), runId);
   }
-  async acquire(): Promise<void> {
+  async acquire(recovery?: {
+    ownerToken: string;
+    recoveryToken: string;
+  }): Promise<void> {
     await mkdir(this.directory, { recursive: true });
     const path = join(this.root, "locks", "graph-owner.json");
     await mkdir(join(this.root, "locks"), { recursive: true });
     const token = randomUUID();
+    if (recovery) {
+      const guard = JSON.parse(
+        await readFile(join(this.root, "locks/graph-recovery.lock"), "utf8"),
+      );
+      const owner = JSON.parse(await readFile(path, "utf8"));
+      if (
+        guard.token !== recovery.recoveryToken ||
+        guard.pid !== process.pid ||
+        owner.token !== recovery.ownerToken ||
+        owner.runId !== this.runId
+      )
+        throw new RalphError("Recovery ownership changed", "run_locked", 9);
+      let dead = false;
+      try {
+        process.kill(owner.pid, 0);
+      } catch (e) {
+        dead = (e as NodeJS.ErrnoException).code === "ESRCH";
+      }
+      if (!dead)
+        throw new RalphError(
+          "Previous supervisor death is not confirmed",
+          "run_locked",
+          9,
+        );
+      // Atomic replacement keeps the owner path continuously present, blocking other acquisitions.
+      await durableWrite(
+        path,
+        JSON.stringify({
+          runId: this.runId,
+          pid: process.pid,
+          token,
+          startedAt: new Date(
+            Date.now() - process.uptime() * 1000,
+          ).toISOString(),
+        }),
+      );
+      this.token = token;
+      return;
+    }
     try {
       const f = await open(path, "wx", 0o600);
       try {

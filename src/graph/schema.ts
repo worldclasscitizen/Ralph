@@ -175,6 +175,15 @@ export type RunEvent =
       };
     }
   | {
+      type: "invocation.reconciled";
+      payload: {
+        attemptId: string;
+        artifactId: string;
+        processStopped: true;
+        inspectionDigest: string;
+      };
+    }
+  | {
       type: "invocation.finished";
       payload: {
         attemptId: string;
@@ -351,6 +360,15 @@ const payloads = {
       connectionId: Type.String(),
       modelId: Type.String(),
       role: Type.String(),
+    },
+    object,
+  ),
+  "invocation.reconciled": Type.Object(
+    {
+      attemptId: Type.String(),
+      artifactId: Type.String(),
+      processStopped: Type.Literal(true),
+      inspectionDigest: Type.String(),
     },
     object,
   ),

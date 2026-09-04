@@ -39,9 +39,15 @@ export async function recoverOwner(root: string): Promise<void> {
     const events = await store.journal.read(true);
     const finished = new Set(
       events
-        .filter((e) => e.type === "invocation.finished")
+        .filter(
+          (e) =>
+            e.type === "invocation.finished" ||
+            e.type === "invocation.reconciled",
+        )
         .map((e) =>
-          e.type === "invocation.finished" ? e.payload.attemptId : "",
+          e.type === "invocation.finished" || e.type === "invocation.reconciled"
+            ? e.payload.attemptId
+            : "",
         ),
     );
     if (

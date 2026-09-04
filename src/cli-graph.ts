@@ -1,4 +1,8 @@
 import { submitResponse } from "./interaction/responses.js";
+import {
+  inspectInterruptedRun,
+  reconcileInterruptedRun,
+} from "./runtime/inspection.js";
 import { readFile, open, mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -86,12 +90,25 @@ export async function graphCli(
     "resume",
     "usage",
     "logs",
+    "inspect-interruption",
   ];
   if (command === "migrate" && !original.includes("--to")) return false;
   if (!supported.includes(command) && command !== "migrate") return false;
   const args = [...original],
     root = await findGitRoot(option(args, "--project") ?? process.cwd());
   const asJson = flag(args, "--json");
+  if (command === "inspect-interruption") {
+    const accepted = option(args, "--accept"),
+      stopped = flag(args, "--confirm-stopped");
+    const runId = args.shift();
+    if (!runId) throw new RalphError("Run ID required", "invalid_argument", 2);
+    output(
+      accepted
+        ? await reconcileInterruptedRun(root, runId, accepted, stopped)
+        : await inspectInterruptedRun(root, runId),
+    );
+    return true;
+  }
   if (command === "migrate") {
     const to = option(args, "--to");
     if (to !== "0.3")

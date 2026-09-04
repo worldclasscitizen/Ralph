@@ -22,3 +22,4 @@ export * from "./interaction/responses.js";
 export * from "./providers/conformance.js";
 export * from "./gateway/measurements.js";
 export * from "./release/schema.js";
+export * from "./runtime/inspection.js";
