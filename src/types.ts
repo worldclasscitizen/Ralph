@@ -68,6 +68,9 @@ export interface ModelDescriptor {
 }
 
 export interface AgentRequest {
+  compactPrompt?: string;
+  generation?: number;
+  iteration?: number;
   runId: string;
   nodeId: string;
   role: AgentRole;
@@ -76,6 +79,9 @@ export interface AgentRequest {
   prompt: string;
   sessionId?: string;
   tools?: ToolDefinition[];
+  writePaths?: string[];
+  excludePaths?: string[];
+  readPaths?: string[];
 }
 
 export interface AgentUsage {
@@ -99,6 +105,7 @@ export interface AgentResult {
 }
 
 export type ProviderErrorKind =
+  | "context_overflow"
   | "rate_limit"
   | "quota"
   | "timeout"
@@ -117,6 +124,7 @@ export interface ProviderError {
   message: string;
   retryable: boolean;
   statusCode?: number;
+  retryAfterMs?: number;
   evidencePath?: string;
 }
 
@@ -239,7 +247,11 @@ export interface RoutePolicy {
 }
 
 export interface RouteDecision {
-  boundary: "contract_approval" | "iteration_start" | "failure" | "boundary_adjudication";
+  boundary:
+    | "contract_approval"
+    | "iteration_start"
+    | "failure"
+    | "boundary_adjudication";
   taskType: TaskType;
   riskTier: RiskTier;
   connectionId: string;
@@ -281,7 +293,11 @@ export interface EvidencePacket {
     ok: boolean;
     exitCode: number;
     summary: string;
-    gates?: Array<{ id: string; status: "pass" | "fail" | "not_applicable"; evidence: string[] }>;
+    gates?: Array<{
+      id: string;
+      status: "pass" | "fail" | "not_applicable";
+      evidence: string[];
+    }>;
   };
   critic?: CriticAssessment;
   failureFingerprint?: string;
@@ -291,6 +307,7 @@ export interface EvidencePacket {
 }
 
 export interface ProjectConfig {
+  operationalMeasurements?: import("./gateway/measurements.js").OperationalMeasurement[];
   schemaVersion: 1;
   projectRoot: string;
   preset: ExecutionProfile;
@@ -311,7 +328,14 @@ export interface ProjectConfig {
   catalogVersion: number;
 }
 
-export type RunVerdict = "running" | "pass" | "retry" | "needs_operator" | "failed" | "interrupted" | "interrupted_partial";
+export type RunVerdict =
+  | "running"
+  | "pass"
+  | "retry"
+  | "needs_operator"
+  | "failed"
+  | "interrupted"
+  | "interrupted_partial";
 
 export interface RunState {
   id: string;

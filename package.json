@@ -1,7 +1,7 @@
 {
   "name": "@worldclasscitizen/ralph",
   "version": "0.2.0-beta.0",
-  "description": "Platform-neutral Ralph loop orchestration CLI",
+  "description": "Graph-native local agent orchestration with isolated Ralph loops",
   "type": "module",
   "bin": {
     "ralph": "dist/cli.js"
@@ -36,15 +36,26 @@
     "prepack": "npm run build"
   },
   "dependencies": {
+    "@sinclair/typebox": "^0.34.52",
     "ajv": "^8.17.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^24.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
     "@vitest/coverage-v8": "^3.2.4",
+    "fast-check": "^4.9.0",
+    "prettier": "^3.9.6",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitepress": "^1.6.4",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@xyflow/react": "^12.11.6",
+    "elkjs": "^0.12.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vite": "6.4.3"
   },
   "license": "MIT",
   "publishConfig": {
@@ -56,6 +67,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/worldclasscitizen/multi-agent-ralph.git"
+    "url": "git+https://github.com/worldclasscitizen/Ralph.git"
   }
 }
