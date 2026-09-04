@@ -4,7 +4,7 @@ Provider, connection and execution transport are separate. Codex login and OpenA
 
 ## Configuration
 
-Run `ralph init`, `ralph providers list`, and `ralph auth status` in the target Git project. API credentials come from the environment or the existing OS credential store. Windows currently uses environment variables; the beta does not claim Windows Credential Manager support.
+Run `ralph init`, `ralph providers list`, and `ralph auth status` in the target Git project. API credentials come from the environment or the existing OS credential store. Windows currently uses environment variables; Windows Credential Manager is not implemented.
 
 | Connection ID | Environment variable | API transport |
 |---|---|---|
@@ -17,13 +17,13 @@ Run `ralph init`, `ralph providers list`, and `ralph auth status` in the target 
 
 For a DeepSeek + GLM-only environment, set just the corresponding environment variables before initialization. Remove or disable other entries from the reviewed project configuration if unrelated local CLI logins were automatically detected. `ralph config refresh` recalculates routes from configured connections. All planner/worker/critic roles can use the remaining portfolio.
 
-For another compatible endpoint, add an explicit connection with adapter `openai-compatible`, mode `api`, a `baseUrl`, an `apiKeyEnv` reference and known `models`. Add candidate routes through `ralph config route set`. Compatibility requires the model's actual tool calling and text output behavior; an OpenAI-shaped URL alone is insufficient. Ollama without authentication needs an explicitly configured local placeholder credential because this beta's compatible adapter requires a credential reference.
+For another compatible endpoint, add an explicit connection with adapter `openai-compatible`, mode `api`, a `baseUrl`, an `apiKeyEnv` reference and known `models`. Add candidate routes through `ralph config route set`. Compatibility requires the model's actual tool calling and text output behavior; an OpenAI-shaped URL alone is insufficient. Ollama without authentication needs an explicitly configured local placeholder credential because the compatible adapter requires a credential reference.
 
 ## Assignment
 
 Hard Pins and fixed routes take priority. Adaptive worker assignment orders approved candidates by catalog quality, then comparable local observations. Only samples in the same task category and verifier protocol with at least 20 terminal logical tasks are compared. Wilson's lower confidence bound is used within equal catalog quality. Inadequate samples preserve catalog order. Latency and available cost break later ties according to profile; no random exploration is performed.
 
-`gateway/measurements.ts` defines benchmark provenance: family, source URL, model revision, harness version, measurement date, sample count, metric, value, unit and task category. Historic v0.2 catalog scores remain compatibility inputs; they must not be described as a new normalized cross-benchmark score. All catalog entries require a source audit before stable release. The plan snapshots empirical history so ranking does not change underneath an approved run.
+`gateway/measurements.ts` defines benchmark provenance: family, source URL, model revision, harness version, measurement date, sample count, metric, value, unit and task category. The separately signed v2 catalog uses official model sources and marks unsupported quality measurements `unrated`. The original v0.2 catalog and signature are retained only for the legacy channel. Scores from different benchmarks are not combined. The plan snapshots empirical history so ranking does not change underneath an approved run.
 
 ## Transport contract
 
@@ -35,9 +35,11 @@ Worker context overflow uses a bounded evidence-backed prompt retaining the full
 
 ## Support evidence
 
-Support statuses are `verified`, `experimental`, `compatible`, `unavailable`. The automatic probe never grants `verified`. A release conformance report must demonstrate planning, one-file work plus validation, cancellation, session isolation, error classification and usage normalization for the actual installed version/model.
+Support statuses are `verified`, `experimental`, `compatible`, `unavailable`. Installation and authentication alone never grant `verified`. The probe can report verification only when a packaged evidence record matches the installed CLI version, platform, Node.js major version and freshness window. Records come from release reports; README, CLI and dashboard share this data. Mock tests exercise error handling and usage normalization separately.
 
-On 2026-09-05, Codex CLI 0.153.1 with gpt-5.4-mini passed four live smoke checks: structured output, exact one-file change, fresh-session isolation and cancellation. The [successful report](evidence/codex-windows.json) and [initial failed check](evidence/codex-windows-initial.json) are preserved. This is bounded smoke evidence, not complete release conformance.
+The stable campaign used Codex CLI 0.153.1, gpt-5.6-luna, Windows and Node.js 24.11.1. Its four [transport checks](../project/evidence/live-provider.json) passed. The subsequent [graph comparison](../project/evidence/live-comparison.json) failed before integration. The revised comparison harness has not been retested live; the earlier transport report is preserved with its original source identity, and the current release gate rejects a mismatched harness digest. This does not establish stable end-to-end support. See the [campaign review](../project/release-campaign-2026-09-05.md).
+
+Earlier beta records for Codex CLI 0.153.1 and gpt-5.4-mini are preserved as [historical smoke evidence](evidence/codex-windows.json), including the [initial failed check](evidence/codex-windows-initial.json). They are not used to establish current model availability or stable support.
 
 Claude Code 2.1.158 reported a saved login but the actual request returned an expired OAuth error. Its [report](evidence/claude-windows.json) marks the remaining model checks blocked. Gemini authentication was unknown. No API credential was available in the current environment; native API and DeepSeek/GLM evidence is protocol-level mock testing. Credentials and account identifiers are excluded from reports.
 
