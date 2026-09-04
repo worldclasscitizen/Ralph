@@ -31,8 +31,10 @@ export function graphFor(contract) {
     readPaths: ["**"], writePaths: ["left.mjs"], acceptanceCriteria: task.acceptanceCriteria,
     requiredCapabilities: [], inputArtifacts: [], verifierIds: [task.verifierCommands[0], "git diff --check"], budget: { maxIterations: 6 } });
   graph.nodes[0].nodeId = "left";
+  graph.nodes[0].goal = "Implement only left.mjs: sumNonNegative must validate an array of finite non-negative numbers and return their sum; invalid input throws TypeError. The other branch owns right.mjs.";
+  graph.nodes[0].acceptanceCriteria = ["sumNonNegative satisfies every valid and invalid input case in the shared contract", "Only left.mjs changes"];
   graph.edges[0].from = "left";
-  graph.nodes.splice(1, 0, { ...graph.nodes[0], nodeId: "right", writePaths: ["right.mjs"], verifierIds: [task.verifierCommands[1], "git diff --check"] });
+  graph.nodes.splice(1, 0, { ...graph.nodes[0], nodeId: "right", goal: "Implement only right.mjs: normalizeLabel requires a string, trims and collapses ASCII whitespace, lowercases, and throws TypeError for non-string or empty results. The other branch owns left.mjs.", acceptanceCriteria: ["normalizeLabel satisfies every valid and invalid input case in the shared contract", "Only right.mjs changes"], writePaths: ["right.mjs"], verifierIds: [task.verifierCommands[1], "git diff --check"] });
   graph.edges.push({ from: "right", to: "integrate", kind: "artifact" });
   graph.nodes.find(n => n.kind === "validate").verifierIds = contract.verifierCommands;
   return graph;
