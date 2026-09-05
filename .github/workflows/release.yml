@@ -109,7 +109,16 @@ jobs:
       - run: npm run smoke -- --package @worldclasscitizen/ralph --expected-version 0.3.0
       - run: node scripts/verify-published.mjs --registry-only
       - if: steps.draft.outputs.is_draft == 'true'
-        run: gh release upload v0.3.0 .release/evidence/installation.json --clobber
+        run: |
+          gh release upload v0.3.0 .release/evidence/installation.json --clobber
+          sha256sum .release/package/*.tgz .release/evidence/*.json assets/catalog*.json assets/catalog*.sig > .release/SHA256SUMS.txt
+          gh release upload v0.3.0 .release/SHA256SUMS.txt --clobber
+      - if: steps.draft.outputs.is_draft != 'true'
+        name: Preserve immutable installation evidence during a registry recheck
+        run: |
+          mv .release/evidence/installation.json .release/evidence/installation-recheck.json
+          gh release download v0.3.0 --pattern installation.json --dir .release/evidence --clobber
+          gh release download v0.3.0 --pattern SHA256SUMS.txt --dir .release --clobber
       - name: Publish GitHub release after registry verification
         run: |
           gh release edit v0.3.0 --draft=false --prerelease=false --latest

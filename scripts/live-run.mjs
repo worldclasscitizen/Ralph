@@ -24,7 +24,9 @@ if (version === "baseline") {
   const { approvePlan } = await load("interaction/approval");
   const { startRun } = await load("runtime/supervisor");
   if (version === "functional") {
-    const plan = await planRun(root, functionalRequest, { config });
+    let plan;
+    try {
+    plan = await planRun(root, functionalRequest, { config });
     assertFunctionalPlan(plan);
     const { git } = await load("workspace/manager");
     if (await git(root, ["status", "--porcelain"])) throw new Error("Planning changed the fixture before approval");
@@ -35,6 +37,10 @@ if (version === "baseline") {
     const { RunStore } = await load("storage/run-store");
     const { statePaths } = await load("state");
     details = await inspectFunctionalResult(root, plan, state, new RunStore((await statePaths(root)).root, plan.runId));
+    } catch (error) {
+      if (!state) await writeFile(output, JSON.stringify({ status: error.question ? "awaiting_input" : "failed", runId: error.runId ?? plan?.runId, phase: plan ? "approval" : "planning", resultHead: null }));
+      throw error;
+    }
   } else state = await startRun(approvePlan(await planRun(root, task.goal, { contract, config, graph: graphFor(contract) })));
 }
 await writeFile(output, JSON.stringify({ status: state.status, runId: state.runId ?? state.id, resultHead: state.resultHead ?? null, ...details }));
