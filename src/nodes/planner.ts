@@ -18,7 +18,7 @@ import {
   compileGraph,
   type GraphEnvelope,
 } from "../graph/compiler.js";
-import { validateContract } from "../contracts.js";
+import { validateContract, validateContractDraft } from "../contracts.js";
 import { contractPlannerPrompt, contractCriticPrompt } from "../prompts.js";
 import { parseJsonObject, RalphError } from "../util.js";
 import { RunStore } from "../storage/run-store.js";
@@ -54,10 +54,10 @@ export async function draftTask(
         prompt: contractPlannerPrompt(request, projectRoot) + feedback,
       },
       signal,
-      (text) => validateContract(parseJsonObject(text), projectRoot),
+      (text) => validateContractDraft(parseJsonObject(text), projectRoot),
       Boolean(config.routePolicies?.contractPlanner?.hardPin),
     );
-    contract = validateContract(
+    contract = validateContractDraft(
       parseJsonObject(outcome.result.text),
       projectRoot,
     );
