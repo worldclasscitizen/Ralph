@@ -18,6 +18,11 @@
       "name": "read-only write rejected",
       "passed": true,
       "exitCode": 1
+    },
+    {
+      "name": "linked worker Git worktree",
+      "passed": true,
+      "exitCode": 0
     }
   ],
   "type": "windows_sandbox_git_probe",

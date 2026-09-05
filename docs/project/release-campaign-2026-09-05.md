@@ -96,3 +96,11 @@ The installed Codex CLI changed from 0.153.1 to 0.153.4. Calls 18–21 reran and
 The adapter now supplies a process-scoped safe.directory for the exact selected worktree. No global Git configuration or sandbox permissions change. A no-model sandbox probe confirms that the selected repository can be inspected, another repository remains untrusted, and read-only writes still fail. Contract prompts also explain the runtime's existing file-scope enforcement and prevent catch-all excludes. The adapter change requires new transport evidence before another full trial. See the [probe evidence](evidence/live-windows-git.json), [Codex Windows sandbox](https://learn.chatgpt.com/docs/windows/windows-sandbox), and [process environment configuration](https://learn.chatgpt.com/docs/config-file/config-reference).
 
 현재 CLI 버전 변경으로 연결 검사를 4회 다시 통과했습니다. 이어진 계약·검토 6회는 Windows 격리 계정의 Git 소유권 문제로 중단됐고 Worker는 시작되지 않았습니다. 해당 작업 폴더만 신뢰하는 프로세스 설정으로 수정했으며, 다른 저장소와 읽기 전용 쓰기 제한이 유지되는지 AI 호출 없이 확인했습니다.
+
+## Graph compiler semantics
+
+The workspace-scoped adapter passed four fresh transport checks (calls 28–31). The next trial passed contract generation and review, but three graph proposals failed local compilation (calls 32–36 overall). The proposals confused durable artifact IDs with paths, used duplicate artifact/order edges for the same pair, and invented verifier aliases or capability labels. The safe single-worker proposal did not qualify for this two-worker acceptance test. No worker started; [the report and review](evidence/live-graph-planning-review.json) preserve the failure.
+
+The graph prompt now supplies the exact compiler semantics and allowed values while retaining the same schema and compiler rejection rules. Regression tests cover all observed invalid forms; no generated graph is manually rewritten. Total usage before the next trial is 36 calls and 777220 active milliseconds.
+
+계약 생성·검토는 통과했지만 잘못된 간선·아티팩트·검증 명령 표기로 그래프가 거부됐습니다. 컴파일러는 유지하고 모델에 실제 실행 규칙을 명확히 전달하도록 수정했습니다. 단일 Worker로 축소된 계획을 병렬 그래프 성공으로 처리하지 않았습니다.

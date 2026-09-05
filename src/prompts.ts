@@ -7,6 +7,8 @@ import type {
 } from "./types.js";
 import { loadRubric } from "./evaluator.js";
 import { TaskContractDraftSchema } from "./contracts.js";
+import { GraphSchema } from "./graph/schema.js";
+import type { GraphEnvelope } from "./graph/compiler.js";
 
 const CANONICAL_STATE = `현재 저장소 파일, Git HEAD·diff, 결정적 검증 결과가 세션 기억보다 우선합니다.
 프로젝트 절대 경로 밖을 수정하지 마세요. Git commit·push·배포와 Ralph 내부 상태 변경을 하지 마세요.
@@ -57,6 +59,29 @@ ${JSON.stringify(contract)}
 
 다음 JSON만 출력하세요:
 {"status":"pass|revise","issues":["..."],"evidence":["..."]}`;
+}
+
+export function graphPlannerPrompt(contract: TaskContract, runId: string, envelope: GraphEnvelope, feedback = ""): string {
+  return `Decompose the approved-scope contract into an executable Ralph DAG. Return only JSON matching the schema below.
+Use only necessary workers, one integrate node and one final validate node. Every worker must reach integration through artifact dependencies, then final validation.
+Runtime semantics (all are mandatory):
+- Initial revision is 1 with reason initial. Every node generation is 0; generation is a retry identity, not topological depth. Omit parentRevision.
+- There is at most ONE edge for each from/to pair. An artifact edge already orders execution AND carries the result. Never add an order edge alongside an artifact edge for the same pair.
+- Every node inputArtifacts must be []. These are durable runtime artifact IDs, not filenames or node IDs. Initial inputs are assembled from readPaths and artifact dependency edges.
+- verifierIds contain the EXACT approved command strings below, not invented aliases. Workers use relevant local checks, and final validation uses the entire approved verifier list.
+- requiredCapabilities must be a subset of the available capability IDs below. Use [] when that list is empty; do not invent skill labels.
+- writePaths contain only each worker's approved file scope. Integrate and validate nodes use []; the runtime merges and verifies their input artifacts without model writes.
+- readPaths and writePaths stay within the allowed paths. Preserve explicit independent-worker requirements from the contract; unrelated workers must not depend on each other.
+- Every node has explicit acceptanceCriteria and budget.maxIterations from 1 to 6. Read source files only if needed; do not modify files during planning.
+Run ID: ${runId}
+Allowed read paths: ${JSON.stringify(envelope.readPaths)}
+Allowed write paths: ${JSON.stringify(envelope.writePaths)}
+Excluded paths: ${JSON.stringify(envelope.exclude)}
+Approved verifier command strings: ${JSON.stringify(envelope.verifierIds)}
+Available capability IDs: ${JSON.stringify(envelope.capabilities ?? [])}
+Graph JSON Schema: ${JSON.stringify(GraphSchema)}
+Contract: ${JSON.stringify(contract)}
+Previous compilation errors: ${feedback || "none"}`;
 }
 
 export async function criticPrompt(

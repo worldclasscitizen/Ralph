@@ -10,7 +10,6 @@ import { routesFor } from "../gateway/routing.js";
 import { BudgetCounter } from "../runtime/budget.js";
 import {
   DEFAULT_BUDGET,
-  GraphSchema,
   type GraphRevision,
 } from "../graph/schema.js";
 import {
@@ -19,7 +18,7 @@ import {
   type GraphEnvelope,
 } from "../graph/compiler.js";
 import { validateContract, validateContractDraft } from "../contracts.js";
-import { contractPlannerPrompt, contractCriticPrompt } from "../prompts.js";
+import { contractPlannerPrompt, contractCriticPrompt, graphPlannerPrompt } from "../prompts.js";
 import { parseJsonObject, RalphError } from "../util.js";
 import { RunStore } from "../storage/run-store.js";
 import { durableWrite } from "../storage/journal.js";
@@ -220,7 +219,7 @@ export async function planRun(
               nodeId: "graph-planner",
               role: "contractPlanner",
               projectRoot,
-              prompt: `Decompose the approved-scope contract into a DAG. Use only necessary workers, one integrate node and one final validate node. Every worker must reach integration and final validation. Return JSON matching ${JSON.stringify(GraphSchema)}. Use runId ${runId}. Contract: ${JSON.stringify(contract)}. Allowed verifiers: ${JSON.stringify(envelope.verifierIds)}. ${feedback}`,
+              prompt: graphPlannerPrompt(contract, runId, envelope, feedback),
             },
             signal,
           );

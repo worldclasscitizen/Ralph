@@ -15,6 +15,8 @@ import {
 } from "../src/graph/compiler.js";
 import { reviseGraph } from "../src/graph/revisions.js";
 import { RunStore } from "../src/storage/run-store.js";
+import { graphPlannerPrompt } from "../src/prompts.js";
+import { validateContract } from "../src/contracts.js";
 import { schedule } from "../src/graph/scheduler.js";
 import {
   approvePlan,
@@ -42,6 +44,26 @@ function graph(): GraphRevision {
   });
 }
 describe("graph compiler", () => {
+  it("explains artifact and verifier semantics and still rejects the observed invalid model graphs", () => {
+    const contract = validateContract({ taskType: "backend_core", goal: "Implement code", acceptanceCriteria: ["Checks pass"] }, "/fixture");
+    const prompt = graphPlannerPrompt(contract, "test-run", envelope);
+    const schema = JSON.parse(prompt.match(/Graph JSON Schema: ([^\n]+)/)![1]!);
+    expect(schema.properties.nodes.items.properties.inputArtifacts.type).toBe("array");
+    expect(prompt).toContain('Available capability IDs: []');
+    expect(prompt).toContain('Approved verifier command strings: ["check"]');
+    const valid = graph();
+    for (const mutate of [
+      (g: GraphRevision) => g.edges.push({ ...g.edges[0]!, kind: "order" }),
+      (g: GraphRevision) => g.nodes[0]!.inputArtifacts.push("src/a.ts"),
+      (g: GraphRevision) => { g.nodes[0]!.verifierIds = ["invented-check"]; },
+      (g: GraphRevision) => g.nodes[0]!.requiredCapabilities.push("javascript"),
+    ]) {
+      const invalid = structuredClone(valid);
+      mutate(invalid);
+      expect(() => compileGraph(invalid, envelope)).toThrow();
+    }
+    expect(compileGraph(valid, envelope).nodes).toHaveLength(3);
+  });
   it("rejects invalid references, cycles, duplicate IDs and unverified writes", () => {
     const g = graph();
     expect(() =>

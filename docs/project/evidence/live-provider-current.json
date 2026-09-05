@@ -3,13 +3,13 @@
   "kind": "provider",
   "subject": {
     "version": "0.3.0",
-    "sourceCommit": "8b77f3de88dd2de2bd8dd3745e88d3f9be53eb2e",
-    "sourceTree": "eacac12aa80da151b1b3dc8782c82c2d78ebf3d2",
-    "runtimeDigest": "fb150a3d2cc92a86e9aef3a13a2eb7af704c8acfcac00344f0111325f3563b1c",
+    "sourceCommit": "84a9dc0277548db125bd3ad9b45f172c7e3f36df",
+    "sourceTree": "bf4cd20ca1475f32672aa74ba2f4cfe2668cc6cd",
+    "runtimeDigest": "47fdce0198e0285810e5824d42a0dfeed2982b02c77bc5c5cf8eb97c6d59d7c9",
     "dependencyDigest": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311",
     "testDigest": "3d0c6f846b8d3312a153764d81b018fcd30bbd46953e86fb847c55640dd46923"
   },
-  "checkedAt": "2026-09-05T21:36:16.533Z",
+  "checkedAt": "2026-09-05T21:45:17.637Z",
   "runner": {
     "platform": "win32",
     "node": "v24.11.1"
@@ -41,7 +41,7 @@
       {
         "name": "structured_output",
         "status": "pass",
-        "durationMs": 4168,
+        "durationMs": 4000,
         "usage": {
           "inputTokens": 14305,
           "outputTokens": 16,
@@ -53,24 +53,24 @@
       {
         "name": "file_change_and_deterministic_verification",
         "status": "pass",
-        "durationMs": 16368,
+        "durationMs": 15977,
         "usage": {
-          "inputTokens": 45849,
-          "outputTokens": 258,
+          "inputTokens": 45952,
+          "outputTokens": 305,
           "cachedTokens": 40192,
-          "reasoningTokens": 68,
-          "totalTokens": 46107
+          "reasoningTokens": 96,
+          "totalTokens": 46257
         },
         "artifact": "conformance.txt"
       },
       {
         "name": "fresh_request_isolation",
         "status": "pass",
-        "durationMs": 4078,
+        "durationMs": 4068,
         "usage": {
           "inputTokens": 14306,
           "outputTokens": 12,
-          "cachedTokens": 9984,
+          "cachedTokens": 14080,
           "reasoningTokens": 0,
           "totalTokens": 14318
         }
@@ -78,19 +78,19 @@
       {
         "name": "cancel_and_await_close",
         "status": "pass",
-        "durationMs": 479,
+        "durationMs": 520,
         "confirmed": "adapter returned after subprocess close"
       }
     ],
-    "scope": "CLI transport in the recorded local environment; fresh sessions, no API credentials"
+    "scope": "CLI transport in the recorded local environment; fresh sessions, per-invocation Windows Git trust, no API credentials"
   },
   "reuse": {
     "schemaVersion": 2,
     "protocol": "codex-conformance-v2",
     "originalFile": "live-provider.json",
-    "originalSha256": "788671cbdf59baa1f8d086dbfc3675ea88b3737c4dd9299d0de19ed2ecd589cf",
-    "originalCheckedAt": "2026-09-05T21:36:16.533Z",
-    "sourceCommit": "abef81c387aa6d091f364dc80a67474ebc0a030f",
+    "originalSha256": "d2ad9eff2ebac61aa17eda5e027520b1a5d65829ed24e7078a85bef1c5f2446f",
+    "originalCheckedAt": "2026-09-05T21:45:17.637Z",
+    "sourceCommit": "050139452bed2dbc09417d1f67b83b81aca7eca1",
     "sourceFiles": [
       {
         "path": "package-lock.json",
@@ -118,7 +118,7 @@
       },
       {
         "path": "src/providers/cli.ts",
-        "sha256": "52866377ec1d8a0d9a2454457e85af1de1f6982c151b78d739e90502d8e2e2b2"
+        "sha256": "9cadde8f7459903410839d9ffa61dc3a2e542a6135d180cbd67c26d19d05f919"
       },
       {
         "path": "src/providers/errors.ts",
@@ -156,6 +156,6 @@
       "platform": "win32",
       "node": "v24.11.1"
     },
-    "verifiedAt": "2026-09-05T21:37:29.091Z"
+    "verifiedAt": "2026-09-05T21:46:30.246Z"
   }
 }
