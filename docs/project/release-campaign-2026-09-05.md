@@ -13,7 +13,7 @@ CI [33930145345](https://github.com/worldclasscitizen/Ralph/actions/runs/3393014
 | v0.3 candidate, first trial | Paused before integration | 6 | 241.533 seconds |
 | Remaining paired trials | Not run | 0 | — |
 
-Total allowance consumption was **15 / 24 calls and 480,712 / 1,800,000 aggregate active milliseconds** (8 minutes 0.712 seconds). Cancellation and unsuccessful work count. API spending was zero. Token measurements are retained in the [failed comparison report](evidence/live-comparison.json); no monetary estimate is invented for the subscription connection. The [conformance report](evidence/live-provider.json) records the actual model `gpt-5.6-luna`, CLI `0.153.1`, Windows and Node.js `24.11.1`.
+Total allowance consumption was **15 / 24 calls and 480,712 / 1,800,000 aggregate active milliseconds** (8 minutes 0.712 seconds). Cancellation and unsuccessful work count. API spending was zero. Token measurements are retained in the [failed comparison report](evidence/live-comparison.json); no monetary estimate is invented for the subscription connection. The [conformance report](evidence/history/live-provider-d852ba4e8c547e612be5d1e04de56a01fe13064d13bfb44e45f85ff8c2d8824a.json) records the actual model `gpt-5.6-luna`, CLI `0.153.1`, Windows and Node.js `24.11.1`.
 
 ## Failure and correction
 
