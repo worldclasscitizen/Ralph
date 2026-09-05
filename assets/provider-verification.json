@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "schemaVersion": 1,
+    "adapter": "codex-builtin",
+    "model": "gpt-5.6-luna",
+    "cliVersion": "codex-cli 0.153.4",
+    "platform": "win32",
+    "node": "v24.11.1",
+    "checkedAt": "2026-09-05T21:45:17.637Z",
+    "runtimeDigest": "9549b335150434b82dffbea263efb857b9eb9a537cbc1df6d59d645620be2c44",
+    "testDigest": "3d0c6f846b8d3312a153764d81b018fcd30bbd46953e86fb847c55640dd46923",
+    "reportDigest": "4264af3c7c1576f899b524a5b4c40481f53f404d08ccec30a2ead10379aeae7b",
+    "features": [
+      "structured_output",
+      "file_change_and_deterministic_verification",
+      "fresh_request_isolation",
+      "cancel_and_await_close"
+    ],
+    "support": "verified"
+  }
+]

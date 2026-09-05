@@ -1,0 +1,792 @@
+{
+  "schemaVersion": 1,
+  "type": "public_functional_evidence",
+  "runId": "run-54764ab5-a1f7-42b3-ab4c-b9b6bbfa8bed",
+  "sourceReportSha256": "17c678e49f59b481a502124cc499b41218797175f7c30f4786d3c5c70bfc698c",
+  "redaction": "Only the disposable fixture root is replaced with <fixture>; original artifact digests and public-view checksums are separate.",
+  "artifacts": [
+    {
+      "nodeId": "left_worker",
+      "kind": "worker",
+      "sourceArtifactId": "5aabfa1c35a2af4485b818d022be3017ea787c3e61e1ed2c3605ec5eccb40bb3",
+      "sourceFileSha256": "d2d18e195e832adaa9a0d08b6b76a6eb394351d35c017230e83f1e234b304121",
+      "publicEvidenceSha256": "d2d18e195e832adaa9a0d08b6b76a6eb394351d35c017230e83f1e234b304121",
+      "evidence": {
+        "schemaVersion": 2,
+        "nodeId": "left_worker",
+        "generation": 0,
+        "iteration": 1,
+        "inputDigest": "731139fcb5f05d7fdabb9723fce3854a58b5d1fd6d3b032729e7d2db4d0df1e2",
+        "inputHead": "bad3247881146d657cf3b6ffc248842ef3a209dd",
+        "scope": {
+          "stage": "worker",
+          "nodeId": "left_worker",
+          "inputHead": "bad3247881146d657cf3b6ffc248842ef3a209dd",
+          "dependencies": []
+        },
+        "execution": {
+          "exitCode": 0,
+          "connectionId": "release-codex",
+          "modelId": "gpt-5.6-luna"
+        },
+        "summary": "구현을 완료했습니다.\n\n- `left.mjs`에 `sumNonNegative(values)` 구현\n- 유한한 비음수 숫자 배열만 허용\n- 빈 배열은 `0` 반환\n- 잘못된 입력은 `TypeError` 발생\n- 기존 ESM export 유지\n- 변경 파일: `left.mjs`만\n\n검증 결과:\n\n- `node --test left.test.mjs` 통과\n- `node --check left.mjs` 통과\n- `git diff --check` 통과",
+        "verifier": {
+          "ok": true,
+          "exitCode": 0,
+          "summary": "$ artifact left.mjs\nexit=0\n존재 확인\n\n\n$ node --test left.test.mjs\nexit=0\n✔ left.test.mjs (61.4608ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 67.1733\n\n\n\n$ node --check left.mjs\nexit=0\n\n\n\n$ git diff --check\nexit=0\n\nwarning: in the working copy of 'left.mjs', LF will be replaced by CRLF the next time Git touches it\n\n\nStrong gates\n[not_applicable] frozen_invariants\n등록된 frozen invariant가 없습니다.\n\n[pass] unresolved_conflicts\nNo added Git conflict markers\n\n[pass] test_tampering\n새로운 skip/only, 검증 우회 또는 임계값 무력화 패턴이 없습니다.\n\n[pass] contract_drift\n계약의 exclude 범위를 변경하지 않았습니다.\n\n[not_applicable] coverage_ratchet\ncoverage summary와 기준선이 없습니다.\n\n[not_applicable] clean_worktree_verification\nT1 작업에는 격리 재검증을 강제하지 않습니다.\n\n[not_applicable] mutation_bite\nT1 작업에는 mutation bite를 강제하지 않습니다.",
+          "commands": [
+            {
+              "command": "artifact left.mjs",
+              "exitCode": 0,
+              "stdout": "존재 확인",
+              "stderr": ""
+            },
+            {
+              "command": "node --test left.test.mjs",
+              "exitCode": 0,
+              "stdout": "✔ left.test.mjs (61.4608ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 67.1733\n",
+              "stderr": ""
+            },
+            {
+              "command": "node --check left.mjs",
+              "exitCode": 0,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "command": "git diff --check",
+              "exitCode": 0,
+              "stdout": "",
+              "stderr": "warning: in the working copy of 'left.mjs', LF will be replaced by CRLF the next time Git touches it\n"
+            }
+          ],
+          "gates": [
+            {
+              "id": "frozen_invariants",
+              "status": "not_applicable",
+              "evidence": [
+                "등록된 frozen invariant가 없습니다."
+              ]
+            },
+            {
+              "id": "unresolved_conflicts",
+              "status": "pass",
+              "evidence": [
+                "No added Git conflict markers"
+              ]
+            },
+            {
+              "id": "test_tampering",
+              "status": "pass",
+              "evidence": [
+                "새로운 skip/only, 검증 우회 또는 임계값 무력화 패턴이 없습니다."
+              ]
+            },
+            {
+              "id": "contract_drift",
+              "status": "pass",
+              "evidence": [
+                "계약의 exclude 범위를 변경하지 않았습니다."
+              ]
+            },
+            {
+              "id": "coverage_ratchet",
+              "status": "not_applicable",
+              "evidence": [
+                "coverage summary와 기준선이 없습니다."
+              ]
+            },
+            {
+              "id": "clean_worktree_verification",
+              "status": "not_applicable",
+              "evidence": [
+                "T1 작업에는 격리 재검증을 강제하지 않습니다."
+              ]
+            },
+            {
+              "id": "mutation_bite",
+              "status": "not_applicable",
+              "evidence": [
+                "T1 작업에는 mutation bite를 강제하지 않습니다."
+              ]
+            }
+          ],
+          "riskTier": "T1"
+        },
+        "assessment": {
+          "criteria": [
+            {
+              "id": "contract_evidence",
+              "level": "complete",
+              "evidence": [
+                "승인 계약대로 left.mjs만 수정되었습니다.",
+                "sumNonNegative의 배열·유한·비음수 검증, 빈 배열의 0 반환, 기존 ESM export가 구현되었습니다."
+              ]
+            },
+            {
+              "id": "deterministic_verification",
+              "level": "complete",
+              "evidence": [
+                "node --test left.test.mjs 통과: 1 passed, 0 failed.",
+                "node --check left.mjs 및 git diff --check가 exit=0입니다."
+              ]
+            },
+            {
+              "id": "regression_scope_safety",
+              "level": "complete",
+              "evidence": [
+                "Git status상 수정 파일은 left.mjs 하나입니다.",
+                "테스트 변조, 충돌 마커, 계약 범위 이탈이 확인되지 않았습니다."
+              ]
+            },
+            {
+              "id": "reproducibility",
+              "level": "complete",
+              "evidence": [
+                "필수 검증 명령 3개와 artifact 존재 확인이 재현 가능하게 실행되어 모두 통과했습니다."
+              ]
+            },
+            {
+              "id": "api_contract_correctness",
+              "level": "complete",
+              "evidence": [
+                "left.mjs가 sumNonNegative(values)를 export합니다.",
+                "배열이 아니거나 유한하지 않은 값·음수가 포함되면 TypeError를 던지고, 유효한 값의 합을 반환합니다."
+              ]
+            },
+            {
+              "id": "data_business_integrity",
+              "level": "complete",
+              "evidence": [
+                "reduce로 유효한 비음수 배열을 정확히 합산합니다.",
+                "빈 배열은 초기값 0을 반환합니다."
+              ]
+            },
+            {
+              "id": "error_security_handling",
+              "level": "complete",
+              "evidence": [
+                "입력 형식과 각 원소의 number·finite·non-negative 조건을 검증하며 위반 시 TypeError를 반환합니다.",
+                "외부 의존성이나 외부 상태 변경이 없습니다."
+              ]
+            },
+            {
+              "id": "integration_evidence",
+              "level": "complete",
+              "evidence": [
+                "node --test left.test.mjs가 공개 모듈 경계를 실행해 통과했습니다.",
+                "ESM 구문 검증과 diff 공백 검증도 통과했습니다."
+              ]
+            }
+          ],
+          "hardGates": [
+            {
+              "id": "worker_execution_failed",
+              "status": "pass",
+              "evidence": [
+                "Worker 종료 결과 exitCode=0입니다."
+              ]
+            },
+            {
+              "id": "deterministic_verifier_failed",
+              "status": "pass",
+              "evidence": [
+                "node --test left.test.mjs, node --check left.mjs, git diff --check가 모두 exit=0입니다."
+              ]
+            },
+            {
+              "id": "secret_or_user_data_exposure",
+              "status": "pass",
+              "evidence": [
+                "diff와 검증 증거에서 비밀값 또는 실제 사용자 데이터 노출이 없습니다."
+              ]
+            },
+            {
+              "id": "core_placeholder_claimed_complete",
+              "status": "pass",
+              "evidence": [
+                "Not implemented placeholder가 실제 입력 검증 및 합산 로직으로 대체되었습니다."
+              ]
+            },
+            {
+              "id": "tests_weakened",
+              "status": "pass",
+              "evidence": [
+                "테스트 변조, skip/only, 검증 우회 또는 임계값 무력화 패턴이 없습니다."
+              ]
+            },
+            {
+              "id": "destructive_out_of_scope_change",
+              "status": "pass",
+              "evidence": [
+                "승인된 범위의 left.mjs만 변경되었고 커밋·푸시·배포·외부 상태 변경이 없습니다."
+              ]
+            },
+            {
+              "id": "core_contract_broken",
+              "status": "pass",
+              "evidence": [
+                "API 계약과 데이터 불변식이 구현되었으며 지정 테스트가 통과했습니다."
+              ]
+            }
+          ],
+          "findings": []
+        },
+        "evaluation": {
+          "score": 100,
+          "verdict": "pass",
+          "hardGateFailures": [],
+          "hardGateUnknown": [],
+          "criterionScores": {
+            "contract_evidence": 15,
+            "deterministic_verification": 15,
+            "regression_scope_safety": 5,
+            "reproducibility": 5,
+            "api_contract_correctness": 20,
+            "data_business_integrity": 20,
+            "error_security_handling": 10,
+            "integration_evidence": 10
+          },
+          "reason": "모든 Hard Gate와 결정적 검증을 통과했고 점수 100.0점입니다."
+        },
+        "failureFingerprint": "e484898aa3afe39c60ae1e9c991913ee56b41e68c597b4a26d8fb9d6e964c429",
+        "independence": "same_provider",
+        "diff": "diff --git a/left.mjs b/left.mjs\nindex b7e36a4..f729b5a 100644\n--- a/left.mjs\n+++ b/left.mjs\n@@ -1 +1,9 @@\n-export function sumNonNegative(value) { throw new Error('Not implemented'); }\n+export function sumNonNegative(values) {\n+  if (!Array.isArray(values) || values.some((value) => (\n+    typeof value !== 'number' || !Number.isFinite(value) || value < 0\n+  ))) {\n+    throw new TypeError('values must be an array of finite non-negative numbers');\n+  }\n+\n+  return values.reduce((sum, value) => sum + value, 0);\n+}\n"
+      }
+    },
+    {
+      "nodeId": "right_worker",
+      "kind": "worker",
+      "sourceArtifactId": "882b35e6ef6f32f809f984cf7a77f3e53d27d19785de98ddbc288fdc68716a6d",
+      "sourceFileSha256": "6562231a78e5b2e0f83017d4a971165d8c2a8ebdad44196779bfe6b077ebc793",
+      "publicEvidenceSha256": "6562231a78e5b2e0f83017d4a971165d8c2a8ebdad44196779bfe6b077ebc793",
+      "evidence": {
+        "schemaVersion": 2,
+        "nodeId": "right_worker",
+        "generation": 0,
+        "iteration": 2,
+        "inputDigest": "731139fcb5f05d7fdabb9723fce3854a58b5d1fd6d3b032729e7d2db4d0df1e2",
+        "inputHead": "17d594a608d7ea5883a91e442898ae5c01905101",
+        "scope": {
+          "stage": "worker",
+          "nodeId": "right_worker",
+          "inputHead": "17d594a608d7ea5883a91e442898ae5c01905101",
+          "dependencies": []
+        },
+        "execution": {
+          "exitCode": 0,
+          "connectionId": "release-codex",
+          "modelId": "gpt-5.6-luna"
+        },
+        "summary": "구현을 완료했습니다.\n\n변경 사항:\n- `right.mjs`에서 ASCII 공백만 양끝 제거하도록 수정\n- 연속 ASCII 공백을 하나로 축약하고 소문자화\n- 기존 export 및 TypeError 처리 유지\n- 다른 파일은 수정하지 않음\n\n검증 결과:\n- `node --test right.test.mjs` 통과\n- `node --check right.mjs` 통과\n- `git diff --check` 통과",
+        "verifier": {
+          "ok": true,
+          "exitCode": 0,
+          "summary": "$ artifact right.mjs\nexit=0\n존재 확인\n\n\n$ node --test right.test.mjs\nexit=0\n✔ right.test.mjs (58.0542ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 63.4193\n\n\n\n$ node --check right.mjs\nexit=0\n\n\n\n$ git diff --check\nexit=0\n\nwarning: in the working copy of 'right.mjs', LF will be replaced by CRLF the next time Git touches it\n\n\nStrong gates\n[not_applicable] frozen_invariants\n등록된 frozen invariant가 없습니다.\n\n[pass] unresolved_conflicts\nNo added Git conflict markers\n\n[pass] test_tampering\n새로운 skip/only, 검증 우회 또는 임계값 무력화 패턴이 없습니다.\n\n[pass] contract_drift\n계약의 exclude 범위를 변경하지 않았습니다.\n\n[not_applicable] coverage_ratchet\ncoverage summary와 기준선이 없습니다.\n\n[not_applicable] clean_worktree_verification\nT1 작업에는 격리 재검증을 강제하지 않습니다.\n\n[not_applicable] mutation_bite\nT1 작업에는 mutation bite를 강제하지 않습니다.",
+          "commands": [
+            {
+              "command": "artifact right.mjs",
+              "exitCode": 0,
+              "stdout": "존재 확인",
+              "stderr": ""
+            },
+            {
+              "command": "node --test right.test.mjs",
+              "exitCode": 0,
+              "stdout": "✔ right.test.mjs (58.0542ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 63.4193\n",
+              "stderr": ""
+            },
+            {
+              "command": "node --check right.mjs",
+              "exitCode": 0,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "command": "git diff --check",
+              "exitCode": 0,
+              "stdout": "",
+              "stderr": "warning: in the working copy of 'right.mjs', LF will be replaced by CRLF the next time Git touches it\n"
+            }
+          ],
+          "gates": [
+            {
+              "id": "frozen_invariants",
+              "status": "not_applicable",
+              "evidence": [
+                "등록된 frozen invariant가 없습니다."
+              ]
+            },
+            {
+              "id": "unresolved_conflicts",
+              "status": "pass",
+              "evidence": [
+                "No added Git conflict markers"
+              ]
+            },
+            {
+              "id": "test_tampering",
+              "status": "pass",
+              "evidence": [
+                "새로운 skip/only, 검증 우회 또는 임계값 무력화 패턴이 없습니다."
+              ]
+            },
+            {
+              "id": "contract_drift",
+              "status": "pass",
+              "evidence": [
+                "계약의 exclude 범위를 변경하지 않았습니다."
+              ]
+            },
+            {
+              "id": "coverage_ratchet",
+              "status": "not_applicable",
+              "evidence": [
+                "coverage summary와 기준선이 없습니다."
+              ]
+            },
+            {
+              "id": "clean_worktree_verification",
+              "status": "not_applicable",
+              "evidence": [
+                "T1 작업에는 격리 재검증을 강제하지 않습니다."
+              ]
+            },
+            {
+              "id": "mutation_bite",
+              "status": "not_applicable",
+              "evidence": [
+                "T1 작업에는 mutation bite를 강제하지 않습니다."
+              ]
+            }
+          ],
+          "riskTier": "T1"
+        },
+        "assessment": {
+          "criteria": [
+            {
+              "id": "contract_evidence",
+              "level": "complete",
+              "evidence": [
+                "계약에 지정된 right.mjs만 수정되었습니다.",
+                "normalizeLabel export와 요구사항이 구현 및 diff로 확인됩니다."
+              ]
+            },
+            {
+              "id": "deterministic_verification",
+              "level": "complete",
+              "evidence": [
+                "node --test right.test.mjs 통과: 1개 테스트, 실패 0개",
+                "node --check right.mjs 통과",
+                "git diff --check 통과"
+              ]
+            },
+            {
+              "id": "regression_scope_safety",
+              "level": "complete",
+              "evidence": [
+                "기존 export를 유지했습니다.",
+                "의존성 추가 및 범위 밖 파일 변경이 없습니다.",
+                "test_tampering, contract_drift, unresolved_conflicts 검증이 통과했습니다."
+              ]
+            },
+            {
+              "id": "reproducibility",
+              "level": "complete",
+              "evidence": [
+                "필수 검증 명령과 right.mjs 산출물이 확인 가능하며 모두 재현 가능한 결과를 반환했습니다."
+              ]
+            },
+            {
+              "id": "api_contract_correctness",
+              "level": "complete",
+              "evidence": [
+                "문자열만 허용하고 ASCII 공백을 trim 및 단일 공백으로 축약한 뒤 소문자화합니다.",
+                "비문자열과 빈 normalized 결과에 TypeError를 발생시킵니다.",
+                "공개 함수 export가 확인됩니다."
+              ]
+            },
+            {
+              "id": "data_business_integrity",
+              "level": "complete",
+              "evidence": [
+                "입력 정규화 규칙과 빈 결과 불변식이 구현되어 있습니다.",
+                "node --test right.test.mjs가 통과했습니다."
+              ]
+            },
+            {
+              "id": "error_security_handling",
+              "level": "complete",
+              "evidence": [
+                "비문자열 및 빈 normalized 입력을 명시적으로 TypeError로 처리합니다.",
+                "외부 의존성이나 민감정보 노출이 없습니다."
+              ]
+            },
+            {
+              "id": "integration_evidence",
+              "level": "complete",
+              "evidence": [
+                "right.test.mjs가 공개 normalizeLabel 경계를 실행해 통과했습니다.",
+                "node --check right.mjs와 git diff --check도 통과했습니다."
+              ]
+            }
+          ],
+          "hardGates": [
+            {
+              "id": "worker_execution_failed",
+              "status": "pass",
+              "evidence": [
+                "Worker 호출 종료 결과 exitCode=0입니다."
+              ]
+            },
+            {
+              "id": "deterministic_verifier_failed",
+              "status": "pass",
+              "evidence": [
+                "필수 검증 3개(node --test, node --check, git diff --check)가 모두 exit=0입니다."
+              ]
+            },
+            {
+              "id": "secret_or_user_data_exposure",
+              "status": "pass",
+              "evidence": [
+                "diff와 검증 증거에서 비밀값 또는 실제 사용자 데이터 노출이 확인되지 않습니다."
+              ]
+            },
+            {
+              "id": "core_placeholder_claimed_complete",
+              "status": "pass",
+              "evidence": [
+                "기존 placeholder가 실제 normalizeLabel 구현으로 대체되었습니다."
+              ]
+            },
+            {
+              "id": "tests_weakened",
+              "status": "pass",
+              "evidence": [
+                "test_tampering 검증이 통과했으며 테스트 약화 패턴이 없습니다."
+              ]
+            },
+            {
+              "id": "destructive_out_of_scope_change",
+              "status": "pass",
+              "evidence": [
+                "계약상 허용된 right.mjs만 변경되었고 commit·push·배포·외부 작업이 없습니다."
+              ]
+            },
+            {
+              "id": "core_contract_broken",
+              "status": "pass",
+              "evidence": [
+                "API 및 정규화 계약이 구현되었고 right.test.mjs가 통과했습니다."
+              ]
+            }
+          ],
+          "findings": []
+        },
+        "evaluation": {
+          "score": 100,
+          "verdict": "pass",
+          "hardGateFailures": [],
+          "hardGateUnknown": [],
+          "criterionScores": {
+            "contract_evidence": 15,
+            "deterministic_verification": 15,
+            "regression_scope_safety": 5,
+            "reproducibility": 5,
+            "api_contract_correctness": 20,
+            "data_business_integrity": 20,
+            "error_security_handling": 10,
+            "integration_evidence": 10
+          },
+          "reason": "모든 Hard Gate와 결정적 검증을 통과했고 점수 100.0점입니다."
+        },
+        "failureFingerprint": "679740b0b4efad72ab85e17e6e0bb15c153ae2edb94f351617adea359cc0961b",
+        "independence": "same_provider",
+        "diff": "diff --git a/right.mjs b/right.mjs\nindex 0df97b9..d4229ec 100644\n--- a/right.mjs\n+++ b/right.mjs\n@@ -1 +1,15 @@\n-export function normalizeLabel(value) { throw new Error('Not implemented'); }\n+export function normalizeLabel(value) {\n+  if (typeof value !== 'string') {\n+    throw new TypeError('value must be a string');\n+  }\n+\n+  const normalized = value\n+    .replace(/^[ \\t\\n\\v\\f\\r]+|[ \\t\\n\\v\\f\\r]+$/g, '')\n+    .replace(/[ \\t\\n\\v\\f\\r]+/g, ' ')\n+    .toLowerCase();\n+  if (normalized.length === 0) {\n+    throw new TypeError('value must not be empty');\n+  }\n+\n+  return normalized;\n+}\n"
+      }
+    },
+    {
+      "nodeId": "final_validate",
+      "kind": "validate",
+      "sourceArtifactId": "116b220490ce182256b4f38622b7f2c3c6a96309b12e33623e396db45eb00558",
+      "sourceFileSha256": "2ed121386d56d260c9e45e62f63f65389380f59e5b555048e3a8880399aa35d3",
+      "publicEvidenceSha256": "2ed121386d56d260c9e45e62f63f65389380f59e5b555048e3a8880399aa35d3",
+      "evidence": {
+        "scope": {
+          "stage": "integration",
+          "nodeId": "final_validate",
+          "inputHead": "4f70873206c564067081b9bd1642d4d22c40c688",
+          "dependencies": [
+            {
+              "nodeId": "integrate",
+              "outcome": "completed",
+              "evidenceIds": []
+            }
+          ],
+          "completedWorkers": [
+            {
+              "nodeId": "left_worker",
+              "outcome": "completed",
+              "evidenceIds": [
+                "5aabfa1c35a2af4485b818d022be3017ea787c3e61e1ed2c3605ec5eccb40bb3"
+              ]
+            },
+            {
+              "nodeId": "right_worker",
+              "outcome": "completed",
+              "evidenceIds": [
+                "882b35e6ef6f32f809f984cf7a77f3e53d27d19785de98ddbc288fdc68716a6d"
+              ]
+            }
+          ]
+        },
+        "verifier": {
+          "ok": true,
+          "exitCode": 0,
+          "summary": "$ artifact left.mjs\nexit=0\n존재 확인\n\n\n$ artifact right.mjs\nexit=0\n존재 확인\n\n\n$ node --test left.test.mjs\nexit=0\n✔ left.test.mjs (53.4734ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 59.0446\n\n\n\n$ node --test right.test.mjs\nexit=0\n✔ right.test.mjs (53.4688ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 58.9712\n\n\n\n$ node --check left.mjs\nexit=0\n\n\n\n$ node --check right.mjs\nexit=0\n\n\n\n$ git diff --check\nexit=0\n\n\n\nStrong gates\n[not_applicable] frozen_invariants\n등록된 frozen invariant가 없습니다.\n\n[pass] unresolved_conflicts\nNo added Git conflict markers\n\n[pass] test_tampering\n새로운 skip/only, 검증 우회 또는 임계값 무력화 패턴이 없습니다.\n\n[pass] contract_drift\n계약의 exclude 범위를 변경하지 않았습니다.\n\n[not_applicable] coverage_ratchet\ncoverage summary와 기준선이 없습니다.\n\n[not_applicable] clean_worktree_verification\nT1 작업에는 격리 재검증을 강제하지 않습니다.\n\n[not_applicable] mutation_bite\nT1 작업에는 mutation bite를 강제하지 않습니다.",
+          "commands": [
+            {
+              "command": "artifact left.mjs",
+              "exitCode": 0,
+              "stdout": "존재 확인",
+              "stderr": ""
+            },
+            {
+              "command": "artifact right.mjs",
+              "exitCode": 0,
+              "stdout": "존재 확인",
+              "stderr": ""
+            },
+            {
+              "command": "node --test left.test.mjs",
+              "exitCode": 0,
+              "stdout": "✔ left.test.mjs (53.4734ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 59.0446\n",
+              "stderr": ""
+            },
+            {
+              "command": "node --test right.test.mjs",
+              "exitCode": 0,
+              "stdout": "✔ right.test.mjs (53.4688ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 58.9712\n",
+              "stderr": ""
+            },
+            {
+              "command": "node --check left.mjs",
+              "exitCode": 0,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "command": "node --check right.mjs",
+              "exitCode": 0,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "command": "git diff --check",
+              "exitCode": 0,
+              "stdout": "",
+              "stderr": ""
+            }
+          ],
+          "gates": [
+            {
+              "id": "frozen_invariants",
+              "status": "not_applicable",
+              "evidence": [
+                "등록된 frozen invariant가 없습니다."
+              ]
+            },
+            {
+              "id": "unresolved_conflicts",
+              "status": "pass",
+              "evidence": [
+                "No added Git conflict markers"
+              ]
+            },
+            {
+              "id": "test_tampering",
+              "status": "pass",
+              "evidence": [
+                "새로운 skip/only, 검증 우회 또는 임계값 무력화 패턴이 없습니다."
+              ]
+            },
+            {
+              "id": "contract_drift",
+              "status": "pass",
+              "evidence": [
+                "계약의 exclude 범위를 변경하지 않았습니다."
+              ]
+            },
+            {
+              "id": "coverage_ratchet",
+              "status": "not_applicable",
+              "evidence": [
+                "coverage summary와 기준선이 없습니다."
+              ]
+            },
+            {
+              "id": "clean_worktree_verification",
+              "status": "not_applicable",
+              "evidence": [
+                "T1 작업에는 격리 재검증을 강제하지 않습니다."
+              ]
+            },
+            {
+              "id": "mutation_bite",
+              "status": "not_applicable",
+              "evidence": [
+                "T1 작업에는 mutation bite를 강제하지 않습니다."
+              ]
+            }
+          ],
+          "riskTier": "T1"
+        },
+        "assessment": {
+          "criteria": [
+            {
+              "id": "contract_evidence",
+              "level": "complete",
+              "evidence": [
+                "승인 계약의 변경 범위와 일치하게 left.mjs·right.mjs만 구현되어 있습니다.",
+                "두 모듈의 공개 ESM 함수와 요구된 입력·출력·예외 규칙이 구현되어 있습니다."
+              ]
+            },
+            {
+              "id": "deterministic_verification",
+              "level": "complete",
+              "evidence": [
+                "node --test left.test.mjs 통과",
+                "node --test right.test.mjs 통과",
+                "node --check left.mjs 및 right.mjs 통과",
+                "git diff --check 통과"
+              ]
+            },
+            {
+              "id": "regression_scope_safety",
+              "level": "complete",
+              "evidence": [
+                "계약 제외 파일을 변경하지 않았습니다.",
+                "test_tampering, contract_drift, unresolved_conflicts 검증이 모두 통과했습니다.",
+                "비밀값 또는 사용자 데이터 노출 증거가 없습니다."
+              ]
+            },
+            {
+              "id": "reproducibility",
+              "level": "verified",
+              "evidence": [
+                "승인된 다섯 개 검증 명령이 실행되었고 모두 exit=0입니다.",
+                "필수 산출물 left.mjs와 right.mjs가 존재합니다."
+              ]
+            },
+            {
+              "id": "api_contract_correctness",
+              "level": "complete",
+              "evidence": [
+                "sumNonNegative가 배열·유한 비음수 숫자만 허용하고 빈 배열에 0을 반환하며 잘못된 입력에 TypeError를 발생시킵니다.",
+                "normalizeLabel이 ASCII 공백 trim·축약·소문자화를 수행하고 비문자열 또는 빈 결과에 TypeError를 발생시킵니다."
+              ]
+            },
+            {
+              "id": "data_business_integrity",
+              "level": "complete",
+              "evidence": [
+                "sumNonNegative가 검증된 값만 reduce하여 합산하며 독립적인 무의존성 모듈로 유지됩니다.",
+                "normalizeLabel의 정규화 순서와 빈 결과 불변식이 구현되어 있습니다."
+              ]
+            },
+            {
+              "id": "error_security_handling",
+              "level": "complete",
+              "evidence": [
+                "두 유틸리티 모두 허용되지 않는 입력을 명시적으로 TypeError로 거부합니다.",
+                "비밀값·실사용자 데이터 처리나 노출이 없습니다."
+              ]
+            },
+            {
+              "id": "integration_evidence",
+              "level": "complete",
+              "evidence": [
+                "통합 결과에서 두 공개 모듈을 대상으로 테스트·문법 검사·diff 검사가 모두 통과했습니다."
+              ]
+            }
+          ],
+          "hardGates": [
+            {
+              "id": "worker_execution_failed",
+              "status": "pass",
+              "evidence": [
+                "완료 Worker 두 개와 integrate 의존성이 completed 상태입니다."
+              ]
+            },
+            {
+              "id": "deterministic_verifier_failed",
+              "status": "pass",
+              "evidence": [
+                "승인된 전체 검증 명령이 모두 exit=0입니다."
+              ]
+            },
+            {
+              "id": "secret_or_user_data_exposure",
+              "status": "pass",
+              "evidence": [
+                "코드·검증 출력에 비밀값 또는 실제 사용자 데이터 노출이 없습니다."
+              ]
+            },
+            {
+              "id": "core_placeholder_claimed_complete",
+              "status": "pass",
+              "evidence": [
+                "두 핵심 함수가 실제 입력 검증·변환·계산 로직으로 구현되어 있습니다."
+              ]
+            },
+            {
+              "id": "tests_weakened",
+              "status": "pass",
+              "evidence": [
+                "test_tampering 검증이 통과했고 테스트 skip/only 및 우회 패턴이 없습니다."
+              ]
+            },
+            {
+              "id": "destructive_out_of_scope_change",
+              "status": "pass",
+              "evidence": [
+                "contract_drift 검증이 통과했고 승인 범위 밖 변경 증거가 없습니다."
+              ]
+            },
+            {
+              "id": "core_contract_broken",
+              "status": "pass",
+              "evidence": [
+                "left·right 테스트와 문법 검사가 모두 통과했으며 핵심 API 계약 구현이 확인됩니다."
+              ]
+            }
+          ],
+          "findings": []
+        },
+        "evaluation": {
+          "score": 99,
+          "verdict": "pass",
+          "hardGateFailures": [],
+          "hardGateUnknown": [],
+          "criterionScores": {
+            "contract_evidence": 15,
+            "deterministic_verification": 15,
+            "regression_scope_safety": 5,
+            "reproducibility": 4,
+            "api_contract_correctness": 20,
+            "data_business_integrity": 20,
+            "error_security_handling": 10,
+            "integration_evidence": 10
+          },
+          "reason": "모든 Hard Gate와 결정적 검증을 통과했고 점수 99.0점입니다."
+        },
+        "diff": "diff --git a/left.mjs b/left.mjs\nindex b7e36a4..f729b5a 100644\n--- a/left.mjs\n+++ b/left.mjs\n@@ -1 +1,9 @@\n-export function sumNonNegative(value) { throw new Error('Not implemented'); }\n+export function sumNonNegative(values) {\n+  if (!Array.isArray(values) || values.some((value) => (\n+    typeof value !== 'number' || !Number.isFinite(value) || value < 0\n+  ))) {\n+    throw new TypeError('values must be an array of finite non-negative numbers');\n+  }\n+\n+  return values.reduce((sum, value) => sum + value, 0);\n+}\ndiff --git a/right.mjs b/right.mjs\nindex 0df97b9..d4229ec 100644\n--- a/right.mjs\n+++ b/right.mjs\n@@ -1 +1,15 @@\n-export function normalizeLabel(value) { throw new Error('Not implemented'); }\n+export function normalizeLabel(value) {\n+  if (typeof value !== 'string') {\n+    throw new TypeError('value must be a string');\n+  }\n+\n+  const normalized = value\n+    .replace(/^[ \\t\\n\\v\\f\\r]+|[ \\t\\n\\v\\f\\r]+$/g, '')\n+    .replace(/[ \\t\\n\\v\\f\\r]+/g, ' ')\n+    .toLowerCase();\n+  if (normalized.length === 0) {\n+    throw new TypeError('value must not be empty');\n+  }\n+\n+  return normalized;\n+}\n"
+      }
+    }
+  ],
+  "outputs": {
+    "left.mjs": "export function sumNonNegative(values) {\r\n  if (!Array.isArray(values) || values.some((value) => (\r\n    typeof value !== 'number' || !Number.isFinite(value) || value < 0\r\n  ))) {\r\n    throw new TypeError('values must be an array of finite non-negative numbers');\r\n  }\r\n\r\n  return values.reduce((sum, value) => sum + value, 0);\r\n}\r\n",
+    "right.mjs": "export function normalizeLabel(value) {\r\n  if (typeof value !== 'string') {\r\n    throw new TypeError('value must be a string');\r\n  }\r\n\r\n  const normalized = value\r\n    .replace(/^[ \\t\\n\\v\\f\\r]+|[ \\t\\n\\v\\f\\r]+$/g, '')\r\n    .replace(/[ \\t\\n\\v\\f\\r]+/g, ' ')\r\n    .toLowerCase();\r\n  if (normalized.length === 0) {\r\n    throw new TypeError('value must not be empty');\r\n  }\r\n\r\n  return normalized;\r\n}\r\n"
+  }
+}

@@ -3,9 +3,9 @@
   "kind": "provider",
   "subject": {
     "version": "0.3.0",
-    "sourceCommit": "6d7fe90280afde42231867cb9b09c600d6b40e05",
-    "sourceTree": "d4dbe0e1a14d08820c64cab4965a6ae379a9a74d",
-    "runtimeDigest": "a79199334573175175b9a7141d386fa37efbd0f9bc59c20c4aad1ec916e01657",
+    "sourceCommit": "2396bce5decab06b2952d066bdc548c53c0dbbe9",
+    "sourceTree": "b82458ce53fc99cfe1e32d1a7544d42ea168e690",
+    "runtimeDigest": "9549b335150434b82dffbea263efb857b9eb9a537cbc1df6d59d645620be2c44",
     "dependencyDigest": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311",
     "testDigest": "3d0c6f846b8d3312a153764d81b018fcd30bbd46953e86fb847c55640dd46923"
   },
@@ -156,6 +156,6 @@
       "platform": "win32",
       "node": "v24.11.1"
     },
-    "verifiedAt": "2026-09-05T21:52:59.269Z"
+    "verifiedAt": "2026-09-05T22:10:08.317Z"
   }
 }
