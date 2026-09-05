@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "type": "functional_failure_review",
+  "failedReport": "history/live-functional-cea23b768e3a4cafa4a8a368dccf44c95a68c676c126fe9d9dfc61de362e27d1.json",
+  "failedReportSha256": "cea23b768e3a4cafa4a8a368dccf44c95a68c676c126fe9d9dfc61de362e27d1",
+  "runId": "run-6b8ac700-4da6-471f-abdc-6abc17a1e9bf",
+  "calls": 5,
+  "totalCalls": 36,
+  "activeMs": 777220,
+  "workersStarted": 0,
+  "cause": "Contract and review passed. All three graph proposals were rejected: duplicate dependencies, file/node names used as runtime artifact IDs, invented verifier aliases and capability labels. Planner correctly offered a single-worker plan, which did not qualify for the two-worker test.",
+  "correction": "Explain compiler semantics and exact allowed verifiers/capabilities in the graph prompt. Compiler rejection and exact-plan acceptance remain unchanged."
+}

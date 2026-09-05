@@ -1,11 +1,23 @@
-import type { CriticAssessment, EvidencePacket, RouteDecision, RouteEntry, TaskContract } from "./types.js";
+import type {
+  CriticAssessment,
+  EvidencePacket,
+  RouteDecision,
+  RouteEntry,
+  TaskContract,
+} from "./types.js";
 import { loadRubric } from "./evaluator.js";
+import { TaskContractDraftSchema } from "./contracts.js";
+import { GraphSchema } from "./graph/schema.js";
+import type { GraphEnvelope } from "./graph/compiler.js";
 
 const CANONICAL_STATE = `현재 저장소 파일, Git HEAD·diff, 결정적 검증 결과가 세션 기억보다 우선합니다.
 프로젝트 절대 경로 밖을 수정하지 마세요. Git commit·push·배포와 Ralph 내부 상태 변경을 하지 마세요.
 비공개 사고과정을 출력하지 말고 판단 요약, 수행 행동, 검증 가능한 증거만 반환하세요.`;
 
-export function contractPlannerPrompt(request: string, projectRoot: string): string {
+export function contractPlannerPrompt(
+  request: string,
+  projectRoot: string,
+): string {
   return `당신은 Ralph의 작업 계약 작성자입니다. 사용자의 자연어 요청을 하나의 실행 가능한 TaskContract JSON으로 바꾸세요.
 ${CANONICAL_STATE}
 
@@ -22,6 +34,12 @@ ${CANONICAL_STATE}
 검증 명령은 비대화형이며 실제 프로젝트에서 실행 가능한 것만 제안하세요.
 요청하지 않은 외부 서비스 변경, 배포, push를 범위에 넣지 마세요.
 JSON 객체만 출력하며 id, approvedHash, approvedAt은 생략하세요.
+다음 JSON Schema를 정확히 따르세요. 목표 필드는 goal이며 objective가 아닙니다.
+Worker와 간선은 다음 그래프 계획 단계가 작성합니다. 이 계약에 workers, integration, finalValidation 또는 projectRoot 필드를 추가하지 마세요.
+필수 배열 필드는 적용 사항이 없어도 빈 배열로 포함하세요.
+include는 수정할 수 있는 파일의 허용 목록입니다. 다른 파일 전체를 제외하려고 exclude에 * 또는 **를 넣으면 include까지 차단하므로 사용하지 마세요.
+TaskContract JSON Schema:
+${JSON.stringify(TaskContractDraftSchema)}
 
 projectRoot: ${projectRoot}
 사용자 요청:
@@ -32,6 +50,8 @@ export function contractCriticPrompt(contract: TaskContract): string {
   return `당신은 실행 전 독립 Contract Critic입니다. 코드를 수정하지 말고 작업 계약이 한 번의 Ralph run으로 안전하게 검증 가능한지 평가하세요.
 ${CANONICAL_STATE}
 다음을 확인하세요: 목표가 하나인지, include/exclude가 충돌하지 않는지, 완료 기준이 관찰 가능한지, verifier가 비대화형·결정적인지, push·배포·외부 상태 변경이 숨어 있지 않은지, 고위험 변경이 명확히 드러나는지.
+Ralph 런타임은 include/exclude와 실제 Git 변경 파일 범위를 별도로 검사하고, Worker 결과와 최종 통합 결과를 검증합니다. 이미 런타임이 강제하는 파일 범위 검사를 verifierCommands에 중복 요구하지 마세요.
+이 단계는 구현 전 계약 검토입니다. 현재 미구현 코드의 테스트 실패와 계약 자체의 결함을 구분하세요. 사용자가 고정한 검증 명령은 유지하며, 수정 요청에는 실행을 막는 구체적인 계약 결함을 제시하세요.
 status는 pass 또는 revise입니다. issues에는 수정해야 할 계약 결함만, evidence에는 해당 필드와 근거만 적으세요. 범위를 새로 만들지 마세요.
 
 계약:
@@ -41,14 +61,64 @@ ${JSON.stringify(contract)}
 {"status":"pass|revise","issues":["..."],"evidence":["..."]}`;
 }
 
+export function graphPlannerPrompt(contract: TaskContract, runId: string, envelope: GraphEnvelope, feedback = ""): string {
+  return `Decompose the approved-scope contract into an executable Ralph DAG. Return only JSON matching the schema below.
+Use only necessary workers, one integrate node and one final validate node. Every worker must reach integration through artifact dependencies, then final validation.
+Runtime semantics (all are mandatory):
+- Initial revision is 1 with reason initial. Every node generation is 0; generation is a retry identity, not topological depth. Omit parentRevision.
+- There is at most ONE edge for each from/to pair. An artifact edge already orders execution AND carries the result. Never add an order edge alongside an artifact edge for the same pair.
+- Every node inputArtifacts must be []. These are durable runtime artifact IDs, not filenames or node IDs. Initial inputs are assembled from readPaths and artifact dependency edges.
+- verifierIds contain the EXACT approved command strings below, not invented aliases. Workers use relevant local checks, and final validation uses the entire approved verifier list.
+- requiredCapabilities must be a subset of the available capability IDs below. Use [] when that list is empty; do not invent skill labels.
+- writePaths contain only each worker's approved file scope. Integrate and validate nodes use []; the runtime merges and verifies their input artifacts without model writes.
+- readPaths and writePaths stay within the allowed paths. Preserve explicit independent-worker requirements from the contract; unrelated workers must not depend on each other.
+- Every node has explicit acceptanceCriteria and budget.maxIterations from 1 to 6. Read source files only if needed; do not modify files during planning.
+Run ID: ${runId}
+Allowed read paths: ${JSON.stringify(envelope.readPaths)}
+Allowed write paths: ${JSON.stringify(envelope.writePaths)}
+Excluded paths: ${JSON.stringify(envelope.exclude)}
+Approved verifier command strings: ${JSON.stringify(envelope.verifierIds)}
+Available capability IDs: ${JSON.stringify(envelope.capabilities ?? [])}
+Graph JSON Schema: ${JSON.stringify(GraphSchema)}
+Contract: ${JSON.stringify(contract)}
+Previous compilation errors: ${feedback || "none"}`;
+}
+
 export async function criticPrompt(
   contract: TaskContract,
   phase: "pre" | "post" | "adjudication",
-  evidence: { head: string; status: string; diff: string; verifier?: string },
+  evidence: {
+    head: string; status: string; diff: string; verifier?: string;
+    execution?: { exitCode: number; connectionId: string; modelId: string };
+    scope?: {
+      stage: "worker" | "integration";
+      nodeId: string;
+      inputHead: string;
+      dependencies: Array<{ nodeId: string; outcome: string; evidenceIds: string[] }>;
+      completedWorkers?: Array<{ nodeId: string; outcome: string; evidenceIds: string[] }>;
+    };
+  },
 ): Promise<string> {
   const rubric = await loadRubric(contract.taskType);
+  if (evidence.scope) {
+    // Interpret the existing criterion at the approved component boundary. Keep
+    // its ID, weight and scoring anchors; unrelated infrastructure is not a requirement.
+    rubric.task.criteria = rubric.task.criteria.map((criterion) =>
+      criterion.id === "integration_evidence"
+        ? { ...criterion, guidance: "승인된 구성요소의 실제 경계(공개 모듈 함수, API, 서비스 등)를 실행하는 검증 증거를 평가합니다. 계약에 없는 HTTP route나 별도 서비스를 요구하지 마세요. 최종 통합 단계에서는 합쳐진 결과에 전체 승인 검증을 적용한 증거도 확인하세요." }
+        : criterion,
+    );
+  }
   return `당신은 독립적인 Ralph Critic입니다. ${phase} 평가를 수행하세요.
 ${CANONICAL_STATE}
+
+${evidence.scope?.stage === "worker"
+    ? "평가 범위는 이 Worker에 배정된 노드 계약입니다. 아직 실행되지 않은 형제 Worker·후속 통합·최종 검증은 이 노드의 완료 조건이 아닙니다. 전체 계약은 후속 최종 검증에서 별도로 평가합니다. 이 노드의 모든 완료 조건과 지정된 검증은 생략 없이 평가하세요."
+    : evidence.scope?.stage === "integration"
+      ? "평가 범위는 최종 통합 결과와 전체 승인 계약입니다. 아래 완료 Worker 기록과 의존 증거, 합쳐진 Git diff, 전체 검증 결과를 함께 확인하세요. 개별 Worker의 통과만으로 전체 요구사항 충족을 추정하지 마세요."
+      : ""}
+${evidence.scope ? `런타임 평가 범위와 실행 증거: ${JSON.stringify(evidence.scope)}` : ""}
+${evidence.execution ? `런타임이 확인한 Worker 호출 종료 결과: ${JSON.stringify(evidence.execution)}` : ""}
 
 임의 총점이나 최종 verdict를 만들지 마세요. 아래 criterion마다 level과 구체적인 증거만 반환하세요.
 level은 absent, partial, verified, complete 중 하나입니다.
@@ -102,7 +172,11 @@ ${evidence ? JSON.stringify(evidence) : "(없음)"}
 {"connectionId":"...","modelId":"...","reasoningEffort":"...","sessionPolicy":"fresh|continue","rationale":"간결한 판단 근거"}`;
 }
 
-export function metaPrompt(contract: TaskContract, assessment: CriticAssessment, evidence?: EvidencePacket): string {
+export function metaPrompt(
+  contract: TaskContract,
+  assessment: CriticAssessment,
+  evidence?: EvidencePacket,
+): string {
   return `당신은 Ralph Meta-Prompter입니다. 승인된 작업 계약의 범위는 바꾸지 말고 Critic 증거를 다음 Worker가 해결할 실행 지시로 최적화하세요.
 ${CANONICAL_STATE}
 한국어 존댓말로 작성하고, 구체적인 파일 후보·검증 순서·금지사항을 포함하세요.
@@ -118,7 +192,12 @@ ${JSON.stringify(assessment)}
 ${evidence ? JSON.stringify(evidence) : "(첫 반복)"}`;
 }
 
-export function workerPrompt(contract: TaskContract, instructions: string, head: string, evidence?: EvidencePacket): string {
+export function workerPrompt(
+  contract: TaskContract,
+  instructions: string,
+  head: string,
+  evidence?: EvidencePacket,
+): string {
   return `당신은 Ralph Worker입니다. 승인된 단일 작업 계약을 실제 프로젝트에 구현하세요.
 ${CANONICAL_STATE}
 Git HEAD: ${head}

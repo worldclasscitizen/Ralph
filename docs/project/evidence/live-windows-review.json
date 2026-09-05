@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "type": "functional_failure_review",
+  "failedReport": "history/live-functional-cc63de9156235aa890a378f69baa07495c3bb639aa4435e65917a4d3aa0ac094.json",
+  "failedReportSha256": "cc63de9156235aa890a378f69baa07495c3bb639aa4435e65917a4d3aa0ac094",
+  "runId": "run-80f2acde-b202-4b6c-8c9c-b27d2c19ba48",
+  "calls": 6,
+  "totalCalls": 27,
+  "activeMs": 657522,
+  "workersStarted": 0,
+  "cause": "Contract reviewers observed Git dubious ownership inside the Windows sandbox. They also identified an exclude wildcard collision and requested duplicated runtime scope checks.",
+  "correction": "Per-invocation Git trust for the selected workspace; sandbox boundaries unchanged. Contract prompts explain the existing runtime scope checks and disallow catch-all excludes. No model calls in the sandbox reproduction."
+}

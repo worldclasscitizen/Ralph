@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "provider",
+  "subject": {
+    "version": "0.3.0",
+    "sourceCommit": "abef81c387aa6d091f364dc80a67474ebc0a030f",
+    "sourceTree": "0dbf4772f0fe998d60c41ed53a453b6d3dd8e473",
+    "runtimeDigest": "fb150a3d2cc92a86e9aef3a13a2eb7af704c8acfcac00344f0111325f3563b1c",
+    "dependencyDigest": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311",
+    "testDigest": "3d0c6f846b8d3312a153764d81b018fcd30bbd46953e86fb847c55640dd46923"
+  },
+  "checkedAt": "2026-09-05T21:36:16.533Z",
+  "runner": {
+    "platform": "win32",
+    "node": "v24.11.1"
+  },
+  "status": "pass",
+  "checks": [
+    {
+      "name": "structured_output",
+      "passed": true
+    },
+    {
+      "name": "file_change_and_deterministic_verification",
+      "passed": true
+    },
+    {
+      "name": "fresh_request_isolation",
+      "passed": true
+    },
+    {
+      "name": "cancel_and_await_close",
+      "passed": true
+    }
+  ],
+  "details": {
+    "adapter": "codex-builtin",
+    "model": "gpt-5.6-luna",
+    "cliVersion": "codex-cli 0.153.4",
+    "observations": [
+      {
+        "name": "structured_output",
+        "status": "pass",
+        "durationMs": 4168,
+        "usage": {
+          "inputTokens": 14305,
+          "outputTokens": 16,
+          "cachedTokens": 9984,
+          "reasoningTokens": 0,
+          "totalTokens": 14321
+        }
+      },
+      {
+        "name": "file_change_and_deterministic_verification",
+        "status": "pass",
+        "durationMs": 16368,
+        "usage": {
+          "inputTokens": 45849,
+          "outputTokens": 258,
+          "cachedTokens": 40192,
+          "reasoningTokens": 68,
+          "totalTokens": 46107
+        },
+        "artifact": "conformance.txt"
+      },
+      {
+        "name": "fresh_request_isolation",
+        "status": "pass",
+        "durationMs": 4078,
+        "usage": {
+          "inputTokens": 14306,
+          "outputTokens": 12,
+          "cachedTokens": 9984,
+          "reasoningTokens": 0,
+          "totalTokens": 14318
+        }
+      },
+      {
+        "name": "cancel_and_await_close",
+        "status": "pass",
+        "durationMs": 479,
+        "confirmed": "adapter returned after subprocess close"
+      }
+    ],
+    "scope": "CLI transport in the recorded local environment; fresh sessions, no API credentials"
+  }
+}
