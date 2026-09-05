@@ -475,6 +475,21 @@ it("proves provider reuse from source bytes and preserves the original date, res
   const git = (...args: string[]) =>
     exec("git", args, { cwd: root, windowsHide: true });
   await mkdir(join(root, "src/providers"), { recursive: true });
+  await mkdir(join(root, "src/workspace"), { recursive: true });
+  await mkdir(join(root, "scripts/lib"), { recursive: true });
+  await writeFile(
+    join(root, "src/workspace/manager.ts"),
+    "export const fixture = 1;\n",
+  );
+  await writeFile(
+    join(root, "scripts/provider-conformance.mjs"),
+    "// frozen requests\n",
+  );
+  await writeFile(
+    join(root, "scripts/lib/live-budget.mjs"),
+    "// frozen allowance\n",
+  );
+  await writeFile(join(root, "package-lock.json"), "{}\n");
   await writeFile(
     join(root, "src/providers/cli.ts"),
     "export const protocol = 1;\n",
@@ -503,6 +518,10 @@ it("proves provider reuse from source bytes and preserves the original date, res
   const reuse = await createEvidenceReuse(root, path, observed);
   const current = { ...original, schemaVersion: 2, reuse };
   await writeFile(join(root, "README.md"), "Documentation changed\n");
+  await writeFile(
+    join(root, "src/prompts.ts"),
+    "// Unrelated planner prompt changed\n",
+  );
   await expect(
     verifyEvidenceReuse(current, root, root),
   ).resolves.toBeUndefined();

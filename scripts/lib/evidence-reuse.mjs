@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
-import { join, basename } from "node:path";
+import { join, basename, posix } from "node:path";
+import ts from "typescript";
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -10,14 +11,35 @@ const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const normalize = bytes => Buffer.from(bytes).includes(0) ? bytes : Buffer.from(bytes).toString("utf8").replaceAll("\r\n", "\n");
 export const PROVIDER_CHECKS = ["structured_output", "file_change_and_deterministic_verification", "fresh_request_isolation", "cancel_and_await_close"];
 async function git(root, args) { return (await exec("git", args, { cwd: root, encoding: "buffer", maxBuffer: 20_000_000, windowsHide: true })).stdout; }
-// Conservative execution scope: all consumer source except release evidence
-// schemas, the exact conformance requests, allowance implementation and lockfile.
-// Report serialization/release gates are tested without making model calls.
-const included = path => (path.startsWith("src/") && !path.startsWith("src/release/")) || ["scripts/provider-conformance.mjs", "scripts/lib/live-budget.mjs", "package-lock.json"].includes(path);
+// Traverse the adapter and fixture helper imports, including type dependencies.
+// Contract/graph prompting is exercised by the separate end-to-end protocol.
+// Bookkeeping and report serialization are covered by deterministic tests.
 export async function providerFiles(root, ref) {
   if (ref && !/^[a-f0-9]{40}$/.test(ref)) throw new Error("Invalid evidence source commit");
-  const names = (await git(root, ref ? ["ls-tree", "-r", "--name-only", "-z", ref] : ["ls-files", "--cached", "--others", "--exclude-standard", "-z"])).toString("utf8").split("\0").filter(included);
-  return Promise.all([...new Set(names)].sort().map(async path => ({ path, sha256: hash(normalize(ref ? await git(root, ["show", `${ref}:${path}`]) : await readFile(join(root, path)))) })));
+  const load = async path => normalize(ref ? await git(root, ["show", `${ref}:${path}`]) : await readFile(join(root, path)));
+  const files = new Map();
+  async function visit(path) {
+    if (files.has(path)) return;
+    if (!path.startsWith("src/") || path.includes("..")) throw new Error("Unexpected provider dependency path");
+    const source = await load(path);
+    files.set(path, hash(source));
+    const syntax = ts.createSourceFile(path, String(source), ts.ScriptTarget.Latest, true);
+    const dependencies = [];
+    function walk(node) {
+      let specifier;
+      if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) specifier = node.moduleSpecifier;
+      else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) specifier = node.argument.literal;
+      else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) specifier = node.arguments[0];
+      if (specifier && ts.isStringLiteral(specifier) && specifier.text.startsWith(".")) dependencies.push(posix.normalize(posix.join(posix.dirname(path), specifier.text)).replace(/\.js$/, ".ts"));
+      ts.forEachChild(node, walk);
+    }
+    walk(syntax);
+    for (const dependency of dependencies) await visit(dependency);
+  }
+  await visit("src/providers/cli.ts");
+  await visit("src/workspace/manager.ts");
+  for (const path of ["scripts/provider-conformance.mjs", "scripts/lib/live-budget.mjs", "package-lock.json"]) files.set(path, hash(await load(path)));
+  return [...files].sort(([a], [b]) => a.localeCompare(b)).map(([path, sha256]) => ({ path, sha256 }));
 }
 function assertOriginal(report, observed) {
   assertReleaseSchema(VerificationReportV1Schema, report);
