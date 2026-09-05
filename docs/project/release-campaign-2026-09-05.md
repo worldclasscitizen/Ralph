@@ -44,3 +44,15 @@ The owner subsequently selected natural-language graph execution through verifie
 The remaining allowance is nine calls and 1,319,288 aggregate active milliseconds. A new generated-graph mock completed in eight calls. Before real work, source-byte proof must confirm reuse of the original four transport checks. No contract or graph is injected into the new real test; scope and frozen verifiers are checked before exact-plan approval. An incomplete real run still blocks release, and the allowance is never increased automatically.
 
 사용자 선택에 따라 자연어 요청부터 그래프 생성·작업·검증·결과 반영까지의 실제 완주를 필수로 변경했습니다. 구버전 반복 비교는 참고 이력으로 보존합니다. 호출 한도는 그대로이며, 남은 예산 안에서 필수 검증을 마치지 못하면 출시를 보류합니다.
+
+## Natural-language trial and contract schema correction
+
+At source b1acb2dea2e79048f40d6241ce2f467a4cc0dc82, the new live trial stopped during contract planning after two calls (38.158 seconds wall time). The runtime persisted awaiting_input; neither the graph planner nor any worker started. Both returned JSON objects used objective instead of the required goal field and also contained worker/integration structures. The prompt named TaskContract without supplying its schema. The validator correctly refused both responses. See the original [failed functional report](evidence/live-functional.json) and the [response-shape review](evidence/live-functional-review.json), which records response hashes without private workspace paths.
+
+The correction supplies one explicit TypeBox draft schema to both the contract prompt and the local draft validator. Errors name the missing field. Programmatic contract normalization remains compatible. Regression tests reject the observed wrong shape, malformed verifier arrays and invented approval fields. The corrected mock completes generated planning, two workers, integration, final validation, branch delivery and external acceptance in eight calls. This is mock evidence, not a corrected live success.
+
+Transport evidence remains reusable: the adapter and fixture helper's recursively imported source files, original conformance requests, allowance implementation and lockfile are unchanged. The initial conservative 68-file comparison was narrowed to the actual 15-file dependency set; contract prompting is separately covered by the end-to-end gate. The original provider report and check date remain intact.
+
+Total consumption is now **17 / 24 calls and 515,096 / 1,800,000 active milliseconds**. Seven calls remain, below the eight-call normal path. No further real call, allowance increase, main merge or publication has occurred. Retained run: run-8d700c7e-e441-49b8-ab87-7cd44141b11b.
+
+실제 시험에서 계약 JSON 형식 안내 누락을 발견해 수정했습니다. 두 응답 모두 목표를 objective에 담았지만 런타임은 goal을 요구했습니다. 그래프와 Worker는 시작하지 않았습니다. 수정 후 모의 완주는 통과했으나 실제 재시험은 하지 않았습니다. 총 17회 사용·7회 잔여이며, 정상 경로의 예상 8회보다 부족해 정식 출시는 계속 보류합니다.
