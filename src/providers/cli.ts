@@ -14,6 +14,16 @@ import type {
 import { commandExists, runCommand } from "../util.js";
 import { classifyProviderError, emptyResponseError } from "./errors.js";
 
+/** Trust only the caller-selected worktree inside the Windows sandbox process. */
+export function codexWorkspaceConfig(projectRoot: string, platform = process.platform): string[] {
+  if (platform !== "win32") return [];
+  return [
+    "-c", 'shell_environment_policy.set.GIT_CONFIG_COUNT="1"',
+    "-c", 'shell_environment_policy.set.GIT_CONFIG_KEY_0="safe.directory"',
+    "-c", `shell_environment_policy.set.GIT_CONFIG_VALUE_0=${JSON.stringify(projectRoot.replaceAll("\\", "/"))}`,
+  ];
+}
+
 abstract class CliAdapter implements ProviderAdapter {
   abstract id: string;
   readonly mode = "builtin" as const;
@@ -201,6 +211,7 @@ export class CodexBuiltinAdapter extends CliAdapter {
     const persistent =
       request.role === "worker" || request.role === "metaPrompter";
     const common = [
+      ...codexWorkspaceConfig(request.projectRoot),
       "--model",
       request.model.modelId,
       "-c",

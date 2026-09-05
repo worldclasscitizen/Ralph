@@ -3,13 +3,13 @@
   "kind": "provider",
   "subject": {
     "version": "0.3.0",
-    "sourceCommit": "a975666176d394b9ce7f6e988c19535bb04f6c6a",
-    "sourceTree": "5cab0d4635727965f95fc139959bb66179eef2a4",
+    "sourceCommit": "8b77f3de88dd2de2bd8dd3745e88d3f9be53eb2e",
+    "sourceTree": "eacac12aa80da151b1b3dc8782c82c2d78ebf3d2",
     "runtimeDigest": "fb150a3d2cc92a86e9aef3a13a2eb7af704c8acfcac00344f0111325f3563b1c",
     "dependencyDigest": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311",
     "testDigest": "3d0c6f846b8d3312a153764d81b018fcd30bbd46953e86fb847c55640dd46923"
   },
-  "checkedAt": "2026-09-04T23:38:02.222Z",
+  "checkedAt": "2026-09-05T21:36:16.533Z",
   "runner": {
     "platform": "win32",
     "node": "v24.11.1"
@@ -36,49 +36,49 @@
   "details": {
     "adapter": "codex-builtin",
     "model": "gpt-5.6-luna",
-    "cliVersion": "codex-cli 0.153.1",
+    "cliVersion": "codex-cli 0.153.4",
     "observations": [
       {
         "name": "structured_output",
         "status": "pass",
-        "durationMs": 4737,
+        "durationMs": 4168,
         "usage": {
-          "inputTokens": 14303,
+          "inputTokens": 14305,
           "outputTokens": 16,
           "cachedTokens": 9984,
           "reasoningTokens": 0,
-          "totalTokens": 14319
+          "totalTokens": 14321
         }
       },
       {
         "name": "file_change_and_deterministic_verification",
         "status": "pass",
-        "durationMs": 21372,
+        "durationMs": 16368,
         "usage": {
-          "inputTokens": 61676,
-          "outputTokens": 420,
-          "cachedTokens": 55296,
-          "reasoningTokens": 115,
-          "totalTokens": 62096
+          "inputTokens": 45849,
+          "outputTokens": 258,
+          "cachedTokens": 40192,
+          "reasoningTokens": 68,
+          "totalTokens": 46107
         },
         "artifact": "conformance.txt"
       },
       {
         "name": "fresh_request_isolation",
         "status": "pass",
-        "durationMs": 5610,
+        "durationMs": 4078,
         "usage": {
-          "inputTokens": 14304,
+          "inputTokens": 14306,
           "outputTokens": 12,
           "cachedTokens": 9984,
           "reasoningTokens": 0,
-          "totalTokens": 14316
+          "totalTokens": 14318
         }
       },
       {
         "name": "cancel_and_await_close",
         "status": "pass",
-        "durationMs": 502,
+        "durationMs": 479,
         "confirmed": "adapter returned after subprocess close"
       }
     ],
@@ -88,9 +88,9 @@
     "schemaVersion": 2,
     "protocol": "codex-conformance-v2",
     "originalFile": "live-provider.json",
-    "originalSha256": "d852ba4e8c547e612be5d1e04de56a01fe13064d13bfb44e45f85ff8c2d8824a",
-    "originalCheckedAt": "2026-09-04T23:38:02.222Z",
-    "sourceCommit": "0b1457f37193b988e3aae79ca793357d31969ae5",
+    "originalSha256": "788671cbdf59baa1f8d086dbfc3675ea88b3737c4dd9299d0de19ed2ecd589cf",
+    "originalCheckedAt": "2026-09-05T21:36:16.533Z",
+    "sourceCommit": "abef81c387aa6d091f364dc80a67474ebc0a030f",
     "sourceFiles": [
       {
         "path": "package-lock.json",
@@ -152,10 +152,10 @@
     "observed": {
       "adapter": "codex-builtin",
       "model": "gpt-5.6-luna",
-      "cliVersion": "codex-cli 0.153.1",
+      "cliVersion": "codex-cli 0.153.4",
       "platform": "win32",
       "node": "v24.11.1"
     },
-    "verifiedAt": "2026-09-05T21:24:31.963Z"
+    "verifiedAt": "2026-09-05T21:37:29.091Z"
   }
 }

@@ -88,3 +88,11 @@ The four provider checks, five old-version calls, six predefined-graph calls and
 Provider reuse now uses an explicit V2 scope for unchanged requests, adapter/helper dependencies and lockfile. Accounting is checked separately without model calls; old V1 certificates keep their original scope. Original live results and dates are never rewritten. Functional source identity continues to include accounting code.
 
 사용자 요청에 따라 누적 호출 횟수 제한을 없앴습니다. 17회는 연결 검사 4회, 구버전 작업 5회, 신버전 작업·평가 6회, 자동 계획 시도 2회입니다. 계획·구현·평가가 각각 AI 요청이며, 빌드·자동 테스트·Git 통합 자체는 AI를 부르지 않습니다. 기존 실패 기록과 호출 장부를 보존하며, 실제 완주 확인 전에는 정식 출시하지 않습니다.
+
+## Current CLI and Windows Git inspection
+
+The installed Codex CLI changed from 0.153.1 to 0.153.4. Calls 18–21 reran and passed the four transport checks. A new natural-language trial then used calls 22–27 for three contract/review pairs and stopped before graph generation. Windows sandbox commands ran as a separate account and Git refused the fixture owner. Original failure evidence is preserved in [the Windows review](evidence/live-windows-review.json). Total consumption at this point was 27 calls and 657522 active milliseconds.
+
+The adapter now supplies a process-scoped safe.directory for the exact selected worktree. No global Git configuration or sandbox permissions change. A no-model sandbox probe confirms that the selected repository can be inspected, another repository remains untrusted, and read-only writes still fail. Contract prompts also explain the runtime's existing file-scope enforcement and prevent catch-all excludes. The adapter change requires new transport evidence before another full trial. See the [probe evidence](evidence/live-windows-git.json), [Codex Windows sandbox](https://learn.chatgpt.com/docs/windows/windows-sandbox), and [process environment configuration](https://learn.chatgpt.com/docs/config-file/config-reference).
+
+현재 CLI 버전 변경으로 연결 검사를 4회 다시 통과했습니다. 이어진 계약·검토 6회는 Windows 격리 계정의 Git 소유권 문제로 중단됐고 Worker는 시작되지 않았습니다. 해당 작업 폴더만 신뢰하는 프로세스 설정으로 수정했으며, 다른 저장소와 읽기 전용 쓰기 제한이 유지되는지 AI 호출 없이 확인했습니다.

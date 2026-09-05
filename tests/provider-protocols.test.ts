@@ -8,6 +8,7 @@ import { ProviderGateway } from "../src/gateway/gateway.js";
 import { BudgetCounter } from "../src/runtime/budget.js";
 import { DEFAULT_BUDGET } from "../src/graph/schema.js";
 import { routesFor } from "../src/gateway/routing.js";
+import { codexWorkspaceConfig } from "../src/providers/cli.js";
 import type {
   AgentRequest,
   ConnectionConfig,
@@ -19,6 +20,18 @@ import type {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+});
+it("limits Windows Git trust to the invocation worktree without changing sandbox permissions", () => {
+  const root = 'C:\\repo with spaces\\name"quoted';
+  const args = codexWorkspaceConfig(root, "win32");
+  expect(args).toEqual([
+    "-c", 'shell_environment_policy.set.GIT_CONFIG_COUNT="1"',
+    "-c", 'shell_environment_policy.set.GIT_CONFIG_KEY_0="safe.directory"',
+    "-c", `shell_environment_policy.set.GIT_CONFIG_VALUE_0=${JSON.stringify(root.replaceAll("\\", "/"))}`,
+  ]);
+  expect(args.join(" ")).not.toContain("--global");
+  expect(args.join(" ")).not.toContain("*");
+  expect(codexWorkspaceConfig(root, "linux")).toEqual([]);
 });
 const variants = [
   {

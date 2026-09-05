@@ -35,6 +35,7 @@ JSON 객체만 출력하며 id, approvedHash, approvedAt은 생략하세요.
 다음 JSON Schema를 정확히 따르세요. 목표 필드는 goal이며 objective가 아닙니다.
 Worker와 간선은 다음 그래프 계획 단계가 작성합니다. 이 계약에 workers, integration, finalValidation 또는 projectRoot 필드를 추가하지 마세요.
 필수 배열 필드는 적용 사항이 없어도 빈 배열로 포함하세요.
+include는 수정할 수 있는 파일의 허용 목록입니다. 다른 파일 전체를 제외하려고 exclude에 * 또는 **를 넣으면 include까지 차단하므로 사용하지 마세요.
 TaskContract JSON Schema:
 ${JSON.stringify(TaskContractDraftSchema)}
 
@@ -47,6 +48,8 @@ export function contractCriticPrompt(contract: TaskContract): string {
   return `당신은 실행 전 독립 Contract Critic입니다. 코드를 수정하지 말고 작업 계약이 한 번의 Ralph run으로 안전하게 검증 가능한지 평가하세요.
 ${CANONICAL_STATE}
 다음을 확인하세요: 목표가 하나인지, include/exclude가 충돌하지 않는지, 완료 기준이 관찰 가능한지, verifier가 비대화형·결정적인지, push·배포·외부 상태 변경이 숨어 있지 않은지, 고위험 변경이 명확히 드러나는지.
+Ralph 런타임은 include/exclude와 실제 Git 변경 파일 범위를 별도로 검사하고, Worker 결과와 최종 통합 결과를 검증합니다. 이미 런타임이 강제하는 파일 범위 검사를 verifierCommands에 중복 요구하지 마세요.
+이 단계는 구현 전 계약 검토입니다. 현재 미구현 코드의 테스트 실패와 계약 자체의 결함을 구분하세요. 사용자가 고정한 검증 명령은 유지하며, 수정 요청에는 실행을 막는 구체적인 계약 결함을 제시하세요.
 status는 pass 또는 revise입니다. issues에는 수정해야 할 계약 결함만, evidence에는 해당 필드와 근거만 적으세요. 범위를 새로 만들지 마세요.
 
 계약:

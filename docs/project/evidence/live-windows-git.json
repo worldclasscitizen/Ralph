@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-05T21:43:39.158Z",
+  "cliVersion": "codex-cli 0.153.4",
+  "modelCalls": 0,
+  "checks": [
+    {
+      "name": "selected Git workspace",
+      "passed": true,
+      "exitCode": 0
+    },
+    {
+      "name": "other Git workspace",
+      "passed": true,
+      "exitCode": 128
+    },
+    {
+      "name": "read-only write rejected",
+      "passed": true,
+      "exitCode": 1
+    }
+  ],
+  "type": "windows_sandbox_git_probe",
+  "subject": {
+    "version": "0.3.0",
+    "sourceCommit": "8b77f3de88dd2de2bd8dd3745e88d3f9be53eb2e",
+    "sourceTree": "eacac12aa80da151b1b3dc8782c82c2d78ebf3d2",
+    "runtimeDigest": "47fdce0198e0285810e5824d42a0dfeed2982b02c77bc5c5cf8eb97c6d59d7c9",
+    "dependencyDigest": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311",
+    "testDigest": "3d0c6f846b8d3312a153764d81b018fcd30bbd46953e86fb847c55640dd46923"
+  }
+}
