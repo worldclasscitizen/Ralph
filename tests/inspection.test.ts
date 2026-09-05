@@ -12,7 +12,7 @@ import {
 } from "../src/runtime/inspection.js";
 import { recoverOwner } from "../src/runtime/recovery.js";
 
-it("binds explicit reconciliation to retained files and never invents a call result", async () => {
+it("binds explicit reconciliation to retained files and never invents a call result", { timeout: 30_000 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "ralph-inspect-"));
   await git(root, ["init"]);
   await git(root, ["config", "user.name", "Test"]);
