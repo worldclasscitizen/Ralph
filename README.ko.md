@@ -17,8 +17,8 @@
     <a href="./docs/architecture/index.md">아키텍처</a>
   </p>
   <p>
-    <img alt="목표 버전: 0.3.0 프리뷰" src="https://img.shields.io/badge/target-v0.3.0_preview-f59e0b?style=flat-square">
-    <a href="https://github.com/worldclasscitizen/Ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/Ralph/ci.yml?branch=feat%2Fgraph-native-v0.3&style=flat-square&label=CI"></a>
+    <img alt="버전: 0.3.0" src="https://img.shields.io/badge/version-v0.3.0-2563eb?style=flat-square">
+    <a href="https://github.com/worldclasscitizen/Ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/Ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 또는 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
     <a href="./LICENSE"><img alt="MIT 라이선스" src="https://img.shields.io/badge/license-MIT-2563eb?style=flat-square"></a>
@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **0.3.0 프리뷰:** 이 브랜치는 그래프 기반 런타임의 정식 승격을 검증 중입니다. npm의 `beta` 태그는 아직 `0.2.0-beta.0`이며, `0.3.0`은 게시되지 않았습니다. 그래프 명령을 사용하려면 아래 소스 설치를 따라 주세요. 정식 승격은 [출시 게이트](./docs/project/v0.3-readiness.md)를 통과한 뒤 진행합니다.
+> **Ralph 0.3.0:** 하나의 실행 그래프 안에서 격리된 Ralph Loop와 통합 검증을 사용합니다. v0.2의 이력·설정은 보존하지만 기존 승인 해시는 새 그래프 실행을 승인하지 않습니다. 전환 전 [마이그레이션 안내](./docs/migration/v0.3.md)와 [검증 범위](./docs/project/v0.3-readiness.md)를 확인하세요.
 
 ## 왜 Ralph인가요?
 
@@ -72,19 +72,19 @@
 
 ### npm에서 설치
 
-**0.3.0 정식 게시 후** 다음 명령으로 정확한 버전을 설치합니다.
+다음 명령으로 0.3.0을 설치합니다.
 
 ```bash
 npm install -g @worldclasscitizen/ralph@0.3.0
 ralph --version
 ```
 
-게시 전에는 아래 소스 설치를 사용합니다. 현재 npm 베타는 이전 Loop 런타임이며 이 문서의 그래프 명령을 제공하지 않습니다.
+버전을 생략하면 npm의 `latest` 버전을 설치합니다. 이전 베타는 별도 버전으로 유지됩니다.
 
 ### 소스에서 설치
 
 ```bash
-git clone --branch feat/graph-native-v0.3 https://github.com/worldclasscitizen/Ralph.git
+git clone --branch v0.3.0 https://github.com/worldclasscitizen/Ralph.git
 cd Ralph
 npm ci
 npm run build
@@ -221,7 +221,7 @@ ralph config refresh
 <!-- provider-verification:start -->
 | Connection / model | Support | Verified environment |
 |---|---|---|
-| Codex | compatible | Live release verification pending |
+| codex-builtin / gpt-5.6-luna | verified | codex-cli 0.153.4 · win32 · v24.11.1 · 2026-09-05 |
 | Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |
 | OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |
 | Antigravity | experimental | Requires a working automation interface |
@@ -407,7 +407,7 @@ Mock 테스트는 유료 모델을 호출하지 않습니다. 실제 출시 검�
 
 ## 프로젝트 상태
 
-Ralph 0.3.0은 출시 검증 중입니다. 실제 요청으로 그래프를 생성하고 Worker 실행·통합·검증·시작 브랜치 반영까지 완료해야 정식 게시합니다. [검증 기록](./docs/project/release-campaign-2026-09-05.md)에 이전 비교 시도의 실패와 남은 호출 예산을 보존합니다. 과거 비교는 참고 자료이며, 일반적인 품질·속도·비용 우위를 주장하지 않습니다.
+실제 자연어 요청으로 계획을 생성하고 두 모듈의 격리 Worker·독립 평가·통합·승인된 검증 5개·시작 브랜치 반영·외부 검사를 완료했습니다. 확인한 환경은 Codex CLI 0.153.4, gpt-5.6-luna, Windows, Node.js 24.11.1입니다. [검증 기록](./docs/project/release-campaign-2026-09-05.md)에 이전 실패와 측정한 사용량을 보존합니다. 과거 비교는 참고 자료이며 일반적인 품질·속도·비용 우위를 주장하지 않습니다.
 
 0.3.0의 실행 범위는 한 컴퓨터입니다. 원격 실행, 자유 조건식 그래프, 모든 외부 동작의 자동 복구 보장은 포함하지 않습니다. 재현 가능한 결함은 [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues)에 남길 수 있습니다.
 

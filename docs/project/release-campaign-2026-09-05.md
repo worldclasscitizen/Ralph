@@ -1,6 +1,6 @@
 # Stable release campaign: 2026-09-05
 
-**Release status: blocked.** PR [#3](https://github.com/worldclasscitizen/Ralph/pull/3) remains a draft. No main merge, npm 0.3.0 publication or public GitHub release has occurred.
+**Functional gate: passed.** The final successful trial is recorded below. Publication is performed only after exact-main CI and registry checks; final manifests and installation evidence are attached to the GitHub Release. Earlier entries are chronological observations and retain their original failure and accounting values.
 
 ## Measured results
 
@@ -112,3 +112,11 @@ Calls 37–46 passed natural-language contract creation, review and four-node gr
 Local worker contracts now carry their approved node criteria and safety constraints. Runtime provider exit evidence is supplied to both initial and additional assessments. Final validation still receives the full original contract, all verifiers, completed worker evidence and integrated diff; rubric weights, hard gates and the 85-point threshold are unchanged. Tests check this separation and retained final coverage.
 
 두 함수의 동작 검사는 통과했지만 Worker 평가에 전체 실행의 요구사항이 섞였고 정상 종료 증거가 빠져 보류됐습니다. 평가 범위와 실행 증거를 수정하며 최종 통합의 전체 검증과 통과 기준은 유지합니다. 이 실패를 성공으로 바꾸지 않습니다.
+
+## Successful generated-graph trial
+
+Source `2396bce5decab06b2952d066bdc548c53c0dbbe9`, run `run-54764ab5-a1f7-42b3-ab4c-b9b6bbfa8bed`, codex-cli 0.153.4, gpt-5.6-luna, win32, v24.11.1. The natural-language trial completed in 12 calls and 278914 wall-clock milliseconds. Both workers completed their scoped changes and assessments, deterministic integration succeeded, all five final commands and final independent assessment passed, and the verified result reached the starting branch. The external oracle and frozen-test checks passed. No contract or graph was injected or manually repaired. See [the actual report](evidence/live-functional.json).
+
+Total consumption is 58 calls and 1301435 active milliseconds, including all previous failures and cancellations. No additional paid API connection was used. Four unchanged transport checks were reused with source and environment proof. Earlier baseline comparisons remain references; this small functional trial establishes the recorded workflow, not general performance superiority.
+
+자연어 계획부터 두 Worker·통합·최종 검증·시작 브랜치 반영·별도 외부 검사까지 12회 호출로 완료했습니다. 이전 실패와 취소를 포함한 누적 호출은 58회이며 총 횟수 제한은 없습니다. 실제 확인한 연결·모델·환경 범위만 지원 증거로 표시하고 일반적인 성능 우위는 주장하지 않습니다.

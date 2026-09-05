@@ -17,8 +17,8 @@
     <a href="./docs/architecture/index.md">Architecture</a>
   </p>
   <p>
-    <img alt="Target version: 0.3.0 preview" src="https://img.shields.io/badge/target-v0.3.0_preview-f59e0b?style=flat-square">
-    <a href="https://github.com/worldclasscitizen/Ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/Ralph/ci.yml?branch=feat%2Fgraph-native-v0.3&style=flat-square&label=CI"></a>
+    <img alt="Version: 0.3.0" src="https://img.shields.io/badge/version-v0.3.0-2563eb?style=flat-square">
+    <a href="https://github.com/worldclasscitizen/Ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/Ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 or 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
     <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-2563eb?style=flat-square"></a>
@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **0.3.0 preview:** this branch contains the graph-native runtime under release verification. The npm `beta` tag still points to `0.2.0-beta.0`; `0.3.0` has not been published. Use the source installation below to try the graph commands. Stable promotion depends on the [release gates](./docs/project/v0.3-readiness.md).
+> **Ralph 0.3.0:** isolated Ralph Loops and integration checks now run within one execution graph. v0.2 history and configuration are preserved, but old approval hashes do not authorize new graphs. Read the [migration guide](./docs/migration/v0.3.md) and [verification scope](./docs/project/v0.3-readiness.md) before upgrading.
 
 ## Why Ralph?
 
@@ -72,19 +72,19 @@ An autonomous coding task needs more than another model call. It needs a clear s
 
 ### Install from npm
 
-**After 0.3.0 is published**, install the exact stable version with:
+Install version 0.3.0 with:
 
 ```bash
 npm install -g @worldclasscitizen/ralph@0.3.0
 ralph --version
 ```
 
-Until publication, use the source installation below. The existing npm beta contains the earlier loop runtime and does not provide these graph commands.
+Omit the version to install the npm `latest` version. Earlier betas remain available by their exact versions.
 
 ### Install from source
 
 ```bash
-git clone --branch feat/graph-native-v0.3 https://github.com/worldclasscitizen/Ralph.git
+git clone --branch v0.3.0 https://github.com/worldclasscitizen/Ralph.git
 cd Ralph
 npm ci
 npm run build
@@ -221,7 +221,7 @@ ralph config refresh
 <!-- provider-verification:start -->
 | Connection / model | Support | Verified environment |
 |---|---|---|
-| Codex | compatible | Live release verification pending |
+| codex-builtin / gpt-5.6-luna | verified | codex-cli 0.153.4 · win32 · v24.11.1 · 2026-09-05 |
 | Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |
 | OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |
 | Antigravity | experimental | Requires a working automation interface |
@@ -407,7 +407,7 @@ Mock tests make no paid model calls. Live release checks are opt-in, with no cum
 
 ## Project status
 
-Ralph 0.3.0 is in release verification. Stable publication requires a real request to generate a graph and complete worker execution, integration, validation and branch delivery. The [campaign review](./docs/project/release-campaign-2026-09-05.md) preserves earlier failed comparison attempts and the remaining test allowance. Historical comparisons are reference material; no general quality, speed or cost advantage is claimed.
+Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.153.4, gpt-5.6-luna, Windows and Node.js 24.11.1. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains earlier failures and measured usage. Historical comparisons are reference material; no general quality, speed or cost advantage is claimed.
 
 Version 0.3.0 targets one local machine. Remote execution, arbitrary conditional graphs and guaranteed automatic recovery of every external action are outside its scope. Report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues).
 
