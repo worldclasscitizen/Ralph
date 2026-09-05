@@ -18,7 +18,21 @@ import {
 } from "../evaluator.js";
 import { classifyRisk } from "../policy.js";
 import { parseJsonObject, RalphError, redact } from "../util.js";
-import type { CriticAssessment } from "../types.js";
+import type { CriticAssessment, TaskContract } from "../types.js";
+
+export function workerContract(parent: TaskContract, node: NodeSpec, root: string): TaskContract {
+  return {
+    ...parent,
+    projectRoot: root,
+    taskType: node.taskType,
+    goal: node.goal,
+    include: node.writePaths,
+    requirements: node.acceptanceCriteria,
+    acceptanceCriteria: node.acceptanceCriteria,
+    verifierCommands: node.verifierIds,
+    requiredArtifacts: parent.requiredArtifacts.filter((p) => covered(p, node.writePaths)),
+  };
+}
 
 export async function checkScope(
   root: string,
@@ -71,17 +85,12 @@ export async function runRalphLoop(context: {
     context.inputBase ? [] : context.dependencies,
     { baseHead: context.inputBase },
   );
-  const contract = {
-    ...plan.contract,
-    projectRoot: input.root,
-    taskType: node.taskType,
-    goal: node.goal,
-    include: node.writePaths,
-    acceptanceCriteria: node.acceptanceCriteria,
-    verifierCommands: node.verifierIds,
-    requiredArtifacts: plan.contract.requiredArtifacts.filter((p) =>
-      covered(p, node.writePaths),
-    ),
+  const contract = workerContract(plan.contract, node, input.root);
+  const scope = {
+    stage: "worker" as const,
+    nodeId: node.nodeId,
+    inputHead: input.inputHead,
+    dependencies: context.dependencies.map(({ nodeId, outcome, evidenceIds }) => ({ nodeId, outcome, evidenceIds })),
   };
   const old = await store.state();
   const saved = await loadLoopCheckpoint(store, node, input.inputDigest);
@@ -200,6 +209,11 @@ export async function runRalphLoop(context: {
     ]);
     const verifiedTree = await git(input.root, ["write-tree"]);
     const critic = routesFor(plan.config, contract, "critic");
+    const execution = {
+      exitCode: outcome.result.exitCode,
+      connectionId: outcome.route.connectionId,
+      modelId: outcome.result.rawModelId ?? outcome.route.modelId,
+    };
     const independent = critic.routes.filter(
       (r) => r.provider !== outcome.route.provider,
     );
@@ -217,6 +231,8 @@ export async function runRalphLoop(context: {
           status: await gitStatus(input.root),
           diff,
           verifier: verifier.summary,
+          scope,
+          execution,
         }),
       },
       signal,
@@ -244,6 +260,8 @@ export async function runRalphLoop(context: {
             status: await gitStatus(input.root),
             diff,
             verifier: verifier.summary,
+            scope,
+            execution,
           }),
         },
         signal,
@@ -278,6 +296,8 @@ export async function runRalphLoop(context: {
       iteration,
       inputDigest: input.inputDigest,
       inputHead: input.inputHead,
+      scope,
+      execution,
       summary: redact(outcome.result.text),
       verifier,
       assessment,

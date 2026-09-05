@@ -15,6 +15,9 @@ import { startRun, resumeGraphRun } from "../src/runtime/supervisor.js";
 import type { ProjectConfig, RouteEntry } from "../src/types.js";
 import { singleGraph } from "../src/graph/compiler.js";
 import { storeFor } from "../src/runtime/supervisor.js";
+import { workerContract } from "../src/loop/runner.js";
+import { criticPrompt } from "../src/prompts.js";
+import { loadRubric } from "../src/evaluator.js";
 export async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "ralph-graph-e2e-"));
   await git(root, ["init"]);
@@ -93,6 +96,15 @@ it("executes the real graph loop in isolated workspaces and delivers once", asyn
   const state = await startRun(approvePlan(plan));
   expect(state.message).toBeUndefined();
   expect(state.status).toBe("completed");
+  const store = await storeFor(root, plan.runId);
+  const worker = plan.graph.nodes.find((n) => n.kind === "worker")!;
+  const validation = plan.graph.nodes.find((n) => n.kind === "validate")!;
+  const workerEvidence = await store.artifact(state.nodes[worker.nodeId]!.result!.evidenceIds[0]!) as any;
+  expect(workerEvidence.scope.stage).toBe("worker");
+  expect(workerEvidence.execution).toMatchObject({ exitCode: 0, connectionId: "mock:process", modelId: "mock-1" });
+  const finalEvidence = await store.artifact(state.nodes[validation.nodeId]!.result!.evidenceIds[0]!) as any;
+  expect(finalEvidence.scope).toMatchObject({ stage: "integration", completedWorkers: [{ nodeId: worker.nodeId, outcome: "completed", evidenceIds: state.nodes[worker.nodeId]!.result!.evidenceIds }] });
+  expect(finalEvidence.verifier.commands.map((c: any) => c.command)).toEqual(expect.arrayContaining(plan.envelope.verifierIds));
   expect(
     (await readFile(join(root, "ralph-smoke.txt"), "utf8")).replaceAll(
       "\r\n",
@@ -103,6 +115,28 @@ it("executes the real graph loop in isolated workspaces and delivers once", asyn
   expect((await resumeGraphRun(root, plan.runId)).status).toBe("completed");
   expect(await git(root, ["rev-parse", "HEAD"])).toBe(head);
 }, 30000);
+
+it("projects local acceptance while preserving global requirements for final assessment and all safety constraints", async () => {
+  const parent = validateContract({ taskType: "backend_core", goal: "Deliver two modules", include: ["left.mjs", "right.mjs"], exclude: ["*.test.mjs"], requirements: ["Use two workers", "Both modules pass full validation"], constraints: ["Never modify tests"], acceptanceCriteria: ["Both modules pass"], verifierCommands: ["left-check", "right-check"], requiredArtifacts: ["left.mjs", "right.mjs"] }, "/project");
+  const original = structuredClone(parent);
+  const node = singleGraph("test", { taskType: parent.taskType, goal: "Implement left", readPaths: ["**"], writePaths: ["left.mjs"], acceptanceCriteria: ["Left boundary cases pass"], verifierIds: ["left-check"], requiredCapabilities: [], inputArtifacts: [], budget: { maxIterations: 6 } }).nodes[0]!;
+  const local = workerContract(parent, node, "/worktree");
+  expect(local).toMatchObject({ requirements: node.acceptanceCriteria, verifierCommands: ["left-check"], requiredArtifacts: ["left.mjs"], constraints: original.constraints, exclude: original.exclude });
+  expect(parent).toEqual(original);
+  const evidence = { head: "head", status: "M left.mjs", diff: "patch", verifier: "left-check exit=0", execution: { exitCode: 0, connectionId: "connection", modelId: "model" }, scope: { stage: "worker" as const, nodeId: node.nodeId, inputHead: "base", dependencies: [] } };
+  for (const phase of ["post", "adjudication"] as const) {
+    const prompt = await criticPrompt(local, phase, evidence);
+    expect(prompt).not.toContain("Both modules pass full validation");
+    expect(prompt).toContain('"exitCode":0');
+    const task = JSON.parse(prompt.match(/작업별 rubric:\n([^\n]+)/)![1]!);
+    const rubric = await loadRubric(parent.taskType);
+    expect(task.criteria.map(({ id, weight }: any) => ({ id, weight }))).toEqual(rubric.task.criteria.map(({ id, weight }) => ({ id, weight })));
+    expect(task.hardGates).toEqual(rubric.task.hardGates);
+  }
+  const final = await criticPrompt(parent, "post", { ...evidence, scope: { ...evidence.scope, stage: "integration" } });
+  expect(final).toContain("Both modules pass full validation");
+  expect(final).toContain("right-check");
+});
 
 it.each(["validation", "merge"])(
   "executes fan-out and repairs %s failure while keeping original generations",

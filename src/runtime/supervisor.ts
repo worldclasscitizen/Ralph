@@ -401,6 +401,18 @@ export async function startRun(
         "--",
       ]);
       const r = routesFor(plan.config, plan.contract, "critic");
+      const scope = {
+        stage: "integration" as const,
+        nodeId: node.nodeId,
+        inputHead: plan.baseHead,
+        dependencies: [{ nodeId: parent.nodeId, outcome: parent.outcome, evidenceIds: parent.evidenceIds }],
+        completedWorkers: plan.graph.nodes.filter((n) => n.kind === "worker").map((n) => {
+          // The compiler connects every worker to this final fan-in, and the
+          // scheduler requires completed dependencies before dispatching it.
+          const result = current.nodes[n.nodeId]!.result!;
+          return { nodeId: n.nodeId, outcome: result.outcome, evidenceIds: result.evidenceIds };
+        }),
+      };
       const review = await gateway.invoke(
         r.routes,
         {
@@ -413,6 +425,7 @@ export async function startRun(
             status: await gitStatus(parent.workspace),
             diff,
             verifier: result.summary,
+            scope,
           }),
         },
         signal,
@@ -431,6 +444,7 @@ export async function startRun(
         { workerOk: true, verifierOk: result.ok },
       );
       const artifactId = await store.putArtifact({
+        scope,
         verifier: result,
         assessment,
         evaluation,

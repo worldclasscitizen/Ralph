@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "type": "functional_failure_review",
+  "failedReport": "history/live-functional-54d673b2ffd7910110b1547f6e548c5b36ffcf6e3fe72205402570ba85bab8f7.json",
+  "failedReportSha256": "54d673b2ffd7910110b1547f6e548c5b36ffcf6e3fe72205402570ba85bab8f7",
+  "runId": "run-14ca93b3-839a-46b7-8f95-57fe8b61a68d",
+  "calls": 10,
+  "totalCalls": 46,
+  "activeMs": 1036542,
+  "workersStarted": 2,
+  "workersCompleted": 1,
+  "cause": "Both modules passed their deterministic behavior checks. Worker reviews inherited global requirements and demanded downstream integration evidence. The right review also lacked explicit provider completion evidence and marked worker execution unknown. The run naturally awaited input before a stop command was queued.",
+  "correction": "Project the approved node acceptance into its local contract, preserve all global requirements for final validation, record actual successful provider exit evidence, and evaluate the approved component boundary with unchanged rubric weights and hard gates."
+}

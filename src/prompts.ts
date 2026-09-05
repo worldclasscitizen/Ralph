@@ -87,11 +87,38 @@ Previous compilation errors: ${feedback || "none"}`;
 export async function criticPrompt(
   contract: TaskContract,
   phase: "pre" | "post" | "adjudication",
-  evidence: { head: string; status: string; diff: string; verifier?: string },
+  evidence: {
+    head: string; status: string; diff: string; verifier?: string;
+    execution?: { exitCode: number; connectionId: string; modelId: string };
+    scope?: {
+      stage: "worker" | "integration";
+      nodeId: string;
+      inputHead: string;
+      dependencies: Array<{ nodeId: string; outcome: string; evidenceIds: string[] }>;
+      completedWorkers?: Array<{ nodeId: string; outcome: string; evidenceIds: string[] }>;
+    };
+  },
 ): Promise<string> {
   const rubric = await loadRubric(contract.taskType);
+  if (evidence.scope) {
+    // Interpret the existing criterion at the approved component boundary. Keep
+    // its ID, weight and scoring anchors; unrelated infrastructure is not a requirement.
+    rubric.task.criteria = rubric.task.criteria.map((criterion) =>
+      criterion.id === "integration_evidence"
+        ? { ...criterion, guidance: "승인된 구성요소의 실제 경계(공개 모듈 함수, API, 서비스 등)를 실행하는 검증 증거를 평가합니다. 계약에 없는 HTTP route나 별도 서비스를 요구하지 마세요. 최종 통합 단계에서는 합쳐진 결과에 전체 승인 검증을 적용한 증거도 확인하세요." }
+        : criterion,
+    );
+  }
   return `당신은 독립적인 Ralph Critic입니다. ${phase} 평가를 수행하세요.
 ${CANONICAL_STATE}
+
+${evidence.scope?.stage === "worker"
+    ? "평가 범위는 이 Worker에 배정된 노드 계약입니다. 아직 실행되지 않은 형제 Worker·후속 통합·최종 검증은 이 노드의 완료 조건이 아닙니다. 전체 계약은 후속 최종 검증에서 별도로 평가합니다. 이 노드의 모든 완료 조건과 지정된 검증은 생략 없이 평가하세요."
+    : evidence.scope?.stage === "integration"
+      ? "평가 범위는 최종 통합 결과와 전체 승인 계약입니다. 아래 완료 Worker 기록과 의존 증거, 합쳐진 Git diff, 전체 검증 결과를 함께 확인하세요. 개별 Worker의 통과만으로 전체 요구사항 충족을 추정하지 마세요."
+      : ""}
+${evidence.scope ? `런타임 평가 범위와 실행 증거: ${JSON.stringify(evidence.scope)}` : ""}
+${evidence.execution ? `런타임이 확인한 Worker 호출 종료 결과: ${JSON.stringify(evidence.execution)}` : ""}
 
 임의 총점이나 최종 verdict를 만들지 마세요. 아래 criterion마다 level과 구체적인 증거만 반환하세요.
 level은 absent, partial, verified, complete 중 하나입니다.

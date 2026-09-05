@@ -104,3 +104,11 @@ The workspace-scoped adapter passed four fresh transport checks (calls 28–31).
 The graph prompt now supplies the exact compiler semantics and allowed values while retaining the same schema and compiler rejection rules. Regression tests cover all observed invalid forms; no generated graph is manually rewritten. Total usage before the next trial is 36 calls and 777220 active milliseconds.
 
 계약 생성·검토는 통과했지만 잘못된 간선·아티팩트·검증 명령 표기로 그래프가 거부됐습니다. 컴파일러는 유지하고 모델에 실제 실행 규칙을 명확히 전달하도록 수정했습니다. 단일 Worker로 축소된 계획을 병렬 그래프 성공으로 처리하지 않았습니다.
+
+## Worker assessment scope
+
+Calls 37–46 passed natural-language contract creation, review and four-node graph compilation, then ran both isolated workers. Both module behavior checks passed. Left completed after a second iteration; right was blocked because the review lacked explicit worker termination evidence. Reviews also incorrectly demanded downstream integration and unrelated service boundaries from individual module workers. The run naturally awaited input before the requested stop command was queued; no integration or delivery occurred. Total usage was 46 calls and 1036542 active milliseconds. The [unchanged failure and correction review](evidence/live-worker-scope-review.json) retain this outcome.
+
+Local worker contracts now carry their approved node criteria and safety constraints. Runtime provider exit evidence is supplied to both initial and additional assessments. Final validation still receives the full original contract, all verifiers, completed worker evidence and integrated diff; rubric weights, hard gates and the 85-point threshold are unchanged. Tests check this separation and retained final coverage.
+
+두 함수의 동작 검사는 통과했지만 Worker 평가에 전체 실행의 요구사항이 섞였고 정상 종료 증거가 빠져 보류됐습니다. 평가 범위와 실행 증거를 수정하며 최종 통합의 전체 검증과 통과 기준은 유지합니다. 이 실패를 성공으로 바꾸지 않습니다.
