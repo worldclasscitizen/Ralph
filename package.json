@@ -42,7 +42,8 @@
     "check:core": "node scripts/check-release.mjs --local",
     "release": "node scripts/release.mjs",
     "test:operational": "node scripts/test-operational.mjs",
-    "test:live:release": "node scripts/live-release.mjs",
+    "test:live:release": "node scripts/live-functional.mjs",
+    "test:live:comparison": "node scripts/live-release.mjs",
     "catalog:audit": "node scripts/audit-catalog.mjs",
     "support:sync": "node scripts/sync-provider-support.mjs"
   },
