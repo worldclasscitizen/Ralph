@@ -31,8 +31,16 @@ GitHub main requires the PR and six matrix checks plus the package check, withou
 
 The npm Trusted Publisher is configured for `worldclasscitizen/Ralph`, `release.yml`, environment `npm-release`, with direct `npm publish` permission. User security-key authentication completed successfully. Authentication setup is complete; publishing remains blocked by the verification results above.
 
-## 재개 조건
+## Original resumption conditions (superseded)
 
 현재 정식 출시는 보류 상태입니다. 공급자 통신 검증은 통과했지만 그래프 실행의 필수 비교를 끝내지 못했습니다. 동작 검증을 보완한 뒤 모의 시험으로 재확인하며, 실패 이력과 남은 호출 예산은 보존합니다.
 
 실검증을 재개하려면 수정한 동일 코드·검증 계약에 대한 비교와 공급자 보고서가 필요합니다. 남은 9회로 필수 비교를 완료할 수 없으므로 예산 변경은 사용자의 별도 결정 사항입니다. 검사 횟수나 통과 기준을 낮춰 출시하지 않습니다. 모든 출시 조건을 통과한 이후에만 PR 병합, 정확한 main 커밋의 재검증, npm 게시, GitHub Release 공개를 진행합니다.
+
+## Approved functional release gate
+
+The owner subsequently selected natural-language graph execution through verified delivery as the mandatory live gate. Repeated baseline comparisons are now historical reference. This is an explicit gate change, not a successful rerun of the failed comparison. The original reports, attempts and consumption above remain unchanged.
+
+The remaining allowance is nine calls and 1,319,288 aggregate active milliseconds. A new generated-graph mock completed in eight calls. Before real work, source-byte proof must confirm reuse of the original four transport checks. No contract or graph is injected into the new real test; scope and frozen verifiers are checked before exact-plan approval. An incomplete real run still blocks release, and the allowance is never increased automatically.
+
+사용자 선택에 따라 자연어 요청부터 그래프 생성·작업·검증·결과 반영까지의 실제 완주를 필수로 변경했습니다. 구버전 반복 비교는 참고 이력으로 보존합니다. 호출 한도는 그대로이며, 남은 예산 안에서 필수 검증을 마치지 못하면 출시를 보류합니다.

@@ -407,7 +407,7 @@ Mock tests make no paid model calls. Live release checks are opt-in and share a 
 
 ## Project status
 
-Ralph 0.3.0 is in release verification. The graph runtime and cross-platform CI are implemented, but stable publication remains blocked by incomplete live comparison evidence. The [campaign review](./docs/project/release-campaign-2026-09-05.md) records the failure, corrected verifier fixture and retained test budget. A graph alone is not a claim of better quality, speed or cost.
+Ralph 0.3.0 is in release verification. Stable publication requires a real request to generate a graph and complete worker execution, integration, validation and branch delivery. The [campaign review](./docs/project/release-campaign-2026-09-05.md) preserves earlier failed comparison attempts and the remaining test allowance. Historical comparisons are reference material; no general quality, speed or cost advantage is claimed.
 
 Version 0.3.0 targets one local machine. Remote execution, arbitrary conditional graphs and guaranteed automatic recovery of every external action are outside its scope. Report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues).
 
