@@ -3,11 +3,11 @@
   "kind": "provider",
   "subject": {
     "version": "0.3.0",
-    "sourceCommit": "94901bff8a6ff02395acfc450b9463aa63129c16",
-    "sourceTree": "b1e090eb75594ebda3866d3be424f4f4ddccc08d",
-    "runtimeDigest": "16d72a87b73443e8332bc2393676f545166ba4f6948cdc8fa09a17b3930033da",
+    "sourceCommit": "a975666176d394b9ce7f6e988c19535bb04f6c6a",
+    "sourceTree": "5cab0d4635727965f95fc139959bb66179eef2a4",
+    "runtimeDigest": "fb150a3d2cc92a86e9aef3a13a2eb7af704c8acfcac00344f0111325f3563b1c",
     "dependencyDigest": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311",
-    "testDigest": "2b84bf0c55f52778309060853f353724eaf4eff788b2745120896ddfb7b1a336"
+    "testDigest": "3d0c6f846b8d3312a153764d81b018fcd30bbd46953e86fb847c55640dd46923"
   },
   "checkedAt": "2026-09-04T23:38:02.222Z",
   "runner": {
@@ -85,8 +85,8 @@
     "scope": "CLI transport in the recorded local environment; fresh sessions, no API credentials"
   },
   "reuse": {
-    "schemaVersion": 1,
-    "protocol": "codex-conformance-v1",
+    "schemaVersion": 2,
+    "protocol": "codex-conformance-v2",
     "originalFile": "live-provider.json",
     "originalSha256": "d852ba4e8c547e612be5d1e04de56a01fe13064d13bfb44e45f85ff8c2d8824a",
     "originalCheckedAt": "2026-09-04T23:38:02.222Z",
@@ -95,10 +95,6 @@
       {
         "path": "package-lock.json",
         "sha256": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311"
-      },
-      {
-        "path": "scripts/lib/live-budget.mjs",
-        "sha256": "2e1a11185ff2ad3f3b2811cd3a38f3309f414ec41d30776750a526af271374d3"
       },
       {
         "path": "scripts/provider-conformance.mjs",
@@ -160,6 +156,6 @@
       "platform": "win32",
       "node": "v24.11.1"
     },
-    "verifiedAt": "2026-09-05T16:09:30.411Z"
+    "verifiedAt": "2026-09-05T21:24:31.963Z"
   }
 }

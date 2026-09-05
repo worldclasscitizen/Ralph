@@ -388,7 +388,7 @@ npm run smoke
 
 CI covers Windows, macOS and Linux with Node.js 22 and 24. One archive is installed across the matrix. Recovery checks terminate real fixture processes; browser cases cover 32 nodes, eight revisions and 100,000 log lines. Ten critical modules require at least 90% line and branch coverage.
 
-Mock tests make no paid model calls. Live release checks are opt-in and share a persistent 24-call, 30-active-minute allowance. Failures and cancellations count; reruns do not reset consumption. [Release verification](./docs/project/v0.3-readiness.md)
+Mock tests make no paid model calls. Live release checks are opt-in, with no cumulative call-count cap. They retain a shared 30-active-minute ceiling and use no additional paid API connection. All calls, failures and cancellations are recorded; reruns do not reset consumption. [Release verification](./docs/project/v0.3-readiness.md)
 
 ## Documentation
 

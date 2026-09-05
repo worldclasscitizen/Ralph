@@ -56,3 +56,35 @@ Transport evidence remains reusable: the adapter and fixture helper's recursivel
 Total consumption is now **17 / 24 calls and 515,096 / 1,800,000 active milliseconds**. Seven calls remain, below the eight-call normal path. No further real call, allowance increase, main merge or publication has occurred. Retained run: run-8d700c7e-e441-49b8-ab87-7cd44141b11b.
 
 실제 시험에서 계약 JSON 형식 안내 누락을 발견해 수정했습니다. 두 응답 모두 목표를 objective에 담았지만 런타임은 goal을 요구했습니다. 그래프와 Worker는 시작하지 않았습니다. 수정 후 모의 완주는 통과했으나 실제 재시험은 하지 않았습니다. 총 17회 사용·7회 잔여이며, 정상 경로의 예상 8회보다 부족해 정식 출시는 계속 보류합니다.
+
+## Owner-directed count policy change and call accounting
+
+The owner subsequently removed the cumulative call-count cap. The earlier limits and failures above describe the historical policy; they are not current limits. The shared 30-active-minute ceiling and no additional paid API connection remain. The V2 ledger archives the original V1 bytes and keeps all 17 calls and 515,096 active milliseconds. No additional live call was made to change or test the accounting policy.
+
+One call means one request to the model, not one entire test. All 17 used the recorded Codex subscription connection and gpt-5.6-luna. Compilation, deterministic tests, Git operations and mock checks do not invoke a model. The real task used disposable Git projects: left.mjs sums finite non-negative numbers and rejects invalid input; right.mjs normalizes string whitespace and case and rejects invalid or empty input.
+
+| Call | Purpose | Observed result |
+|---:|---|---|
+| 1 | Provider: produce structured JSON | Passed |
+| 2 | Provider: create conformance.txt and verify its content | Passed |
+| 3 | Provider: respond in a separate fresh session | Passed |
+| 4 | Provider: start and cancel a request, await process closure | Cancellation check passed; the intentional interrupted call is recorded as failed |
+| 5 | v0.2: initial review of the task and code | Review returned |
+| 6 | v0.2: prepare implementation instructions | Instructions returned |
+| 7 | v0.2: implement both functions | Implementation returned |
+| 8 | v0.2: assess the implementation | Additional assessment required |
+| 9 | v0.2: additional assessment | Run completed and external checks passed |
+| 10 | v0.3 predefined graph: implement left.mjs | First implementation returned |
+| 11 | v0.3 predefined graph: implement right.mjs | First implementation returned |
+| 12 | v0.3: assess left.mjs | 55.5; behavioral evidence missing, another iteration required |
+| 13 | v0.3: assess right.mjs | Borderline result required additional assessment |
+| 14 | v0.3: second left.mjs implementation iteration | Changes returned; subsequent review never started under the old per-comparison cap |
+| 15 | v0.3: additional right.mjs assessment | 89; right worker completed, integration did not start |
+| 16 | Natural-language trial: generate the task contract | Invalid JSON shape; the prompt lacked the required contract schema |
+| 17 | Natural-language trial: retry contract generation | Still invalid; graph planning and workers never started |
+
+The four provider checks, five old-version calls, six predefined-graph calls and two contract-planning calls total 17. The missing behavioral evidence and missing contract schema were test setup and prompt defects, not mandatory overhead for every user request. Both corrections are covered by mock and deterministic tests; a corrected real end-to-end success is still required.
+
+Provider reuse now uses an explicit V2 scope for unchanged requests, adapter/helper dependencies and lockfile. Accounting is checked separately without model calls; old V1 certificates keep their original scope. Original live results and dates are never rewritten. Functional source identity continues to include accounting code.
+
+사용자 요청에 따라 누적 호출 횟수 제한을 없앴습니다. 17회는 연결 검사 4회, 구버전 작업 5회, 신버전 작업·평가 6회, 자동 계획 시도 2회입니다. 계획·구현·평가가 각각 AI 요청이며, 빌드·자동 테스트·Git 통합 자체는 AI를 부르지 않습니다. 기존 실패 기록과 호출 장부를 보존하며, 실제 완주 확인 전에는 정식 출시하지 않습니다.
