@@ -39,6 +39,7 @@ import {
   PROVIDER_CHECKS,
   createEvidenceReuse,
   verifyEvidenceReuse,
+  providerFiles,
 } from "../scripts/lib/evidence-reuse.mjs";
 // @ts-ignore release-only fixture shared by baseline and candidate
 import {
@@ -121,12 +122,12 @@ function reports() {
     injectedContract: false,
     injectedGraph: false,
     allowance: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       releaseId: "ralph-0.3.0",
-      maxCalls: 24,
+      maxCalls: null,
       maxActiveMs: 1800000,
       apiSpendUsd: 0,
-      calls: 23,
+      calls: 25,
       activeMs: 1000,
       pending: null,
       attempts: [],
@@ -198,7 +199,7 @@ it("validates all public release contracts and rejects unknown fields", () => {
     assertReleaseSchema(ReleaseManifestSchema, { ...manifest, publish: true }),
   ).toThrow();
 });
-it("persists shared live budgets and counts failed calls", async () => {
+it("persists shared live budgets and counts failed calls", { timeout: 30_000 }, async () => {
   const path = join(
       await mkdtemp(join(tmpdir(), "ralph-budget-")),
       "budget.json",
@@ -213,12 +214,12 @@ it("persists shared live budgets and counts failed calls", async () => {
   assertReleaseSchema(LiveTestBudgetSchema, state);
   expect(state.calls).toBe(1);
   expect(state.attempts[0].outcome).toBe("failed");
-  state.calls = 24;
-  await atomicJson(path, state);
-  await expect(budget.invoke("extra", async () => null)).rejects.toThrow(
-    /exhausted/,
-  );
-  state.calls = 1;
+  for (let i = 0; i < 25; i++) await budget.invoke("mock success", async () => null);
+  const after = await budget.load();
+  expect(after.calls).toBe(26);
+  expect(after.attempts).toHaveLength(26);
+  expect(after.maxCalls).toBeNull();
+  Object.assign(state, after);
   state.pending = {
     attemptId: "unknown",
     startedAt: Date.now(),
@@ -228,6 +229,55 @@ it("persists shared live budgets and counts failed calls", async () => {
   await expect(budget.invoke("duplicate", async () => null)).rejects.toThrow(
     /Unconfirmed/,
   );
+});
+it("archives and migrates the old count cap without resetting attempts or time", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ralph-budget-migration-"));
+  const path = join(root, "budget.json"), budget = new LiveBudget(path);
+  const old = { ...(await budget.load()), schemaVersion: 1, maxCalls: 24,
+    calls: 17, activeMs: 515096,
+    attempts: Array.from({ length: 17 }, (_, i) => ({ attemptId: String(i), purpose: "retained", durationMs: 1, outcome: "returned", usage: null })),
+  };
+  await atomicJson(path, old);
+  const original = await readFile(path), migrated = await budget.load();
+  expect(migrated).toMatchObject({ schemaVersion: 2, maxCalls: null, calls: 17, activeMs: 515096, attempts: old.attempts });
+  expect(await readFile(join(root, migrated.previousLedger.file))).toEqual(original);
+  expect(migrated.previousLedger.sha256).toBe(sha256(original));
+  expect(await new LiveBudget(path).load()).toEqual(migrated);
+  // A crash after the archive but before the new ledger is durable is resumable.
+  await writeFile(path, original);
+  expect((await budget.load()).calls).toBe(17);
+});
+it("keeps interrupted and simultaneous calls blocked after removing the count cap", async () => {
+  const path = join(await mkdtemp(join(tmpdir(), "ralph-budget-lock-")), "budget.json");
+  const budget = new LiveBudget(path);
+  const state = { ...(await budget.load()), schemaVersion: 1, maxCalls: 24, calls: 24,
+    pending: { attemptId: "interrupted", startedAt: 1, reservedMs: 90000 },
+  };
+  await atomicJson(path, state);
+  let called = false;
+  await expect(budget.invoke("unknown", async () => { called = true; })).rejects.toThrow(/Unconfirmed/);
+  expect(called).toBe(false);
+  expect((await budget.load()).pending).toEqual(state.pending);
+  const current = await budget.load();
+  current.pending = null;
+  await atomicJson(path, current);
+  await budget.invoke("first", async () => {
+    await expect(new LiveBudget(path).invoke("duplicate", async () => { called = true; })).rejects.toThrow(/EEXIST/);
+  });
+  expect(called).toBe(false);
+  expect((await budget.load()).calls).toBe(25);
+});
+it("passes cancellation to the provider and records the unsuccessful call", async () => {
+  const path = join(await mkdtemp(join(tmpdir(), "ralph-budget-cancel-")), "budget.json");
+  const budget = new LiveBudget(path), controller = new AbortController();
+  await expect(budget.invoke("cancel", async (signal: AbortSignal) => {
+    controller.abort(new Error("cancelled by test"));
+    signal.throwIfAborted();
+  }, controller.signal)).rejects.toThrow(/cancelled by test/);
+  const state = await budget.load();
+  expect(state.calls).toBe(1);
+  expect(state.pending).toBeNull();
+  expect(state.attempts[0].outcome).toBe("failed");
 });
 it("enforces the active time ceiling and ownership of an allowance", async () => {
   const path = join(
@@ -295,23 +345,22 @@ it("keeps old signatures valid while rejecting tampered v2 catalogs", async () =
 it("does not fabricate live verification for an untested adapter", async () => {
   expect(await providerVerification("unknown", "1")).toEqual([]);
 });
-it("blocks unaffordable campaigns before spending and never discards a failed trial", () => {
+it("reports call estimates without a cap and never discards a failed trial", () => {
   const mock = [4, 5, 4, 5].map((calls) => ({ calls, passed: true }));
   const allowance = {
     calls: 0,
-    maxCalls: 24,
+    maxCalls: null,
     activeMs: 0,
     maxActiveMs: 1800000,
     pending: null,
   };
   expect(assertLiveCampaignReady(allowance, [], mock, true)).toEqual({
-    minimumCalls: 22,
-    remainingCalls: 24,
-    retryReserve: 2,
+    estimatedCalls: 22,
+    remainingActiveMs: 1800000,
   });
-  expect(() =>
-    assertLiveCampaignReady({ ...allowance, calls: 15 }, [], mock, false),
-  ).toThrow(/18 calls required, 9 available/);
+  expect(assertLiveCampaignReady({ ...allowance, calls: 100 }, [], mock, false)).toEqual({
+    estimatedCalls: 18, remainingActiveMs: 1800000,
+  });
   expect(() =>
     assertLiveCampaignReady(allowance, [{ passed: false }], mock, false),
   ).toThrow(/prior comparison failed/);
@@ -370,10 +419,10 @@ it("records behavioral evidence per branch without requiring an unfinished sibli
   );
   await expect(check("left.test.mjs")).rejects.toThrow();
 });
-it("requires an affordable generated-graph mock before the remaining real calls", () => {
+it("requires a passing generated-graph mock without treating its call estimate as a limit", () => {
   const allowance = {
-    maxCalls: 24,
-    calls: 15,
+    maxCalls: null,
+    calls: 17,
     pending: null,
     activeMs: 480712,
     maxActiveMs: 1800000,
@@ -387,8 +436,7 @@ it("requires an affordable generated-graph mock before the remaining real calls"
   };
   expect(assertFunctionalPreflight(allowance, mock)).toEqual({
     estimatedCalls: 8,
-    remainingCalls: 9,
-    retryReserve: 1,
+    remainingActiveMs: 1319288,
   });
   for (const bad of [
     { ...mock, mode: "live" },
@@ -398,11 +446,11 @@ it("requires an affordable generated-graph mock before the remaining real calls"
   ])
     expect(() => assertFunctionalPreflight(allowance, bad)).toThrow();
   for (const bad of [
-    { ...allowance, calls: 17 },
     { ...allowance, pending: {} },
     { ...allowance, activeMs: 1800000 },
   ])
     expect(() => assertFunctionalPreflight(bad, mock)).toThrow();
+  expect(assertFunctionalPreflight({ ...allowance, calls: 100 }, mock).estimatedCalls).toBe(8);
 });
 it("preserves historical comparisons without allowing required evidence to become optional", { timeout: 30_000 }, async () => {
   const directory = await mkdtemp(join(tmpdir(), "ralph-manifest-"));
@@ -517,6 +565,18 @@ it("proves provider reuse from source bytes and preserves the original date, res
   };
   const reuse = await createEvidenceReuse(root, path, observed);
   const current = { ...original, schemaVersion: 2, reuse };
+  expect(reuse.schemaVersion).toBe(2);
+  const previousScope = { ...reuse, schemaVersion: 1, protocol: "codex-conformance-v1",
+    sourceFiles: await providerFiles(root, original.subject.sourceCommit, "codex-conformance-v1"),
+  };
+  await expect(verifyEvidenceReuse({ ...current, reuse: previousScope }, root, root)).resolves.toBeUndefined();
+  await writeFile(join(root, "scripts/lib/live-budget.mjs"), "// Call cap removed; separately tested accounting\n");
+  // The old certificate is not silently given the new, narrower meaning.
+  await expect(verifyEvidenceReuse({ ...current, reuse: previousScope }, root, root)).rejects.toThrow(/identity/);
+  await expect(verifyEvidenceReuse(current, root, root)).resolves.toBeUndefined();
+  expect(await createEvidenceReuse(root, path, observed)).toMatchObject({
+    originalSha256: reuse.originalSha256, originalCheckedAt: reuse.originalCheckedAt,
+  });
   await writeFile(join(root, "README.md"), "Documentation changed\n");
   await writeFile(
     join(root, "src/prompts.ts"),

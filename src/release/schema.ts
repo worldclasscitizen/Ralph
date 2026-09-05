@@ -58,7 +58,7 @@ export const VerificationReportV1Schema = Type.Object(
   object,
 );
 export type VerificationReportV1 = Static<typeof VerificationReportV1Schema>;
-export const EvidenceReuseSchema = Type.Object(
+export const EvidenceReuseV1Schema = Type.Object(
   {
     schemaVersion: Type.Literal(1),
     protocol: Type.Literal("codex-conformance-v1"),
@@ -84,7 +84,20 @@ export const EvidenceReuseSchema = Type.Object(
   },
   object,
 );
-export type EvidenceReuseV1 = Static<typeof EvidenceReuseSchema>;
+export type EvidenceReuseV1 = Static<typeof EvidenceReuseV1Schema>;
+export const EvidenceReuseV2Schema = Type.Object(
+  {
+    ...EvidenceReuseV1Schema.properties,
+    schemaVersion: Type.Literal(2),
+    protocol: Type.Literal("codex-conformance-v2"),
+  },
+  object,
+);
+export type EvidenceReuseV2 = Static<typeof EvidenceReuseV2Schema>;
+export const EvidenceReuseSchema = Type.Union([
+  EvidenceReuseV1Schema,
+  EvidenceReuseV2Schema,
+]);
 export const VerificationReportV2Schema = Type.Object(
   {
     ...VerificationReportV1Schema.properties,
@@ -124,7 +137,7 @@ export const ProviderVerificationSchema = Type.Object(
   object,
 );
 export type ProviderVerificationV1 = Static<typeof ProviderVerificationSchema>;
-export const LiveTestBudgetSchema = Type.Object(
+export const LiveTestBudgetV1Schema = Type.Object(
   {
     schemaVersion: Type.Literal(1),
     releaseId: Type.String(),
@@ -159,7 +172,27 @@ export const LiveTestBudgetSchema = Type.Object(
   },
   object,
 );
-export type LiveTestBudgetV1 = Static<typeof LiveTestBudgetSchema>;
+export type LiveTestBudgetV1 = Static<typeof LiveTestBudgetV1Schema>;
+export const LiveTestBudgetV2Schema = Type.Object(
+  {
+    ...LiveTestBudgetV1Schema.properties,
+    schemaVersion: Type.Literal(2),
+    maxCalls: Type.Null(),
+    calls: Type.Integer({ minimum: 0 }),
+    previousLedger: Type.Optional(Type.Object({
+      file: Type.String(),
+      sha256: hash,
+      changedAt: Type.String(),
+      reason: Type.Literal("call_count_cap_removed"),
+    }, object)),
+  },
+  object,
+);
+export type LiveTestBudgetV2 = Static<typeof LiveTestBudgetV2Schema>;
+export const LiveTestBudgetSchema = Type.Union([
+  LiveTestBudgetV1Schema,
+  LiveTestBudgetV2Schema,
+]);
 export const ReleaseManifestV1Schema = Type.Object(
   {
     schemaVersion: Type.Literal(1),

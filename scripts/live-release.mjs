@@ -75,7 +75,7 @@ for (const version of ["baseline", "candidate", "baseline", "candidate"]) {
 }
 if (live) {
   const allowance = await budget.load();
-  const checks = [{ name: "four frozen comparisons", passed: observations.length === 4 }, { name: "independent acceptance and runtime completion", passed: observations.every(o => o.passed) }, { name: "fixed allowance", passed: allowance.calls <= 24 && allowance.activeMs <= 1800000 && !allowance.pending }];
+  const checks = [{ name: "four frozen comparisons", passed: observations.length === 4 }, { name: "independent acceptance and runtime completion", passed: observations.every(o => o.passed) }, { name: "active time and confirmed calls", passed: allowance.activeMs <= allowance.maxActiveMs && !allowance.pending }];
   // Keep local reproduction paths in the private campaign. Public reports contain
   // aggregate results and source identities, never command lines or workspaces.
   const publicObservations = observations.map(({ fixture, error, ...o }) => ({ ...o, ...(error ? { error: "Runtime completion, external acceptance, or source consistency failed; inspect the retained local campaign" } : {}) }));

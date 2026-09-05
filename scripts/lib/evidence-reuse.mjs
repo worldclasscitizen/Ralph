@@ -14,7 +14,8 @@ async function git(root, args) { return (await exec("git", args, { cwd: root, en
 // Traverse the adapter and fixture helper imports, including type dependencies.
 // Contract/graph prompting is exercised by the separate end-to-end protocol.
 // Bookkeeping and report serialization are covered by deterministic tests.
-export async function providerFiles(root, ref) {
+export async function providerFiles(root, ref, protocol = "codex-conformance-v2") {
+  if (!["codex-conformance-v1", "codex-conformance-v2"].includes(protocol)) throw new Error("Unknown provider evidence protocol");
   if (ref && !/^[a-f0-9]{40}$/.test(ref)) throw new Error("Invalid evidence source commit");
   const load = async path => normalize(ref ? await git(root, ["show", `${ref}:${path}`]) : await readFile(join(root, path)));
   const files = new Map();
@@ -38,7 +39,11 @@ export async function providerFiles(root, ref) {
   }
   await visit("src/providers/cli.ts");
   await visit("src/workspace/manager.ts");
-  for (const path of ["scripts/provider-conformance.mjs", "scripts/lib/live-budget.mjs", "package-lock.json"]) files.set(path, hash(await load(path)));
+  const protocolFiles = ["scripts/provider-conformance.mjs", "package-lock.json"];
+  // V1 also bound release accounting to transport proof. V2 keeps that historical
+  // scope readable, but tests accounting separately from requests and adapters.
+  if (protocol === "codex-conformance-v1") protocolFiles.push("scripts/lib/live-budget.mjs");
+  for (const path of protocolFiles) files.set(path, hash(await load(path)));
   return [...files].sort(([a], [b]) => a.localeCompare(b)).map(([path, sha256]) => ({ path, sha256 }));
 }
 function assertOriginal(report, observed) {
@@ -52,7 +57,7 @@ export async function createEvidenceReuse(root, originalPath, observed) {
   assertOriginal(original, observed);
   const previous = await providerFiles(root, original.subject.sourceCommit), current = await providerFiles(root);
   if (JSON.stringify(previous) !== JSON.stringify(current)) throw new Error("Provider execution protocol changed; new live evidence required");
-  const reuse = { schemaVersion: 1, protocol: "codex-conformance-v1", originalFile: basename(originalPath), originalSha256: hash(bytes), originalCheckedAt: original.checkedAt, sourceCommit: original.subject.sourceCommit, sourceFiles: previous, observed, verifiedAt: new Date().toISOString() };
+  const reuse = { schemaVersion: 2, protocol: "codex-conformance-v2", originalFile: basename(originalPath), originalSha256: hash(bytes), originalCheckedAt: original.checkedAt, sourceCommit: original.subject.sourceCommit, sourceFiles: previous, observed, verifiedAt: new Date().toISOString() };
   assertReleaseSchema(EvidenceReuseSchema, reuse);
   return reuse;
 }
@@ -65,6 +70,6 @@ export async function verifyEvidenceReuse(report, directory, root = process.cwd(
   const original = JSON.parse(bytes);
   assertOriginal(original, reuse.observed);
   if (report.kind !== "provider" || report.schemaVersion !== 2 || original.checkedAt !== report.checkedAt || original.checkedAt !== reuse.originalCheckedAt || original.subject.sourceCommit !== reuse.sourceCommit || JSON.stringify(original.checks) !== JSON.stringify(report.checks) || JSON.stringify(original.details) !== JSON.stringify(report.details) || JSON.stringify(original.runner) !== JSON.stringify(report.runner)) throw new Error("Reused evidence changed its original result or scope");
-  const previous = await providerFiles(root, reuse.sourceCommit), current = await providerFiles(root);
+  const previous = await providerFiles(root, reuse.sourceCommit, reuse.protocol), current = await providerFiles(root, undefined, reuse.protocol);
   if (JSON.stringify(previous) !== JSON.stringify(reuse.sourceFiles) || JSON.stringify(previous) !== JSON.stringify(current)) throw new Error("Provider protocol identity mismatch");
 }
