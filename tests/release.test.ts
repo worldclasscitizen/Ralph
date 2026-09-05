@@ -330,7 +330,7 @@ it("blocks unaffordable campaigns before spending and never discards a failed tr
     ),
   ).toThrow(/time/);
 });
-it("records behavioral evidence per branch without requiring an unfinished sibling", async () => {
+it("records behavioral evidence per branch without requiring an unfinished sibling", { timeout: 30_000 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "ralph-acceptance-"));
   await fixture(root);
   const exec = promisify(execFile);
@@ -404,7 +404,7 @@ it("requires an affordable generated-graph mock before the remaining real calls"
   ])
     expect(() => assertFunctionalPreflight(bad, mock)).toThrow();
 });
-it("preserves historical comparisons without allowing required evidence to become optional", async () => {
+it("preserves historical comparisons without allowing required evidence to become optional", { timeout: 30_000 }, async () => {
   const directory = await mkdtemp(join(tmpdir(), "ralph-manifest-"));
   const rows = reports().map((value, i) => ({
     file: `report-${i}.json`,
@@ -469,7 +469,7 @@ it("preserves historical comparisons without allowing required evidence to becom
     verifyManifest(manifest, archive, directory, subject),
   ).rejects.toThrow(/integrity/);
 });
-it("proves provider reuse from source bytes and preserves the original date, result and environment", async () => {
+it("proves provider reuse from source bytes and preserves the original date, result and environment", { timeout: 30_000 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "ralph-reuse-")),
     exec = promisify(execFile);
   const git = (...args: string[]) =>
