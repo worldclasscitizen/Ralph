@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { json, integrity, sha256, report, atomicJson } from "./lib/release.mjs";
+import { json, integrity, sha256, report, atomicJson, publishedAssetPath } from "./lib/release.mjs";
 import { verifyCatalog } from "../dist/catalog.js";
 const exec = promisify(execFile), registryOnly = process.argv.includes("--registry-only");
 const manifest = await json(".release/evidence/manifest.json");
@@ -27,7 +27,7 @@ if (!registryOnly) {
     const response = await fetch(asset.browser_download_url);
     if (!response.ok) throw new Error(`Cannot download ${file}`);
     const bytes = Buffer.from(await response.arrayBuffer());
-    const local = file === "SHA256SUMS.txt" ? ".release/SHA256SUMS.txt" : file.startsWith("catalog") ? `assets/${file}` : file.endsWith(".tgz") ? `.release/package/${file}` : `.release/evidence/${file}`;
+    const local = publishedAssetPath(file);
     if (sha256(bytes) !== sha256(await readFile(local))) throw new Error(`Release asset mismatch: ${file}`);
   }
   for (const name of ["catalog", "catalog-v2"]) if (!verifyCatalog(await json(`assets/${name}.json`), await readFile(`assets/${name}.sig`, "utf8"))) throw new Error("Catalog signature mismatch");

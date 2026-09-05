@@ -11,6 +11,6 @@ const checks = [
   { name: "legacy content and signature retained", passed: JSON.stringify(legacy) === JSON.stringify(original) && verifyCatalog(legacy, await readFile("assets/catalog.sig", "utf8")) },
   ...current.models.map((m) => ({ name: `${m.adapter}/${m.modelId}`, passed: m.qualityTier === "unrated" && m.capabilities.reasoning === null && m.capabilities.coding === null && Object.values(m.taskAffinity).every((v) => v === null) && m.evidence.every((e) => hosts.has(new URL(e.source).hostname)) })),
 ];
-await atomicJson(resolve(".release/evidence/catalog.json"), await report("catalog", checks, { keyId: CATALOG_KEY_ID, catalogVersion: current.version, legacyContentDigest: sha256(JSON.stringify(legacy)), sources: [...new Set(current.models.flatMap((m) => m.evidence.map((e) => e.source)))] }));
+await atomicJson(resolve(".release/evidence/catalog-verification.json"), await report("catalog", checks, { keyId: CATALOG_KEY_ID, catalogVersion: current.version, legacyContentDigest: sha256(JSON.stringify(legacy)), sources: [...new Set(current.models.flatMap((m) => m.evidence.map((e) => e.source)))] }));
 if (checks.some((c) => !c.passed)) throw new Error("Catalog audit failed");
 console.log("Signed v2 catalog and preserved legacy channel verified; numerical quality is unrated.");

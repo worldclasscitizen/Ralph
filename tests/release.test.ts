@@ -23,6 +23,8 @@ import {
   FUNCTIONAL_CHECKS,
   selectReports,
   verifyManifest,
+  assertReleaseAssetNames,
+  publishedAssetPath,
 } from "../scripts/lib/release.mjs";
 // @ts-ignore release-only script
 import { LiveBudget } from "../scripts/lib/live-budget.mjs";
@@ -50,6 +52,19 @@ import {
 } from "../scripts/live-fixture.mjs";
 
 const hash = "a".repeat(64);
+it("keeps catalog documents and verification reports distinct in flat release attachments", () => {
+  expect(() => assertReleaseAssetNames(["catalog-verification.json", "live-functional.json"], "ralph.tgz")).not.toThrow();
+  for (const name of ["catalog.json", "catalog-v2.sig", "manifest.json", "installation.json", "ralph.tgz", "../escape.json", ".", ".."])
+    expect(() => assertReleaseAssetNames([name], "ralph.tgz")).toThrow(/collision|filename/);
+  expect(() => assertReleaseAssetNames(["duplicate.json", "duplicate.json"], "ralph.tgz")).toThrow(/collision/);
+  expect(publishedAssetPath("catalog.json")).toBe("assets/catalog.json");
+  expect(publishedAssetPath("catalog-v2.sig")).toBe("assets/catalog-v2.sig");
+  expect(publishedAssetPath("catalog-verification.json")).toBe(".release/evidence/catalog-verification.json");
+  expect(publishedAssetPath("ralph.tgz")).toBe(".release/package/ralph.tgz");
+  expect(publishedAssetPath("SHA256SUMS.txt")).toBe(".release/SHA256SUMS.txt");
+  expect(() => publishedAssetPath("../catalog.json")).toThrow(/filename/);
+  expect(() => publishedAssetPath("..")).toThrow(/filename/);
+});
 const subject = {
   version: "0.3.0",
   sourceCommit: "b".repeat(40),

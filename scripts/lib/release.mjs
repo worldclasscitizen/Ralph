@@ -10,6 +10,15 @@ const exec = promisify(execFile);
 export const BASELINE = "e04b387fca1b10ae6668b6b6223fb8c8a530712a";
 export const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 export const integrity = (data) => `sha512-${createHash("sha512").update(data).digest("base64")}`;
+const CATALOG_ASSETS = ["catalog.json", "catalog.sig", "catalog-v2.json", "catalog-v2.sig"];
+export function assertReleaseAssetNames(reports, archive) {
+  const names = [...CATALOG_ASSETS, "manifest.json", "installation.json", "SHA256SUMS.txt", archive, ...reports];
+  if (names.some(name => !name || name === "." || name === ".." || /[/\\]/.test(name)) || new Set(names).size !== names.length) throw new Error("Release asset name collision or invalid filename");
+}
+export function publishedAssetPath(file) {
+  if (!file || file === "." || file === ".." || /[/\\]/.test(file)) throw new Error("Invalid asset filename");
+  return file === "SHA256SUMS.txt" ? ".release/SHA256SUMS.txt" : CATALOG_ASSETS.includes(file) ? `assets/${file}` : file.endsWith(".tgz") ? `.release/package/${file}` : `.release/evidence/${file}`;
+}
 export async function atomicJson(path, value) {
   await mkdir(dirname(path), { recursive: true });
   const tmp = `${path}.${randomUUID()}.tmp`;
@@ -114,6 +123,7 @@ export async function readReports(dir) {
 }
 export async function createManifest(archive, dir, root = process.cwd()) {
   const target = await subject(root), reports = await readReports(dir);
+  assertReleaseAssetNames((await readdir(dir)).filter(f => f.endsWith(".json") && f !== "manifest.json"), archive.split(/[\\/]/).at(-1));
   const data = await readFile(archive);
   const selected = await validateReportFiles(reports, target, Date.now(), integrity(data), dir, root);
   const manifest = { schemaVersion: 2, gateProfile: "stable-functional-v1", releaseId: `ralph-${target.version}`, subject: target,
@@ -129,6 +139,7 @@ export async function verifyManifest(manifest, archive, dir, expected) {
   if (manifest.artifact.integrity !== integrity(data) || manifest.artifact.sha256 !== sha256(data)) throw new Error("Tarball integrity mismatch");
   const reports = [];
   const files = [...manifest.reports, ...manifest.references];
+  assertReleaseAssetNames(files.map(r => r.file), manifest.artifact.file);
   if (new Set(files.map(r => r.file)).size !== files.length) throw new Error("Duplicate evidence file");
   for (const r of files) {
     const path = resolve(dir, r.file), rel = relative(resolve(dir), path);
