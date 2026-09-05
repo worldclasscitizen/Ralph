@@ -1,4 +1,4 @@
-import { coverageChecks, json, report, atomicJson, readReports, subject, validateReports } from "./lib/release.mjs";
+import { coverageChecks, json, report, atomicJson, readReports, subject, validateReportFiles } from "./lib/release.mjs";
 import { resolve } from "node:path";
 const args = process.argv.slice(2);
 const coverage = await json("coverage/coverage-summary.json");
@@ -7,5 +7,5 @@ const index = args.indexOf("--evidence");
 const evidenceDir = resolve(index >= 0 ? args[index + 1] : ".release/evidence");
 if (checks.some((c) => !c.passed)) throw new Error(checks.filter((c) => !c.passed).map((c) => c.name).join("\n"));
 await atomicJson(resolve(evidenceDir, "coverage.json"), await report("coverage", checks, { coverage }));
-if (!args.includes("--local")) validateReports((await readReports(evidenceDir)).map((r) => r.value), await subject());
+if (!args.includes("--local")) await validateReportFiles(await readReports(evidenceDir), await subject(), Date.now(), undefined, evidenceDir);
 console.log(args.includes("--local") ? "Coverage gate passed; external evidence has not been evaluated." : "Release evidence matches the source and all required gates pass.");

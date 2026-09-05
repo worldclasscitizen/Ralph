@@ -9,3 +9,11 @@ export function assertLiveCampaignReady(allowance, observations, mockObservation
   if (allowance.activeMs >= allowance.maxActiveMs) throw new Error("Active time allowance exhausted");
   return { minimumCalls, remainingCalls, retryReserve: remainingCalls - minimumCalls };
 }
+export function assertFunctionalPreflight(allowance, mock) {
+  if (allowance.pending) throw new Error("Unconfirmed live call; inspect before continuing");
+  if (mock.mode !== "mock" || !mock.passed || mock.status !== "completed" || mock.workerCount !== 2 || mock.calls !== 8) throw new Error("A successful eight-call generated-graph mock is required");
+  const remainingCalls = allowance.maxCalls - allowance.calls;
+  if (remainingCalls < mock.calls) throw new Error(`At least ${mock.calls} calls required, ${remainingCalls} available. No calls started.`);
+  if (allowance.activeMs >= allowance.maxActiveMs) throw new Error("Active time allowance exhausted");
+  return { estimatedCalls: mock.calls, remainingCalls, retryReserve: remainingCalls - mock.calls };
+}

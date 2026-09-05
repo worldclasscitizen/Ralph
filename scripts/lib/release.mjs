@@ -4,6 +4,7 @@ import { resolve, dirname, join, relative, isAbsolute } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { VerificationReportSchema, ReleaseManifestSchema, LiveTestBudgetSchema, assertReleaseSchema } from "../../dist/release/schema.js";
+import { PROVIDER_CHECKS, verifyEvidenceReuse } from "./evidence-reuse.mjs";
 
 const exec = promisify(execFile);
 export const BASELINE = "e04b387fca1b10ae6668b6b6223fb8c8a530712a";
@@ -40,7 +41,7 @@ export async function subject(root = process.cwd()) {
   };
 }
 export async function report(kind, checks, details = {}, root = process.cwd()) {
-  const value = { schemaVersion: 1, kind, subject: await subject(root), checkedAt: new Date().toISOString(),
+  const value = { schemaVersion: 2, kind, subject: await subject(root), checkedAt: new Date().toISOString(),
     runner: { platform: process.platform, node: process.version, ...(process.env.GITHUB_RUN_ID ? { workflowRunId: process.env.GITHUB_RUN_ID } : {}) },
     status: checks.every((c) => c.passed) ? "pass" : "fail", checks, details };
   assertReleaseSchema(VerificationReportSchema, value); return value;
@@ -59,7 +60,7 @@ export function validateReports(reports, expected, now = Date.now(), artifactInt
     assertReleaseSchema(VerificationReportSchema, r);
     if (r.status !== "pass" || r.checks.some((c) => !c.passed)) failures.push(`${r.kind}: incomplete checks`);
     if (r.kind === "ci" && artifactIntegrity && r.details.artifactIntegrity !== artifactIntegrity) failures.push("CI tested a different artifact");
-    const live = ["provider", "comparison"].includes(r.kind);
+    const live = ["provider", "comparison", "end_to_end"].includes(r.kind);
     const keys = live ? ["runtimeDigest", "dependencyDigest", "testDigest"] : ["runtimeDigest", "dependencyDigest", "sourceTree"];
     if (keys.some((k) => r.subject[k] !== expected[k])) failures.push(`${r.kind}: subject mismatch`);
     const age = now - Date.parse(r.checkedAt);
@@ -68,18 +69,39 @@ export function validateReports(reports, expected, now = Date.now(), artifactInt
   for (const os of ["win32", "darwin", "linux"]) for (const node of [22, 24]) {
     if (!reports.some((r) => r.kind === "ci" && r.runner.platform === os && Number(r.runner.node.replace(/^v/, "").split(".")[0]) === node && r.runner.workflowRunId)) failures.push(`Missing CI ${os}/Node ${node}`);
   }
-  for (const kind of ["coverage", "operational", "accessibility", "provider", "comparison", "catalog"]) {
+  for (const kind of ["coverage", "operational", "accessibility", "provider", "end_to_end", "catalog"]) {
     if (!reports.some((r) => r.kind === kind)) failures.push(`Missing ${kind} report`);
   }
   for (const r of reports.filter((r) => r.kind === "coverage")) if (coverageChecks(r.details.coverage).some((c) => !c.passed)) failures.push("Coverage below release floor");
   for (const os of ["win32", "darwin", "linux"]) if (!reports.some((r) => r.kind === "operational" && r.runner.platform === os && r.details.repetitions >= 5 && r.details.boundaries?.length >= 5)) failures.push(`Missing process interruption evidence: ${os}`);
   const provider = reports.find((r) => r.kind === "provider");
-  if (provider && (!provider.details.model || !provider.details.cliVersion || provider.checks.length < 4)) failures.push("Incomplete provider identity/conformance");
-  const comparison = reports.find((r) => r.kind === "comparison");
-  if (comparison && (comparison.details.baselineCommit !== BASELINE || comparison.details.observations?.length !== 4 || comparison.details.observations.filter((o) => o.version === "candidate").length !== 2 || comparison.details.observations.filter((o) => o.version === "baseline").length !== 2 || comparison.details.observations.filter((o) => o.version === "candidate").some((o) => !o.passed))) failures.push("Incomplete independent comparison");
+  if (provider && (!provider.details.model || !provider.details.cliVersion || PROVIDER_CHECKS.some(name => !provider.checks.some(c => c.name === name && c.passed)))) failures.push("Incomplete provider identity/conformance");
+  const functional = reports.find(r => r.kind === "end_to_end");
+  if (functional) {
+    const d = functional.details;
+    if (functional.schemaVersion !== 2 || FUNCTIONAL_CHECKS.some(name => !functional.checks.some(c => c.name === name && c.passed)) || d.mode !== "live" || d.status !== "completed" || !d.runId || !d.resultHead || !d.model || !d.cliVersion || d.workerCount !== 2 || d.injectedContract !== false || d.injectedGraph !== false) failures.push("Incomplete live end-to-end evidence");
+    try {
+      assertReleaseSchema(LiveTestBudgetSchema, d.allowance);
+      if (d.allowance.pending || d.allowance.activeMs > d.allowance.maxActiveMs) throw new Error("Unfinished allowance");
+    } catch { failures.push("Invalid end-to-end live allowance"); }
+  }
   const accessibility = reports.find((r) => r.kind === "accessibility");
   if (accessibility && (accessibility.details.maxNodes < 32 || accessibility.details.revisions < 8 || accessibility.details.logLines < 100000 || !accessibility.details.maxNodes)) failures.push("Incomplete browser scale evidence");
   if (failures.length) throw new Error(failures.join("\n"));
+}
+export const FUNCTIONAL_CHECKS = ["generated_contract_and_dag", "exact_plan_approval", "isolated_scoped_workers", "behavior_and_independent_review", "integration_and_final_validation", "branch_delivery_completed", "external_oracle_and_frozen_tests", "persistent_live_allowance"];
+export function selectReports(rows) {
+  const originals = new Set(rows.flatMap(r => r.value.reuse ? [r.value.reuse.originalFile] : []));
+  return {
+    required: rows.filter(r => r.value.kind !== "comparison" && !originals.has(r.file)),
+    references: rows.filter(r => r.value.kind === "comparison" || originals.has(r.file)),
+  };
+}
+export async function validateReportFiles(rows, expected, now = Date.now(), artifactIntegrity, directory, root = process.cwd()) {
+  const selected = selectReports(rows);
+  for (const r of selected.required) await verifyEvidenceReuse(r.value, directory, root);
+  validateReports(selected.required.map(r => r.value), expected, now, artifactIntegrity);
+  return selected;
 }
 export async function readReports(dir) {
   const files = (await readdir(dir)).filter((f) => f.endsWith(".json") && !f.startsWith("manifest"));
@@ -93,26 +115,31 @@ export async function readReports(dir) {
 export async function createManifest(archive, dir, root = process.cwd()) {
   const target = await subject(root), reports = await readReports(dir);
   const data = await readFile(archive);
-  validateReports(reports.map((r) => r.value), target, Date.now(), integrity(data));
-  const manifest = { schemaVersion: 1, releaseId: `ralph-${target.version}`, subject: target,
+  const selected = await validateReportFiles(reports, target, Date.now(), integrity(data), dir, root);
+  const manifest = { schemaVersion: 2, gateProfile: "stable-functional-v1", releaseId: `ralph-${target.version}`, subject: target,
     artifact: { file: archive.split(/[\\/]/).at(-1), integrity: integrity(data), sha256: sha256(data) },
-    reports: reports.map(({ file, sha256 }) => ({ file, sha256 })), createdAt: new Date().toISOString() };
+    reports: selected.required.map(({ file, sha256 }) => ({ file, sha256 })), references: selected.references.map(({ file, sha256 }) => ({ file, sha256 })), createdAt: new Date().toISOString() };
   assertReleaseSchema(ReleaseManifestSchema, manifest); return manifest;
 }
 export async function verifyManifest(manifest, archive, dir, expected) {
   assertReleaseSchema(ReleaseManifestSchema, manifest);
+  if (manifest.schemaVersion !== 2) throw new Error("Historical manifest cannot authorize a stable functional release");
   if (JSON.stringify(manifest.subject) !== JSON.stringify(expected)) throw new Error("Manifest source identity mismatch");
   const data = await readFile(archive);
   if (manifest.artifact.integrity !== integrity(data) || manifest.artifact.sha256 !== sha256(data)) throw new Error("Tarball integrity mismatch");
   const reports = [];
-  for (const r of manifest.reports) {
+  const files = [...manifest.reports, ...manifest.references];
+  if (new Set(files.map(r => r.file)).size !== files.length) throw new Error("Duplicate evidence file");
+  for (const r of files) {
     const path = resolve(dir, r.file), rel = relative(resolve(dir), path);
     if (rel.startsWith("..") || isAbsolute(rel)) throw new Error("Invalid report path");
     const bytes = await readFile(path);
     if (sha256(bytes) !== r.sha256) throw new Error("Report integrity mismatch");
-    reports.push(JSON.parse(bytes));
+    reports.push({ file: r.file, sha256: r.sha256, value: JSON.parse(bytes) });
   }
-  validateReports(reports, expected, Date.now(), integrity(data)); return true;
+  const selected = await validateReportFiles(reports, expected, Date.now(), integrity(data), dir);
+  if (JSON.stringify(selected.required.map(r => r.file).sort()) !== JSON.stringify(manifest.reports.map(r => r.file).sort())) throw new Error("Required evidence was relabeled as reference");
+  return true;
 }
 export async function registryState(name, version, expectedIntegrity, fetcher = fetch) {
   const response = await fetcher(`https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`);

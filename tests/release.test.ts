@@ -1,5 +1,5 @@
 import { it, expect } from "vitest";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -20,6 +20,9 @@ import {
   sha256,
   BASELINE,
   CRITICAL,
+  FUNCTIONAL_CHECKS,
+  selectReports,
+  verifyManifest,
 } from "../scripts/lib/release.mjs";
 // @ts-ignore release-only script
 import { LiveBudget } from "../scripts/lib/live-budget.mjs";
@@ -27,7 +30,16 @@ import { providerVerification } from "../src/providers/verification.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 // @ts-ignore release-only script
-import { assertLiveCampaignReady } from "../scripts/lib/live-preflight.mjs";
+import {
+  assertLiveCampaignReady,
+  assertFunctionalPreflight,
+} from "../scripts/lib/live-preflight.mjs";
+// @ts-ignore release-only evidence verification
+import {
+  PROVIDER_CHECKS,
+  createEvidenceReuse,
+  verifyEvidenceReuse,
+} from "../scripts/lib/evidence-reuse.mjs";
 // @ts-ignore release-only fixture shared by baseline and candidate
 import {
   fixture,
@@ -55,7 +67,7 @@ const coverage = {
   ),
 };
 const row = (kind: string, platform = "linux", node = "v24.11.1") => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   kind,
   subject: { ...subject },
   checkedAt: new Date().toISOString(),
@@ -72,7 +84,7 @@ function reports() {
     "coverage",
     "accessibility",
     "provider",
-    "comparison",
+    "end_to_end",
     "catalog",
   ])
     rows.push(row(kind));
@@ -89,15 +101,36 @@ function reports() {
   };
   const provider = rows.find((r) => r.kind === "provider")!;
   provider.details = { model: "fixture", cliVersion: "fixture-v1" };
-  provider.checks = Array.from({ length: 4 }, (_, i) => ({
-    name: String(i),
+  provider.checks = PROVIDER_CHECKS.map((name: string) => ({
+    name,
     passed: true,
   }));
-  rows.find((r) => r.kind === "comparison")!.details = {
-    baselineCommit: BASELINE,
-    observations: ["baseline", "candidate", "baseline", "candidate"].map(
-      (version) => ({ version, passed: true }),
-    ),
+  const functional = rows.find((r) => r.kind === "end_to_end")!;
+  functional.checks = FUNCTIONAL_CHECKS.map((name: string) => ({
+    name,
+    passed: true,
+  }));
+  functional.details = {
+    mode: "live",
+    status: "completed",
+    runId: "run-fixture",
+    resultHead: "1".repeat(40),
+    model: "fixture",
+    cliVersion: "1",
+    workerCount: 2,
+    injectedContract: false,
+    injectedGraph: false,
+    allowance: {
+      schemaVersion: 1,
+      releaseId: "ralph-0.3.0",
+      maxCalls: 24,
+      maxActiveMs: 1800000,
+      apiSpendUsd: 0,
+      calls: 23,
+      activeMs: 1000,
+      pending: null,
+      attempts: [],
+    },
   };
   return rows;
 }
@@ -116,14 +149,15 @@ it("requires a complete, matching evidence matrix instead of boolean release gat
   valid[0]!.subject.runtimeDigest = "d".repeat(64);
   expect(() => validateReports(valid, subject)).toThrow(/subject mismatch/);
 });
-it("rejects stale, incomplete and failed comparison evidence", () => {
+it("rejects stale, incomplete and substituted functional evidence", () => {
   for (const change of [
     (rows: any[]) => (rows[0].checkedAt = "2020-01-01T00:00:00Z"),
     (rows: any[]) => (rows[0].status = "fail"),
     (rows: any[]) =>
-      (rows.find(
-        (r) => r.kind === "comparison",
-      ).details.observations[1].passed = false),
+      (rows.find((r) => r.kind === "end_to_end").details.mode = "mock"),
+    (rows: any[]) =>
+      (rows.find((r) => r.kind === "end_to_end").details.injectedGraph = true),
+    (rows: any[]) => rows.find((r) => r.kind === "end_to_end").checks.pop(),
     (rows: any[]) => (rows.find((r) => r.kind === "provider").details = {}),
     (rows: any[]) =>
       (rows.find((r) => r.kind === "coverage").details.coverage = {
@@ -335,4 +369,169 @@ it("records behavioral evidence per branch without requiring an unfinished sibli
     "export function sumNonNegative() { return 0; }\n",
   );
   await expect(check("left.test.mjs")).rejects.toThrow();
+});
+it("requires an affordable generated-graph mock before the remaining real calls", () => {
+  const allowance = {
+    maxCalls: 24,
+    calls: 15,
+    pending: null,
+    activeMs: 480712,
+    maxActiveMs: 1800000,
+  };
+  const mock = {
+    mode: "mock",
+    passed: true,
+    status: "completed",
+    workerCount: 2,
+    calls: 8,
+  };
+  expect(assertFunctionalPreflight(allowance, mock)).toEqual({
+    estimatedCalls: 8,
+    remainingCalls: 9,
+    retryReserve: 1,
+  });
+  for (const bad of [
+    { ...mock, mode: "live" },
+    { ...mock, passed: false },
+    { ...mock, calls: 5 },
+    { ...mock, workerCount: 1 },
+  ])
+    expect(() => assertFunctionalPreflight(allowance, bad)).toThrow();
+  for (const bad of [
+    { ...allowance, calls: 17 },
+    { ...allowance, pending: {} },
+    { ...allowance, activeMs: 1800000 },
+  ])
+    expect(() => assertFunctionalPreflight(bad, mock)).toThrow();
+});
+it("preserves historical comparisons without allowing required evidence to become optional", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "ralph-manifest-"));
+  const rows = reports().map((value, i) => ({
+    file: `report-${i}.json`,
+    value,
+  }));
+  rows.push({
+    file: "old-comparison.json",
+    value: { ...row("comparison"), status: "fail" },
+  });
+  const selected = selectReports(rows);
+  expect(selected.references.map((r: any) => r.file)).toEqual([
+    "old-comparison.json",
+  ]);
+  expect(() =>
+    validateReports(
+      selected.required.map((r: any) => r.value),
+      subject,
+    ),
+  ).not.toThrow();
+  const archive = join(directory, "package.tgz"),
+    bytes = Buffer.from("same tested archive");
+  await writeFile(archive, bytes);
+  const integrity = `sha512-${createHash("sha512").update(bytes).digest("base64")}`;
+  for (const r of rows) {
+    if (r.value.kind === "ci") r.value.details.artifactIntegrity = integrity;
+    await atomicJson(join(directory, r.file), r.value);
+  }
+  const refs = async (list: any[]) =>
+    Promise.all(
+      list.map(async (r) => ({
+        file: r.file,
+        sha256: sha256(await readFile(join(directory, r.file))),
+      })),
+    );
+  const manifest = {
+    schemaVersion: 2,
+    gateProfile: "stable-functional-v1",
+    releaseId: "ralph-0.3.0",
+    subject,
+    artifact: { file: "package.tgz", integrity, sha256: sha256(bytes) },
+    reports: await refs(selected.required),
+    references: await refs(selected.references),
+    createdAt: new Date().toISOString(),
+  };
+  await expect(
+    verifyManifest(manifest, archive, directory, subject),
+  ).resolves.toBe(true);
+  await expect(
+    verifyManifest(
+      {
+        ...manifest,
+        references: [...manifest.references, manifest.reports[0]],
+        reports: manifest.reports.slice(1),
+      },
+      archive,
+      directory,
+      subject,
+    ),
+  ).rejects.toThrow(/relabeled/);
+  await writeFile(join(directory, rows[0]!.file), "{}");
+  await expect(
+    verifyManifest(manifest, archive, directory, subject),
+  ).rejects.toThrow(/integrity/);
+});
+it("proves provider reuse from source bytes and preserves the original date, result and environment", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ralph-reuse-")),
+    exec = promisify(execFile);
+  const git = (...args: string[]) =>
+    exec("git", args, { cwd: root, windowsHide: true });
+  await mkdir(join(root, "src/providers"), { recursive: true });
+  await writeFile(
+    join(root, "src/providers/cli.ts"),
+    "export const protocol = 1;\n",
+  );
+  await git("init");
+  await git("config", "user.name", "Evidence");
+  await git("config", "user.email", "evidence@localhost");
+  await git("add", ".");
+  await git("commit", "-m", "Original protocol");
+  const original = {
+    ...row("provider"),
+    schemaVersion: 1,
+    checks: PROVIDER_CHECKS.map((name: string) => ({ name, passed: true })),
+    details: { adapter: "codex-builtin", model: "fixture", cliVersion: "1" },
+  };
+  original.subject.sourceCommit = (
+    await git("rev-parse", "HEAD")
+  ).stdout.trim();
+  const path = join(root, "original.json");
+  await atomicJson(path, original);
+  const observed = {
+    ...original.details,
+    platform: original.runner.platform,
+    node: original.runner.node,
+  };
+  const reuse = await createEvidenceReuse(root, path, observed);
+  const current = { ...original, schemaVersion: 2, reuse };
+  await writeFile(join(root, "README.md"), "Documentation changed\n");
+  await expect(
+    verifyEvidenceReuse(current, root, root),
+  ).resolves.toBeUndefined();
+  await expect(
+    verifyEvidenceReuse({ ...current, checkedAt: "2027-01-01" }, root, root),
+  ).rejects.toThrow(/original/);
+  await expect(
+    createEvidenceReuse(root, path, { ...observed, model: "different" }),
+  ).rejects.toThrow(/environment/);
+  const tampered = structuredClone(current);
+  tampered.reuse.sourceFiles[0].sha256 = hash;
+  await expect(verifyEvidenceReuse(tampered, root, root)).rejects.toThrow(
+    /identity/,
+  );
+  await writeFile(
+    join(root, "src/providers/cli.ts"),
+    "export const protocol = 2;\n",
+  );
+  await expect(verifyEvidenceReuse(current, root, root)).rejects.toThrow(
+    /identity/,
+  );
+  await expect(createEvidenceReuse(root, path, observed)).rejects.toThrow(
+    /changed/,
+  );
+  await atomicJson(path, { ...original, status: "fail" });
+  await expect(createEvidenceReuse(root, path, observed)).rejects.toThrow(
+    /passing/,
+  );
+  await expect(verifyEvidenceReuse(current, root, root)).rejects.toThrow(
+    /integrity/,
+  );
 });

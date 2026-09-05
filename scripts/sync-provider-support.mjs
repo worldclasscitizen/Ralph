@@ -1,4 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { verifyEvidenceReuse } from "./lib/evidence-reuse.mjs";
 import { assertReleaseSchema, VerificationReportSchema } from "../dist/release/schema.js";
 import { json, sha256, subject } from "./lib/release.mjs";
 const reportPath = process.argv[2];
@@ -6,6 +8,7 @@ let records = await json("assets/provider-verification.json");
 if (reportPath) {
   const report = await json(reportPath), current = await subject();
   assertReleaseSchema(VerificationReportSchema, report);
+  await verifyEvidenceReuse(report, dirname(reportPath));
   if (report.kind !== "provider" || report.status !== "pass" || report.checks.some((c) => !c.passed) || report.subject.runtimeDigest !== current.runtimeDigest || report.subject.testDigest !== current.testDigest) throw new Error("Provider evidence does not qualify for this runtime");
   records = [{ schemaVersion: 1, adapter: report.details.adapter, model: report.details.model, cliVersion: report.details.cliVersion,
     platform: report.runner.platform, node: report.runner.node, checkedAt: report.checkedAt, runtimeDigest: report.subject.runtimeDigest,

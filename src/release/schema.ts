@@ -14,7 +14,7 @@ export const ReleaseSubjectSchema = Type.Object(
   },
   object,
 );
-export const VerificationReportSchema = Type.Object(
+export const VerificationReportV1Schema = Type.Object(
   {
     schemaVersion: Type.Literal(1),
     kind: Type.Union([
@@ -57,7 +57,51 @@ export const VerificationReportSchema = Type.Object(
   },
   object,
 );
-export type VerificationReportV1 = Static<typeof VerificationReportSchema>;
+export type VerificationReportV1 = Static<typeof VerificationReportV1Schema>;
+export const EvidenceReuseSchema = Type.Object(
+  {
+    schemaVersion: Type.Literal(1),
+    protocol: Type.Literal("codex-conformance-v1"),
+    originalFile: Type.String({ pattern: "^[a-zA-Z0-9_-]+\\.json$" }),
+    originalSha256: hash,
+    originalCheckedAt: Type.String(),
+    sourceCommit: Type.String({ pattern: "^[a-f0-9]{40}$" }),
+    sourceFiles: Type.Array(
+      Type.Object({ path: Type.String(), sha256: hash }, object),
+      { minItems: 1 },
+    ),
+    observed: Type.Object(
+      {
+        adapter: Type.String(),
+        model: Type.String(),
+        cliVersion: Type.String(),
+        platform: Type.String(),
+        node: Type.String(),
+      },
+      object,
+    ),
+    verifiedAt: Type.String(),
+  },
+  object,
+);
+export type EvidenceReuseV1 = Static<typeof EvidenceReuseSchema>;
+export const VerificationReportV2Schema = Type.Object(
+  {
+    ...VerificationReportV1Schema.properties,
+    schemaVersion: Type.Literal(2),
+    kind: Type.Union([
+      VerificationReportV1Schema.properties.kind,
+      Type.Literal("end_to_end"),
+    ]),
+    reuse: Type.Optional(EvidenceReuseSchema),
+  },
+  object,
+);
+export type VerificationReportV2 = Static<typeof VerificationReportV2Schema>;
+export const VerificationReportSchema = Type.Union([
+  VerificationReportV1Schema,
+  VerificationReportV2Schema,
+]);
 export const ProviderVerificationSchema = Type.Object(
   {
     schemaVersion: Type.Literal(1),
@@ -116,7 +160,7 @@ export const LiveTestBudgetSchema = Type.Object(
   object,
 );
 export type LiveTestBudgetV1 = Static<typeof LiveTestBudgetSchema>;
-export const ReleaseManifestSchema = Type.Object(
+export const ReleaseManifestV1Schema = Type.Object(
   {
     schemaVersion: Type.Literal(1),
     releaseId: Type.String(),
@@ -132,7 +176,21 @@ export const ReleaseManifestSchema = Type.Object(
   },
   object,
 );
-export type ReleaseManifestV1 = Static<typeof ReleaseManifestSchema>;
+export type ReleaseManifestV1 = Static<typeof ReleaseManifestV1Schema>;
+export const ReleaseManifestV2Schema = Type.Object(
+  {
+    ...ReleaseManifestV1Schema.properties,
+    schemaVersion: Type.Literal(2),
+    gateProfile: Type.Literal("stable-functional-v1"),
+    references: ReleaseManifestV1Schema.properties.reports,
+  },
+  object,
+);
+export type ReleaseManifestV2 = Static<typeof ReleaseManifestV2Schema>;
+export const ReleaseManifestSchema = Type.Union([
+  ReleaseManifestV1Schema,
+  ReleaseManifestV2Schema,
+]);
 const ajv = new Ajv.default({ allErrors: true, strict: false });
 const validators = new Map<object, ReturnType<typeof ajv.compile>>();
 export function assertReleaseSchema(schema: object, value: unknown): void {
