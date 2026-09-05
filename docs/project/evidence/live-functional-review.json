@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "type": "functional_failure_review",
-  "failedReport": "live-functional.json",
+  "failedReport": "history/live-functional-643b7993c52ccadbd4d6b1b6916860eae5f5a0bbf048b55f463450710deb89eb.json",
   "failedReportSha256": "643b7993c52ccadbd4d6b1b6916860eae5f5a0bbf048b55f463450710deb89eb",
   "runId": "run-8d700c7e-e441-49b8-ab87-7cd44141b11b",
   "runtimeStatus": "awaiting_input",
