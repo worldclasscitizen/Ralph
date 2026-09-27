@@ -1,24 +1,24 @@
 {
   "schemaVersion": 2,
   "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e",
-  "version": 3,
-  "generatedAt": "2026-09-05T00:00:00.000Z",
+  "version": 4,
+  "generatedAt": "2026-09-27T00:00:00.000Z",
   "models": [
     {
       "provider": "openai",
       "adapter": "codex-builtin",
-      "modelId": "gpt-5.6-luna",
-      "displayName": "gpt-5.6-luna",
+      "modelId": "gpt-6-astra",
+      "displayName": "GPT-6 Astra",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
         "vision": false,
         "toolUse": true,
-        "longContext": false
+        "longContext": true
       },
       "taskAffinity": {
         "planning_architecture": null,
@@ -40,25 +40,25 @@
       "evidence": [
         {
           "source": "https://learn.chatgpt.com/docs/models",
-          "checkedAt": "2026-09-05"
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "openai",
       "adapter": "codex-builtin",
-      "modelId": "gpt-5.6-terra",
-      "displayName": "gpt-5.6-terra",
+      "modelId": "gpt-6-sol",
+      "displayName": "GPT-6 Sol",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
         "vision": false,
         "toolUse": true,
-        "longContext": false
+        "longContext": true
       },
       "taskAffinity": {
         "planning_architecture": null,
@@ -80,25 +80,25 @@
       "evidence": [
         {
           "source": "https://learn.chatgpt.com/docs/models",
-          "checkedAt": "2026-09-05"
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "openai",
       "adapter": "codex-builtin",
-      "modelId": "gpt-5.6-sol",
-      "displayName": "gpt-5.6-sol",
+      "modelId": "gpt-6-luna",
+      "displayName": "GPT-6 Luna",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
         "vision": false,
         "toolUse": true,
-        "longContext": false
+        "longContext": true
       },
       "taskAffinity": {
         "planning_architecture": null,
@@ -120,25 +120,25 @@
       "evidence": [
         {
           "source": "https://learn.chatgpt.com/docs/models",
-          "checkedAt": "2026-09-05"
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "openai",
       "adapter": "openai-api",
-      "modelId": "gpt-5.4-mini",
-      "displayName": "gpt-5.4-mini",
+      "modelId": "gpt-6-astra",
+      "displayName": "GPT-6 Astra",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
         "vision": true,
         "toolUse": true,
-        "longContext": false
+        "longContext": true
       },
       "taskAffinity": {
         "planning_architecture": null,
@@ -159,24 +159,184 @@
       "recommendedEffort": "low",
       "evidence": [
         {
-          "source": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
-          "checkedAt": "2026-09-05"
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "openai",
+      "adapter": "openai-api",
+      "modelId": "gpt-6-sol",
+      "displayName": "GPT-6 Sol",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-sol",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "openai",
+      "adapter": "openai-api",
+      "modelId": "gpt-6-luna",
+      "displayName": "GPT-6 Luna",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "anthropic",
       "adapter": "claude-code-builtin",
-      "modelId": "claude-sonnet-5",
-      "displayName": "claude-sonnet-5",
+      "modelId": "claude-opus-5-5",
+      "displayName": "Claude Opus 5.5",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
-        "vision": false,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://platform.claude.com/docs/en/models/opus-5-5/overview",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "adapter": "claude-code-builtin",
+      "modelId": "claude-fable-5-1",
+      "displayName": "Claude Fable 5.1",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://platform.claude.com/docs/en/models/fable-5-1/overview",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "adapter": "claude-code-builtin",
+      "modelId": "claude-haiku-4-5",
+      "displayName": "Claude Haiku 4.5",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
         "toolUse": true,
         "longContext": false
       },
@@ -199,19 +359,99 @@
       "recommendedEffort": "low",
       "evidence": [
         {
-          "source": "https://platform.claude.com/docs/en/models/overview",
-          "checkedAt": "2026-09-05"
+          "source": "https://platform.claude.com/docs/en/models/haiku-4-5/overview",
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "anthropic",
       "adapter": "anthropic-api",
-      "modelId": "claude-sonnet-5",
-      "displayName": "claude-sonnet-5",
+      "modelId": "claude-opus-5-5",
+      "displayName": "Claude Opus 5.5",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://platform.claude.com/docs/en/models/opus-5-5/overview",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "adapter": "anthropic-api",
+      "modelId": "claude-fable-5-1",
+      "displayName": "Claude Fable 5.1",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://platform.claude.com/docs/en/models/fable-5-1/overview",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "adapter": "anthropic-api",
+      "modelId": "claude-haiku-4-5",
+      "displayName": "Claude Haiku 4.5",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
@@ -239,66 +479,26 @@
       "recommendedEffort": "low",
       "evidence": [
         {
-          "source": "https://platform.claude.com/docs/en/models/overview",
-          "checkedAt": "2026-09-05"
+          "source": "https://platform.claude.com/docs/en/models/haiku-4-5/overview",
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "google",
       "adapter": "gemini-cli-builtin",
-      "modelId": "gemini-2.5-flash",
-      "displayName": "gemini-2.5-flash",
+      "modelId": "gemini-3.8-flash",
+      "displayName": "Gemini 3.8 Flash",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
-      "capabilities": {
-        "reasoning": null,
-        "coding": null,
-        "structuredOutput": true,
-        "vision": false,
-        "toolUse": true,
-        "longContext": false
-      },
-      "taskAffinity": {
-        "planning_architecture": null,
-        "frontend_visual": null,
-        "backend_core": null,
-        "tdd_debugging": null,
-        "static_review": null,
-        "delivery_evidence": null
-      },
-      "costTier": null,
-      "latencyTier": null,
-      "reliabilityBaseline": null,
-      "supportedEfforts": [
-        "low",
-        "medium",
-        "high"
-      ],
-      "recommendedEffort": "low",
-      "evidence": [
-        {
-          "source": "https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash",
-          "checkedAt": "2026-09-05"
-        }
-      ]
-    },
-    {
-      "provider": "google",
-      "adapter": "gemini-api",
-      "modelId": "gemini-2.5-flash",
-      "displayName": "gemini-2.5-flash",
-      "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
         "vision": true,
         "toolUse": true,
-        "longContext": false
+        "longContext": true
       },
       "taskAffinity": {
         "planning_architecture": null,
@@ -319,26 +519,66 @@
       "recommendedEffort": "low",
       "evidence": [
         {
-          "source": "https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash",
-          "checkedAt": "2026-09-05"
+          "source": "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "google",
+      "adapter": "gemini-api",
+      "modelId": "gemini-3.8-flash",
+      "displayName": "Gemini 3.8 Flash",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash",
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "deepseek",
       "adapter": "deepseek-api",
-      "modelId": "deepseek-v4-pro",
-      "displayName": "deepseek-v4-pro",
+      "modelId": "deepseek-flash",
+      "displayName": "DeepSeek V4.1 Flash",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
-        "vision": false,
+        "vision": true,
         "toolUse": true,
-        "longContext": false
+        "longContext": true
       },
       "taskAffinity": {
         "planning_architecture": null,
@@ -360,25 +600,25 @@
       "evidence": [
         {
           "source": "https://api-docs.deepseek.com/updates/",
-          "checkedAt": "2026-09-05"
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "zai",
       "adapter": "zai-general-api",
-      "modelId": "glm-5",
-      "displayName": "glm-5",
+      "modelId": "glm-5.3",
+      "displayName": "GLM-5.3",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
         "vision": false,
         "toolUse": true,
-        "longContext": false
+        "longContext": true
       },
       "taskAffinity": {
         "planning_architecture": null,
@@ -393,32 +633,72 @@
       "reliabilityBaseline": null,
       "supportedEfforts": [
         "low",
-        "medium",
-        "high"
+        "high",
+        "max"
       ],
       "recommendedEffort": "low",
       "evidence": [
         {
-          "source": "https://docs.z.ai/guides/llm/glm-5",
-          "checkedAt": "2026-09-05"
+          "source": "https://docs.z.ai/guides/llm/glm-5.3",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "zai",
+      "adapter": "zai-general-api",
+      "modelId": "glm-5.3-flash",
+      "displayName": "GLM-5.3 Flash",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "high",
+        "max"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://docs.z.ai/guides/vlm/glm-5.3-flash",
+          "checkedAt": "2026-09-27"
         }
       ]
     },
     {
       "provider": "zai",
       "adapter": "zai-coding-api",
-      "modelId": "glm-5",
-      "displayName": "glm-5",
+      "modelId": "glm-5.3",
+      "displayName": "GLM-5.3",
       "qualityTier": "unrated",
-      "checkedAt": "2026-09-05T00:00:00.000Z",
-      "expiresAt": "2027-03-05T00:00:00.000Z",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
       "capabilities": {
         "reasoning": null,
         "coding": null,
         "structuredOutput": true,
         "vision": false,
         "toolUse": true,
-        "longContext": false
+        "longContext": true
       },
       "taskAffinity": {
         "planning_architecture": null,
@@ -433,14 +713,14 @@
       "reliabilityBaseline": null,
       "supportedEfforts": [
         "low",
-        "medium",
-        "high"
+        "high",
+        "max"
       ],
       "recommendedEffort": "low",
       "evidence": [
         {
-          "source": "https://docs.z.ai/guides/llm/glm-5",
-          "checkedAt": "2026-09-05"
+          "source": "https://docs.z.ai/guides/llm/glm-5.3",
+          "checkedAt": "2026-09-27"
         }
       ]
     }

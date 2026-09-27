@@ -85,7 +85,7 @@ import {
 } from "./util.js";
 import { readCoverageSummary } from "./verifier.js";
 
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 const argv = process.argv.slice(2);
 
 function takeFlag(args: string[], name: string): boolean {

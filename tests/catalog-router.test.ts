@@ -83,15 +83,15 @@ describe("signed catalog and deterministic router", () => {
         await expect(updateCatalog()).rejects.toThrow();
       }
       mode = "valid";
-      expect((await updateCatalog()).version).toBe(3);
+      expect((await updateCatalog()).version).toBe(4);
       expect((await loadCatalog()).schemaVersion).toBe(2);
       const status = await catalogStatus({ checkRemote: true });
-      expect(status.cacheVersion).toBe(3);
+      expect(status.cacheVersion).toBe(4);
       expect(status.changes).toEqual({ added: [], removed: [], modified: [] });
-      expect(await catalogDiff()).toMatchObject({ from: 3, to: 3 });
+      expect(await catalogDiff()).toMatchObject({ from: 4, to: 4 });
       expect(await previewCatalogUpdate()).toBeUndefined();
       mode = "unchanged";
-      expect((await updateCatalog()).version).toBe(3);
+      expect((await updateCatalog()).version).toBe(4);
       expect((await catalogStatus({ checkRemote: true })).remoteChecked).toBe(
         true,
       );
@@ -108,7 +108,7 @@ describe("signed catalog and deterministic router", () => {
   it("verifies and loads the signed bootstrap catalog", async () => {
     const catalog = await loadCatalog();
     const status = await catalogStatus({ offline: true });
-    expect(catalog.version).toBe(3);
+    expect(catalog.version).toBe(4);
     expect(catalog.schemaVersion).toBe(2);
     expect(catalog.models.length).toBeGreaterThan(0);
     expect(status.signatureValid).toBe(true);
@@ -158,16 +158,16 @@ describe("signed catalog and deterministic router", () => {
     const catalog = await loadCatalog();
     const connections: ConnectionConfig[] = [
       {
-        id: "deepseek:api",
-        adapter: "deepseek-api",
-        provider: "deepseek",
+        id: "zai:coding-plan",
+        adapter: "zai-coding-api",
+        provider: "zai",
         enabled: true,
         mode: "api",
       },
     ];
     const routes = buildRoutes(catalog, connections, "balanced");
     expect(routes.frontend_visual).toHaveLength(1);
-    expect(routes.frontend_visual[0]?.modelId).toBe("deepseek-v4-pro");
+    expect(routes.frontend_visual[0]?.modelId).toBe("glm-5.3");
     expect(routes.frontend_visual[0]?.degradedCapabilities).toContain("vision");
   });
 });

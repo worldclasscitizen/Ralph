@@ -22,34 +22,38 @@ if (process.platform === "win32") {
 const publicKey = createPublicKey(privateKey), pem = publicKey.export({ type: "spki", format: "pem" });
 const keyId = createHash("sha256").update(publicKey.export({ type: "spki", format: "der" })).digest("hex");
 await writeFile("src/catalog-key.ts", `// Public trust anchor. Private signing material stays outside this repository.\nexport const CATALOG_KEY_ID = ${JSON.stringify(keyId)};\nexport const CATALOG_PUBLIC_KEY_PEM = ${JSON.stringify(pem)};\n`);
-const sources = {
-  codex: "https://learn.chatgpt.com/docs/models",
-  openai: "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
-  claude: "https://platform.claude.com/docs/en/models/overview",
-  gemini: "https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash",
-  deepseek: "https://api-docs.deepseek.com/updates/",
-  glm: "https://docs.z.ai/guides/llm/glm-5",
-};
+// One definition per (adapter, model) candidate. Only the newest model of each tier is
+// listed; superseded ids are removed rather than kept as silent fallbacks.
+// effort: "standard" = low/medium/high, "zai" = GLM's documented low/high/max.
 const definitions = [
-  ["openai", "codex-builtin", "gpt-5.6-luna", "codex", false],
-  ["openai", "codex-builtin", "gpt-5.6-terra", "codex", false],
-  ["openai", "codex-builtin", "gpt-5.6-sol", "codex", false],
-  ["openai", "openai-api", "gpt-5.4-mini", "openai", true],
-  ["anthropic", "claude-code-builtin", "claude-sonnet-5", "claude", false],
-  ["anthropic", "anthropic-api", "claude-sonnet-5", "claude", true],
-  ["google", "gemini-cli-builtin", "gemini-2.5-flash", "gemini", false],
-  ["google", "gemini-api", "gemini-2.5-flash", "gemini", true],
-  ["deepseek", "deepseek-api", "deepseek-v4-pro", "deepseek", false],
-  ["zai", "zai-general-api", "glm-5", "glm", false],
-  ["zai", "zai-coding-api", "glm-5", "glm", false],
+  ["openai", "codex-builtin", "gpt-6-astra", "GPT-6 Astra", "https://learn.chatgpt.com/docs/models", false, true, "standard"],
+  ["openai", "codex-builtin", "gpt-6-sol", "GPT-6 Sol", "https://learn.chatgpt.com/docs/models", false, true, "standard"],
+  ["openai", "codex-builtin", "gpt-6-luna", "GPT-6 Luna", "https://learn.chatgpt.com/docs/models", false, true, "standard"],
+  ["openai", "openai-api", "gpt-6-astra", "GPT-6 Astra", "https://developers.openai.com/api/docs/models/gpt-6-astra", true, true, "standard"],
+  ["openai", "openai-api", "gpt-6-sol", "GPT-6 Sol", "https://developers.openai.com/api/docs/models/gpt-6-sol", true, true, "standard"],
+  ["openai", "openai-api", "gpt-6-luna", "GPT-6 Luna", "https://developers.openai.com/api/docs/models/gpt-6-luna", true, true, "standard"],
+  ["anthropic", "claude-code-builtin", "claude-opus-5-5", "Claude Opus 5.5", "https://platform.claude.com/docs/en/models/opus-5-5/overview", true, true, "standard"],
+  ["anthropic", "claude-code-builtin", "claude-fable-5-1", "Claude Fable 5.1", "https://platform.claude.com/docs/en/models/fable-5-1/overview", true, true, "standard"],
+  ["anthropic", "claude-code-builtin", "claude-haiku-4-5", "Claude Haiku 4.5", "https://platform.claude.com/docs/en/models/haiku-4-5/overview", true, false, "standard"],
+  ["anthropic", "anthropic-api", "claude-opus-5-5", "Claude Opus 5.5", "https://platform.claude.com/docs/en/models/opus-5-5/overview", true, true, "standard"],
+  ["anthropic", "anthropic-api", "claude-fable-5-1", "Claude Fable 5.1", "https://platform.claude.com/docs/en/models/fable-5-1/overview", true, true, "standard"],
+  ["anthropic", "anthropic-api", "claude-haiku-4-5", "Claude Haiku 4.5", "https://platform.claude.com/docs/en/models/haiku-4-5/overview", true, false, "standard"],
+  ["google", "gemini-cli-builtin", "gemini-3.8-flash", "Gemini 3.8 Flash", "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash", true, true, "standard"],
+  ["google", "gemini-api", "gemini-3.8-flash", "Gemini 3.8 Flash", "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash", true, true, "standard"],
+  ["deepseek", "deepseek-api", "deepseek-flash", "DeepSeek V4.1 Flash", "https://api-docs.deepseek.com/updates/", true, true, "standard"],
+  ["zai", "zai-general-api", "glm-5.3", "GLM-5.3", "https://docs.z.ai/guides/llm/glm-5.3", false, true, "zai"],
+  ["zai", "zai-general-api", "glm-5.3-flash", "GLM-5.3 Flash", "https://docs.z.ai/guides/vlm/glm-5.3-flash", true, true, "zai"],
+  ["zai", "zai-coding-api", "glm-5.3", "GLM-5.3", "https://docs.z.ai/guides/llm/glm-5.3", false, true, "zai"],
 ];
+const EFFORTS = { standard: ["low", "medium", "high"], zai: ["low", "high", "max"] };
+const CHECKED_AT = "2026-09-27";
 const tasks = ["planning_architecture", "frontend_visual", "backend_core", "tdd_debugging", "static_review", "delivery_evidence"];
-const catalog = { schemaVersion: 2, keyId, version: 3, generatedAt: "2026-09-05T00:00:00.000Z", models: definitions.map(([provider, adapter, modelId, source, vision]) => ({
-  provider, adapter, modelId, displayName: modelId, qualityTier: "unrated", checkedAt: "2026-09-05T00:00:00.000Z", expiresAt: "2027-03-05T00:00:00.000Z",
-  capabilities: { reasoning: null, coding: null, structuredOutput: true, vision, toolUse: true, longContext: false },
+const catalog = { schemaVersion: 2, keyId, version: 4, generatedAt: `${CHECKED_AT}T00:00:00.000Z`, models: definitions.map(([provider, adapter, modelId, displayName, source, vision, longContext, effort]) => ({
+  provider, adapter, modelId, displayName, qualityTier: "unrated", checkedAt: `${CHECKED_AT}T00:00:00.000Z`, expiresAt: "2027-03-27T00:00:00.000Z",
+  capabilities: { reasoning: null, coding: null, structuredOutput: true, vision, toolUse: true, longContext },
   taskAffinity: Object.fromEntries(tasks.map((t) => [t, null])), costTier: null, latencyTier: null, reliabilityBaseline: null,
-  supportedEfforts: ["low", "medium", "high"], recommendedEffort: "low",
-  evidence: [{ source: sources[source], checkedAt: "2026-09-05" }],
+  supportedEfforts: EFFORTS[effort], recommendedEffort: "low",
+  evidence: [{ source, checkedAt: CHECKED_AT }],
 })) };
 await writeFile("assets/catalog-v2.json", JSON.stringify(catalog, null, 2) + "\n");
 await writeFile("assets/catalog-v2.sig", sign(null, Buffer.from(JSON.stringify(catalog)), privateKey).toString("base64") + "\n");

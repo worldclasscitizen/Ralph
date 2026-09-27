@@ -10,7 +10,7 @@ import { atomicJson, json, report, subject, BASELINE } from "./lib/release.mjs";
 const exec = promisify(execFile), source = resolve(".");
 const args = process.argv.slice(2), live = args.includes("--live");
 const arg = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
-const model = arg("--model", "gpt-5.6-luna");
+const model = arg("--model", "gpt-6-sol");
 const baseline = resolve(".release/baseline"), campaign = resolve(live ? ".release/live-campaign.json" : ".release/mock-campaign.json");
 const budgetPath = resolve(live ? ".release/live-budget.json" : ".release/mock-budget.json");
 await mkdir(resolve(".release"), { recursive: true });

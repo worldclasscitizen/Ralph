@@ -12,7 +12,7 @@ import { assertFunctionalPreflight } from "./lib/live-preflight.mjs";
 
 const exec = promisify(execFile), source = resolve("."), args = process.argv.slice(2), live = args.includes("--live");
 const arg = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback;
-const model = arg("--model", "gpt-5.6-luna"), mode = live ? "live" : "mock";
+const model = arg("--model", "gpt-6-sol"), mode = live ? "live" : "mock";
 const campaign = resolve(`.release/functional-${mode}.json`), budgetPath = resolve(live ? ".release/live-budget.json" : ".release/functional-mock-budget.json");
 const target = await subject();
 let cliVersion = "mock-only";
