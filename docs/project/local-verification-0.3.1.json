@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-27T08:12:00.000Z",
+  "version": "0.3.1",
+  "sourceCommit": "84212aef8c11e429cf87a822956f5e4da136fb8c",
+  "parentCommit": "1ace54688a18be6728a32c440c8d82ecef714a08",
+  "sourceNote": "The measured tree is 84212ae. The documentation-only commit that adds this record leaves runtimeDigest, testDigest and dependencyDigest unchanged, so the measurements still describe the current tree.",
+  "platform": "win32",
+  "node": "v24.11.1",
+  "git": "git version 2.45.1.windows.1",
+  "build": { "runtime": "pass", "ui": "pass" },
+  "typecheck": "pass",
+  "unitIntegrationTests": { "files": 18, "passed": 138, "failed": 0 },
+  "operationalTests": {
+    "passed": 25,
+    "failed": 0,
+    "repetitions": 5,
+    "boundaries": [
+      "invocation_before",
+      "invocation_after",
+      "commit_after",
+      "delivery_checkout",
+      "delivery_after"
+    ]
+  },
+  "globalCoverage": {
+    "lines": { "total": 11925, "covered": 7339, "skipped": 0, "pct": 61.54 },
+    "statements": { "total": 11925, "covered": 7339, "skipped": 0, "pct": 61.54 },
+    "functions": { "total": 341, "covered": 247, "skipped": 0, "pct": 72.43 },
+    "branches": { "total": 2157, "covered": 1626, "skipped": 0, "pct": 75.38 }
+  },
+  "releaseGates": {
+    "check:core": "pass (lines >= 57.77, branches >= 73.70, ten critical files >= 90)",
+    "catalog:audit": "pass (v2 signature, trust anchor, evidence hosts, legacy catalog byte-identical)",
+    "docs:check": "pass (27 documents, links, terminology, README parity, version badge)",
+    "smoke": "pass (npm pack archive installed, ralph --version 0.3.1, bundled dashboard served, mock graph completed)"
+  },
+  "catalog": {
+    "schemaVersion": 2,
+    "version": 4,
+    "models": 18,
+    "generatedAt": "2026-09-27T00:00:00.000Z",
+    "expiresAt": "2027-03-27T00:00:00.000Z",
+    "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e"
+  },
+  "notRunLocally": [
+    "The six-cell CI matrix (Windows/macOS/Linux x Node 22/24) is GitHub Actions work; this record is one win32/Node 24 host.",
+    "Live provider conformance and the live end-to-end campaign were not run; no 0.3.1 model has live support evidence because gpt-5.6-luna is no longer in the catalog.",
+    "npm run test:e2e (Playwright accessibility and 32-node browser cases) was not run locally; CI installs Chromium for it on ubuntu-latest."
+  ],
+  "scope": "Local mock/protocol/Git/browser-independent evidence for 0.3.1 on one Windows host. It does not replace cross-platform CI, live-provider conformance or the published release gate."
+}
