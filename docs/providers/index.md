@@ -4,16 +4,38 @@ Provider, connection and execution transport are separate. Codex login and OpenA
 
 ## Configuration
 
-Run `ralph init`, `ralph providers list`, and `ralph auth status` in the target Git project. API credentials come from the environment or the existing OS credential store. Windows currently uses environment variables; Windows Credential Manager is not implemented.
+Run `ralph init` in the target Git project, then `ralph auth setup`. The setup command prints every provider with its current state, lets you pick providers, offers the transports each provider actually supports (installed CLI login or API key), asks for an API key without echoing it, and lets you select any number of models per connection. It works identically from a terminal and from a host integration, because Codex, Claude Code, Gemini CLI and Antigravity all shell out to this same CLI.
 
-| Connection ID | Environment variable | API transport |
-|---|---|---|
-| openai:api | OPENAI_API_KEY | Responses |
-| anthropic:api | ANTHROPIC_API_KEY | Messages |
-| google:api | GEMINI_API_KEY | generateContent |
-| deepseek:api | DEEPSEEK_API_KEY | Chat completions |
-| zai:general | GLM_GENERAL_API_KEY | Chat completions |
-| zai:coding-plan | GLM_API_KEY | Chat completions |
+```bash
+ralph auth setup                      # status + guided selection
+ralph auth status                     # the same status table, no changes
+ralph auth status --json               # machine-readable status
+ralph auth login claude-code-builtin   # run the provider's own login command
+ralph auth add deepseek:api --key-stdin < key.txt
+ralph auth remove zai:general
+```
+
+Selection is stored per connection as `models`, so a later `ralph init` or `ralph config refresh` never widens it. Non-interactive hosts and CI use the flags below; without them a non-interactive run fails instead of hanging.
+
+```bash
+ralph auth setup --provider deepseek --method api --key-stdin --models deepseek-flash
+ralph auth setup --provider zai --method api --key-env GLM_API_KEY   # read the key from the environment
+```
+
+| Connection ID | Provider | Transport | Environment variable |
+|---|---|---|---|
+| openai:codex-login | openai | Codex CLI login | — |
+| anthropic:claude-login | anthropic | Claude Code login | — |
+| google:gemini-cli-login | google | Gemini CLI login | — |
+| google:antigravity-login | google | Antigravity CLI (`agy`) | — |
+| openai:api | openai | Responses | OPENAI_API_KEY |
+| anthropic:api | anthropic | Messages | ANTHROPIC_API_KEY |
+| google:api | google | generateContent | GEMINI_API_KEY |
+| deepseek:api | deepseek | Chat completions | DEEPSEEK_API_KEY |
+| zai:general | zai | Chat completions | GLM_GENERAL_API_KEY |
+| zai:coding-plan | zai | Chat completions | GLM_API_KEY |
+
+A key entered through `ralph auth setup` is stored in the macOS Keychain or the Freedesktop Secret Service when available. On Windows and other hosts without a keychain it is written to `credentials.json` in the per-user Ralph directory (`%APPDATA%\ralph`, `~/Library/Application Support/ralph` or `$XDG_CONFIG_HOME/ralph`), created with owner-only permissions and never written into a project or committed. Set `RALPH_CREDENTIAL_STORE=file` to skip the keychain deliberately on a headless or shared machine. Environment variables still work and remain the only path needed in CI.
 
 For a DeepSeek + GLM-only environment, set just the corresponding environment variables before initialization. Remove or disable other entries from the reviewed project configuration if unrelated local CLI logins were automatically detected. `ralph config refresh` recalculates routes from configured connections. All planner/worker/critic roles can use the remaining portfolio.
 
@@ -23,21 +45,23 @@ For another compatible endpoint, add an explicit connection with adapter `openai
 
 The candidate model pool is data, not code. The router reads only the Ed25519-signed `assets/catalog-v2.json` (with `assets/catalog-v2.sig` and the public trust anchor in `src/catalog-key.ts`), filtered by configured connection adapter, capability and expiry in `src/router.ts`. Inspect it with `ralph catalog show`, `ralph catalog diff` and `ralph catalog update`; `npm run catalog:audit` verifies the v2 signature, the trust anchor, the six official evidence hosts and that the legacy `assets/catalog.json`/`catalog.sig` pair stays byte-identical to the frozen v0.2 channel.
 
-Catalog version 4 (checked 2026-09-27, expires 2027-03-27) lists only the newest model of each tier; superseded ids are removed instead of kept as silent fallbacks.
+Catalog version 5 (checked 2026-09-27, expires 2027-03-27) lists only the newest model of each tier; superseded ids are removed instead of kept as silent fallbacks. A cached catalog is used only when it is strictly newer than the bundled one, so a stale cache can never shadow the signature-verified artifact shipped with the package.
 
 | Adapter | Candidate models | Vision | Effort strings |
 |---|---|---|---|
 | codex-builtin | gpt-6-astra, gpt-6-sol, gpt-6-luna | no | low, medium, high |
 | openai-api | gpt-6-astra, gpt-6-sol, gpt-6-luna | yes | low, medium, high |
-| claude-code-builtin | claude-opus-5-5, claude-fable-5-1, claude-haiku-4-5 | yes | low, medium, high |
-| anthropic-api | claude-opus-5-5, claude-fable-5-1, claude-haiku-4-5 | yes | low, medium, high |
+| claude-code-builtin | claude-opus-5-5, claude-fable-5-1 | yes | low, medium, high |
+| anthropic-api | claude-opus-5-5, claude-fable-5-1 | yes | low, medium, high |
 | gemini-cli-builtin | gemini-3.8-flash | yes | low, medium, high |
 | gemini-api | gemini-3.8-flash | yes | low, medium, high |
 | deepseek-api | deepseek-flash (`DeepSeek-V4.1-Flash`) | yes | low, medium, high |
 | zai-general-api | glm-5.3, glm-5.3-flash | glm-5.3 no, flash yes | low, high, max |
-| zai-coding-api | glm-5.3 | no | low, high, max |
+| zai-coding-plan | glm-5.3 | no | low, high, max |
 
-Every entry is `qualityTier: "unrated"` with null scores and cites one official provider page from an allow-listed host (`learn.chatgpt.com`, `developers.openai.com`, `platform.claude.com`, `ai.google.dev`, `api-docs.deepseek.com`, `docs.z.ai`). Entries expire after six months, so an unrefreshed catalog drops models instead of routing to them forever. No measured benchmark value is published for these models; adding one requires provenance recorded in `gateway/measurements.ts`, never an estimate. `gpt-6-astra` is listed for Codex only where the CLI exposes it as a power preset, and audit-only entries such as Claude Mythos 5.1 (invite-only) and Gemini Pro previews are deliberately absent.
+Every entry is `qualityTier: "unrated"` with null scores and cites one official provider page from an allow-listed host (`learn.chatgpt.com`, `developers.openai.com`, `platform.claude.com`, `ai.google.dev`, `api-docs.deepseek.com`, `docs.z.ai`). Entries expire after six months, so an unrefreshed catalog drops models instead of routing to them forever. No measured benchmark value is published for these models; adding one requires provenance recorded in `gateway/measurements.ts`, never an estimate.
+
+Model admission is deliberately narrow. `claude-haiku-4-5` is excluded: it is the only current Claude limited to 200K context, and the credible criticism against it is specifically about autonomous coding-agent work, which is exactly this project's workload. `deepseek-v4-pro` is excluded because DeepSeek rerouted that id to `deepseek-flash` on 2026-09-14, so it no longer names a distinct model. Claude Mythos 5.1 (invite-only) and Gemini Pro previews are excluded because they are not generally available. `gemini-3.8-flash` is kept as the only generally available Gemini, but it is also the entry with the weakest reliability signal (reports of elevated latency and `MODEL_CAPACITY_EXHAUSTED` errors); it is unreviewed live and should be treated as such. `gpt-6-sol` carries mixed community sentiment and is therefore a candidate, not a default.
 
 ## Assignment
 

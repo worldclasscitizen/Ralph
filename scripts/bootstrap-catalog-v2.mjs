@@ -34,21 +34,19 @@ const definitions = [
   ["openai", "openai-api", "gpt-6-luna", "GPT-6 Luna", "https://developers.openai.com/api/docs/models/gpt-6-luna", true, true, "standard"],
   ["anthropic", "claude-code-builtin", "claude-opus-5-5", "Claude Opus 5.5", "https://platform.claude.com/docs/en/models/opus-5-5/overview", true, true, "standard"],
   ["anthropic", "claude-code-builtin", "claude-fable-5-1", "Claude Fable 5.1", "https://platform.claude.com/docs/en/models/fable-5-1/overview", true, true, "standard"],
-  ["anthropic", "claude-code-builtin", "claude-haiku-4-5", "Claude Haiku 4.5", "https://platform.claude.com/docs/en/models/haiku-4-5/overview", true, false, "standard"],
   ["anthropic", "anthropic-api", "claude-opus-5-5", "Claude Opus 5.5", "https://platform.claude.com/docs/en/models/opus-5-5/overview", true, true, "standard"],
   ["anthropic", "anthropic-api", "claude-fable-5-1", "Claude Fable 5.1", "https://platform.claude.com/docs/en/models/fable-5-1/overview", true, true, "standard"],
-  ["anthropic", "anthropic-api", "claude-haiku-4-5", "Claude Haiku 4.5", "https://platform.claude.com/docs/en/models/haiku-4-5/overview", true, false, "standard"],
   ["google", "gemini-cli-builtin", "gemini-3.8-flash", "Gemini 3.8 Flash", "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash", true, true, "standard"],
   ["google", "gemini-api", "gemini-3.8-flash", "Gemini 3.8 Flash", "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash", true, true, "standard"],
   ["deepseek", "deepseek-api", "deepseek-flash", "DeepSeek V4.1 Flash", "https://api-docs.deepseek.com/updates/", true, true, "standard"],
   ["zai", "zai-general-api", "glm-5.3", "GLM-5.3", "https://docs.z.ai/guides/llm/glm-5.3", false, true, "zai"],
   ["zai", "zai-general-api", "glm-5.3-flash", "GLM-5.3 Flash", "https://docs.z.ai/guides/vlm/glm-5.3-flash", true, true, "zai"],
-  ["zai", "zai-coding-api", "glm-5.3", "GLM-5.3", "https://docs.z.ai/guides/llm/glm-5.3", false, true, "zai"],
+  ["zai", "zai-coding-plan", "glm-5.3", "GLM-5.3", "https://docs.z.ai/guides/llm/glm-5.3", false, true, "zai"],
 ];
 const EFFORTS = { standard: ["low", "medium", "high"], zai: ["low", "high", "max"] };
 const CHECKED_AT = "2026-09-27";
 const tasks = ["planning_architecture", "frontend_visual", "backend_core", "tdd_debugging", "static_review", "delivery_evidence"];
-const catalog = { schemaVersion: 2, keyId, version: 4, generatedAt: `${CHECKED_AT}T00:00:00.000Z`, models: definitions.map(([provider, adapter, modelId, displayName, source, vision, longContext, effort]) => ({
+const catalog = { schemaVersion: 2, keyId, version: 5, generatedAt: `${CHECKED_AT}T00:00:00.000Z`, models: definitions.map(([provider, adapter, modelId, displayName, source, vision, longContext, effort]) => ({
   provider, adapter, modelId, displayName, qualityTier: "unrated", checkedAt: `${CHECKED_AT}T00:00:00.000Z`, expiresAt: "2027-03-27T00:00:00.000Z",
   capabilities: { reasoning: null, coding: null, structuredOutput: true, vision, toolUse: true, longContext },
   taskAffinity: Object.fromEntries(tasks.map((t) => [t, null])), costTier: null, latencyTier: null, reliabilityBaseline: null,

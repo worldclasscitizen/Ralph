@@ -7,3 +7,5 @@ Present the returned contract, graph, verification commands, provider candidates
 If a structured question is returned with exit code 10, show the required questions, collect the answers and use ralph respond <run-id> --request <question-id> --stdin. Review the resulting changed plan before approving it. Never infer approval from elapsed time.
 
 Ralph owns scheduling, worker loops, state, verification and delivery. Use ralph graph show, ralph explain, ralph status, ralph stop and ralph resume to inspect or control the same run. Report summaries, changes, verifier evidence and recorded errors. Do not collect private internal reasoning. Preserve user changes and result branches. Do not push or deploy automatically.
+
+Provider setup is a user action, not a host action. When no connection is enabled, tell the user to run ralph auth setup and answer its prompts (provider, CLI login or API key, models). Never ask for, type, echo or store an API key yourself, and never pass --key-stdin on the user's behalf.

@@ -83,15 +83,15 @@ describe("signed catalog and deterministic router", () => {
         await expect(updateCatalog()).rejects.toThrow();
       }
       mode = "valid";
-      expect((await updateCatalog()).version).toBe(4);
+      expect((await updateCatalog()).version).toBe(5);
       expect((await loadCatalog()).schemaVersion).toBe(2);
       const status = await catalogStatus({ checkRemote: true });
-      expect(status.cacheVersion).toBe(4);
+      expect(status.cacheVersion).toBe(5);
       expect(status.changes).toEqual({ added: [], removed: [], modified: [] });
-      expect(await catalogDiff()).toMatchObject({ from: 4, to: 4 });
+      expect(await catalogDiff()).toMatchObject({ from: 5, to: 5 });
       expect(await previewCatalogUpdate()).toBeUndefined();
       mode = "unchanged";
-      expect((await updateCatalog()).version).toBe(4);
+      expect((await updateCatalog()).version).toBe(5);
       expect((await catalogStatus({ checkRemote: true })).remoteChecked).toBe(
         true,
       );
@@ -108,7 +108,7 @@ describe("signed catalog and deterministic router", () => {
   it("verifies and loads the signed bootstrap catalog", async () => {
     const catalog = await loadCatalog();
     const status = await catalogStatus({ offline: true });
-    expect(catalog.version).toBe(4);
+    expect(catalog.version).toBe(5);
     expect(catalog.schemaVersion).toBe(2);
     expect(catalog.models.length).toBeGreaterThan(0);
     expect(status.signatureValid).toBe(true);
@@ -159,7 +159,7 @@ describe("signed catalog and deterministic router", () => {
     const connections: ConnectionConfig[] = [
       {
         id: "zai:coding-plan",
-        adapter: "zai-coding-api",
+        adapter: "zai-coding-plan",
         provider: "zai",
         enabled: true,
         mode: "api",

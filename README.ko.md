@@ -97,9 +97,12 @@ ralph --version
 ```bash
 cd /absolute/path/to/a/clean/git-project
 ralph init
+ralph auth setup
 ralph doctor
 ralph plan "Improve login accessibility and add tests" --json
 ```
+
+`ralph auth setup`는 어떤 공급자가 연결되어 있는지 보여주고, 연결할 공급자를 고르게 한 뒤, 각 공급자가 지원하는 방식(CLI 로그인 또는 API 키)을 제시합니다. API 키는 화면에 표시하지 않고 입력받고, 사용할 모델은 복수로 선택할 수 있습니다. Enter로 기본값을 그대로 받아들이거나, 건너뛰고 환경 변수를 계속 사용해도 됩니다. 비대화형 호스트는 `--provider`, `--method`, `--key-stdin` 또는 `--key-env`, `--models`를 전달합니다.
 
 Ralph는 컨텍스트를 수집하고 설정된 공급자를 확인한 뒤 계약과 그래프를 저장합니다. 경로·완료 기준·검증 명령·모델·예산을 검토합니다. 반환된 `runId`로 확인한 바로 그 계획을 승인합니다.
 
@@ -209,12 +212,12 @@ ralph config route list
 | 호환 API | DeepSeek·GLM·명시적으로 설정한 호환 엔드포인트 | 공급자 API 키 참조 |
 | 사용자 프로세스 | Ralph JSON/NDJSON 프로토콜 | 프로세스 어댑터에서 정의 |
 
-CLI 로그인과 API 연결은 별개입니다. 사용하는 연결만 설정합니다. DeepSeek와 GLM만으로 계획·작업·평가를 구성할 수 있으며 Codex 로그인을 요구하지 않습니다. 자격 증명 저장 방식은 운영체제에 따라 다르고, Windows에서는 현재 환경 변수를 사용합니다.
+CLI 로그인과 API 연결은 별개입니다. 사용하는 연결만 설정합니다. DeepSeek와 GLM만으로 계획·작업·평가를 구성할 수 있으며 Codex 로그인을 요구하지 않습니다. `ralph auth setup`은 API 키를 OS 키체인이 있으면 거기에, 없으면 저장소 밖 사용자 디렉터리의 `credentials.json`에 보관합니다. 환경 변수도 그대로 지원하며 CI에서는 그 방식만으로 충분하고, `RALPH_CREDENTIAL_STORE=file`로 파일 저장을 강제할 수 있습니다.
 
 ```bash
-ralph providers detect
-ralph providers list
+ralph auth setup
 ralph auth status
+ralph providers list
 ralph config refresh
 ```
 
@@ -249,6 +252,7 @@ ralph config refresh
 | 명령 | 용도 |
 | :--- | :--- |
 | `ralph doctor` | Git·인증·라우팅 진단 |
+| `ralph auth setup` | 공급자 연결: 상태·방식·API 키·모델 선택 |
 | `ralph config explain` | 경로와 정책 설명 |
 | `ralph providers list` | 연결과 검증 범위 확인 |
 | `ralph auth status` | 설치 여부와 구분된 인증 상태 확인 |

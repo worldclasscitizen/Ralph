@@ -24,8 +24,16 @@ All graph commands resolve the project through `--project <absolute-git-root>` o
 | usage | Deduplicated graph attempt usage |
 | logs run-id --follow | Sequence-based event log |
 | dashboard --open | Packaged local UI |
+| auth setup | Show provider status, choose providers, transports, keys and models |
+| auth status [--json] | Provider connection state only, without changes |
+| auth login connection-id | Run the provider's own login command |
+| auth add connection-id --key-stdin | Store an API key from stdin |
+| config route set key --candidate connection=model@effort | Pin an approved candidate |
+| catalog show \| diff \| update | Inspect or refresh the signed model catalog |
 | migrate --to 0.3 --dry-run | Classify legacy state without writing |
 | migrate --to 0.3 | Preserve legacy state and write migration manifest |
+
+`ralph auth setup` is the only command that needs interactive input. It fails instead of hanging when stdin is not a terminal, and it accepts `--provider`, `--method login|api`, `--connection`, `--key-stdin`, `--key-env NAME`, `--models a,b` and `--no-login` for scripted hosts. Host integrations run this same CLI, so provider setup behaves identically from Codex, Claude Code, Gemini CLI and Antigravity.
 
 Host context JSON is `{ "summary": "Explicit context supplied by the host" }`. It cannot extend approval scope. A clarification response is `{ "clarify": "Target paths, desired behavior and completion checks" }`; use the actual question IDs returned by the run.
 

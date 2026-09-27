@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e",
-  "version": 4,
+  "version": 5,
   "generatedAt": "2026-09-27T00:00:00.000Z",
   "models": [
     {
@@ -326,46 +326,6 @@
     },
     {
       "provider": "anthropic",
-      "adapter": "claude-code-builtin",
-      "modelId": "claude-haiku-4-5",
-      "displayName": "Claude Haiku 4.5",
-      "qualityTier": "unrated",
-      "checkedAt": "2026-09-27T00:00:00.000Z",
-      "expiresAt": "2027-03-27T00:00:00.000Z",
-      "capabilities": {
-        "reasoning": null,
-        "coding": null,
-        "structuredOutput": true,
-        "vision": true,
-        "toolUse": true,
-        "longContext": false
-      },
-      "taskAffinity": {
-        "planning_architecture": null,
-        "frontend_visual": null,
-        "backend_core": null,
-        "tdd_debugging": null,
-        "static_review": null,
-        "delivery_evidence": null
-      },
-      "costTier": null,
-      "latencyTier": null,
-      "reliabilityBaseline": null,
-      "supportedEfforts": [
-        "low",
-        "medium",
-        "high"
-      ],
-      "recommendedEffort": "low",
-      "evidence": [
-        {
-          "source": "https://platform.claude.com/docs/en/models/haiku-4-5/overview",
-          "checkedAt": "2026-09-27"
-        }
-      ]
-    },
-    {
-      "provider": "anthropic",
       "adapter": "anthropic-api",
       "modelId": "claude-opus-5-5",
       "displayName": "Claude Opus 5.5",
@@ -440,46 +400,6 @@
       "evidence": [
         {
           "source": "https://platform.claude.com/docs/en/models/fable-5-1/overview",
-          "checkedAt": "2026-09-27"
-        }
-      ]
-    },
-    {
-      "provider": "anthropic",
-      "adapter": "anthropic-api",
-      "modelId": "claude-haiku-4-5",
-      "displayName": "Claude Haiku 4.5",
-      "qualityTier": "unrated",
-      "checkedAt": "2026-09-27T00:00:00.000Z",
-      "expiresAt": "2027-03-27T00:00:00.000Z",
-      "capabilities": {
-        "reasoning": null,
-        "coding": null,
-        "structuredOutput": true,
-        "vision": true,
-        "toolUse": true,
-        "longContext": false
-      },
-      "taskAffinity": {
-        "planning_architecture": null,
-        "frontend_visual": null,
-        "backend_core": null,
-        "tdd_debugging": null,
-        "static_review": null,
-        "delivery_evidence": null
-      },
-      "costTier": null,
-      "latencyTier": null,
-      "reliabilityBaseline": null,
-      "supportedEfforts": [
-        "low",
-        "medium",
-        "high"
-      ],
-      "recommendedEffort": "low",
-      "evidence": [
-        {
-          "source": "https://platform.claude.com/docs/en/models/haiku-4-5/overview",
           "checkedAt": "2026-09-27"
         }
       ]
@@ -686,7 +606,7 @@
     },
     {
       "provider": "zai",
-      "adapter": "zai-coding-api",
+      "adapter": "zai-coding-plan",
       "modelId": "glm-5.3",
       "displayName": "GLM-5.3",
       "qualityTier": "unrated",

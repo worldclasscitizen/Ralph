@@ -1,4 +1,3 @@
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { access, readFile } from "node:fs/promises";
 import type { ConnectionConfig, ExecutionProfile, ProjectConfig } from "./types.js";
@@ -9,12 +8,7 @@ import { getCredential } from "./credentials.js";
 import { createAdapter } from "./providers/index.js";
 import { saveConfig } from "./state.js";
 
-export function globalConfigDir(): string {
-  if (process.env.RALPH_CONFIG_HOME) return process.env.RALPH_CONFIG_HOME;
-  if (process.platform === "win32") return join(process.env.APPDATA ?? homedir(), "ralph");
-  if (process.platform === "darwin") return join(homedir(), "Library", "Application Support", "ralph");
-  return join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "ralph");
-}
+export { globalConfigDir } from "./paths.js";
 
 export async function detectConnections(): Promise<ConnectionConfig[]> {
   const candidates: Array<{ command: string; connection: ConnectionConfig }> = [
@@ -53,6 +47,8 @@ export async function detectConnections(): Promise<ConnectionConfig[]> {
 async function discoverModels(config: ProjectConfig): Promise<ConnectionConfig[]> {
   return await Promise.all(config.connections.map(async (connection) => {
     if (!connection.enabled || connection.mode === "process") return connection;
+    // An explicit user selection (ralph auth setup) is never widened by discovery.
+    if (connection.models?.length) return connection;
     try {
       const models = await createAdapter(connection, config).listModels();
       const ids = [...new Set(models.map((model) => model.modelId).filter(Boolean))];
@@ -149,12 +145,32 @@ export async function refreshProjectConfig(config: ProjectConfig, preset: Execut
   const catalog = await loadCatalog();
   const connections = await syncAuthentication(config);
   const authChanged = connections.some((connection, index) => connection.enabled !== config.connections[index]?.enabled);
-  if (config.preset === preset && config.catalogVersion === catalog.version && !authChanged) return config;
+  // A changed model selection must rebuild routes even when authentication is unchanged.
+  const modelsChanged = connections.some((connection, index) => JSON.stringify(connection.models ?? []) !== JSON.stringify(config.connections[index]?.models ?? []));
+  if (config.preset === preset && config.catalogVersion === catalog.version && !authChanged && !modelsChanged) return config;
   return {
     ...config,
     preset,
     connections,
     routes: buildRoutes(catalog, connections, preset, config.overrides),
+    catalogVersion: catalog.version,
+  };
+}
+
+/**
+ * Rebuild authentication state and routes unconditionally. Used after an explicit
+ * change (ralph auth setup), where a cheap no-op comparison would skip the rebuild
+ * because the caller already mutated the in-memory config.
+ */
+export async function recomputeProjectConfig(config: ProjectConfig, preset: ExecutionProfile = config.preset): Promise<ProjectConfig> {
+  const normalized = normalizeProjectConfig(config);
+  const catalog = await loadCatalog();
+  const connections = await syncAuthentication(normalized);
+  return {
+    ...normalized,
+    preset,
+    connections,
+    routes: buildRoutes(catalog, connections, preset, normalized.overrides),
     catalogVersion: catalog.version,
   };
 }

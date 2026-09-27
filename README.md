@@ -97,9 +97,12 @@ ralph --version
 ```bash
 cd /absolute/path/to/a/clean/git-project
 ralph init
+ralph auth setup
 ralph doctor
 ralph plan "Improve login accessibility and add tests" --json
 ```
+
+`ralph auth setup` shows which providers are connected, asks which ones to connect, offers the transports each provider supports (CLI login or API key), reads the key without echoing it, and lets you choose any number of models. Answer with Enter to accept defaults, or skip it to keep using environment variables. Non-interactive hosts pass `--provider`, `--method`, `--key-stdin` or `--key-env` and `--models`.
 
 Ralph collects context, resolves configured providers, and saves a contract and graph. Review the paths, acceptance criteria, verifier commands, models and budget. Then use the returned `runId` to approve that exact plan:
 
@@ -209,12 +212,12 @@ Approved capabilities and availability are checked before assignment. Fixed rout
 | Compatible API | DeepSeek, GLM, configured compatible endpoints | Provider API-key reference |
 | Custom process | Ralph JSON/NDJSON protocol | Defined by the process adapter |
 
-CLI login and API connections remain separate. Configure only what you use: DeepSeek and GLM can supply planning, work and evaluation without a Codex login. Credential storage depends on the operating system; Windows currently uses environment variables.
+CLI login and API connections remain separate. Configure only what you use: DeepSeek and GLM can supply planning, work and evaluation without a Codex login. `ralph auth setup` stores an API key in the OS keychain when one exists, otherwise in a per-user `credentials.json` outside every repository; environment variables remain supported for CI and `RALPH_CREDENTIAL_STORE=file` forces the file store.
 
 ```bash
-ralph providers detect
-ralph providers list
+ralph auth setup
 ralph auth status
+ralph providers list
 ralph config refresh
 ```
 
@@ -249,6 +252,7 @@ Installation and login are distinct from verified behavior. Support records iden
 | Command | Purpose |
 | :--- | :--- |
 | `ralph doctor` | Diagnose Git, authentication and routing |
+| `ralph auth setup` | Connect providers: status, transports, API key and model selection |
 | `ralph config explain` | Explain routes and policies |
 | `ralph providers list` | Inspect connections and verification scope |
 | `ralph auth status` | Inspect authentication separately from installation |

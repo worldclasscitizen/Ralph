@@ -31,10 +31,18 @@ import {
 } from "./config.js";
 import { approveContract, validateContract } from "./contracts.js";
 import {
+  describeStore,
   getCredential,
   removeCredential,
   setCredential,
 } from "./credentials.js";
+import { createPrompt } from "./interaction/prompt.js";
+import {
+  formatStatusTable,
+  loginCommand,
+  providerStatusRows,
+  runProviderSetup,
+} from "./setup.js";
 import { startDashboard } from "./dashboard.js";
 import { findGitRoot, gitStatus, checkpoint } from "./git.js";
 import {
@@ -189,6 +197,7 @@ async function commandInit(args: string[]): Promise<void> {
   const preset = (takeOption(args, "--preset") ??
     "balanced") as ExecutionProfile;
   const asJson = takeFlag(args, "--json");
+  const connect = takeFlag(args, "--connect");
   if (!["balanced", "quality", "fast", "budget"].includes(preset))
     throw new RalphError(
       "preset은 balanced, quality, fast, budget 중 하나입니다.",
@@ -210,6 +219,12 @@ async function commandInit(args: string[]): Promise<void> {
     },
     asJson,
   );
+  if (!config.connections.some((connection) => connection.enabled)) {
+    human(
+      "연동된 공급자가 없습니다. ralph auth setup을 실행하면 공급자·방식·모델을 고를 수 있습니다.",
+    );
+  }
+  if (connect) await commandAuth(["--project", root]);
 }
 
 async function commandDoctor(args: string[]): Promise<void> {
@@ -888,18 +903,79 @@ async function spawnInteractive(
 }
 
 async function commandAuth(args: string[]): Promise<void> {
-  const sub = args.shift() ?? "status";
+  const sub = args[0] && !args[0].startsWith("--") ? args.shift()! : "setup";
   const root = await projectRoot(args);
   let config = await loadConfig(root);
+  if (sub === "setup" || sub === "connect") {
+    const asJson = takeFlag(args, "--json");
+    const providers = takeOptions(args, "--provider");
+    const requestedMethod = takeOption(args, "--method");
+    if (requestedMethod && requestedMethod !== "login" && requestedMethod !== "api")
+      throw new RalphError(
+        "--method는 login 또는 api여야 합니다.",
+        "invalid_argument",
+        2,
+      );
+    const method = requestedMethod as "login" | "api" | undefined;
+    const connectionIds = takeOptions(args, "--connection");
+    const modelList = takeOptions(args, "--models")
+      .flatMap((value) => value.split(/[\s,]+/))
+      .filter(Boolean);
+    let apiKey: string | undefined;
+    if (takeFlag(args, "--key-stdin")) apiKey = (await stdinText()).trim();
+    const keyEnv = takeOption(args, "--key-env");
+    if (keyEnv) {
+      const value = process.env[keyEnv]?.trim();
+      if (!value)
+        throw new RalphError(
+          `${keyEnv} 환경변수가 비어 있습니다.`,
+          "credential_missing",
+          2,
+        );
+      apiKey = value;
+    }
+    const result = await runProviderSetup(
+      root,
+      config,
+      createPrompt(),
+      {
+        ...(providers.length ? { providers } : {}),
+        ...(method ? { method } : {}),
+        ...(connectionIds.length ? { connectionIds } : {}),
+        ...(apiKey ? { apiKeys: { "*": apiKey } } : {}),
+        ...(modelList.length ? { models: { "*": modelList } } : {}),
+        login: !takeFlag(args, "--no-login"),
+      },
+      spawnInteractive,
+    );
+    config = result.config;
+    human("");
+    human("적용된 변경");
+    for (const change of result.changed) human(`- ${change}`);
+    human("");
+    human(formatStatusTable(result.rows, await loadCatalog()));
+    human("경로 미리보기");
+    print(explainRoutes(config), asJson);
+    return;
+  }
   if (sub === "status") {
-    const rows = [];
-    for (const connection of config.connections)
-      rows.push({
-        connection: connection.id,
-        enabled: connection.enabled,
-        ...(await createAdapter(connection, config).authStatus()),
-      });
-    print(rows, true);
+    const asJson = takeFlag(args, "--json");
+    const rows = await providerStatusRows(config);
+    if (asJson) {
+      const machine = [];
+      for (const connection of config.connections)
+        machine.push({
+          connection: connection.id,
+          enabled: connection.enabled,
+          ...(await createAdapter(connection, config).authStatus()),
+        });
+      print(machine, true);
+      return;
+    }
+    human(formatStatusTable(rows, await loadCatalog()));
+    human(
+      "연동하려면 ralph auth setup을 실행하세요. 환경변수만 쓰려면 기존 방식을 그대로 사용할 수 있습니다.",
+    );
     return;
   }
   if (sub === "login") {
@@ -911,12 +987,7 @@ async function commandAuth(args: string[]): Promise<void> {
         "invalid_argument",
         2,
       );
-    const mapping: Record<string, [string, string[]] | undefined> = {
-      "codex-builtin": ["codex", ["login"]],
-      "claude-code-builtin": ["claude", ["auth", "login"]],
-      "gemini-cli-builtin": ["gemini", []],
-    };
-    const command = mapping[connection.adapter];
+    const command = loginCommand(connection.adapter);
     if (!command)
       throw new RalphError(
         `${connection.adapter}는 자동 로그인 명령을 제공하지 않습니다. 해당 Provider의 공식 CLI/IDE에서 로그인해 주세요.`,
@@ -946,17 +1017,13 @@ async function commandAuth(args: string[]): Promise<void> {
         2,
       );
     const mode = await setCredential(id, (await stdinText()).trim());
-    if (mode === "unavailable")
-      throw new RalphError(
-        "OS 자격 증명 저장소를 사용할 수 없습니다. 해당 connection의 환경변수를 사용해 주세요.",
-        "credential_store_unavailable",
-        2,
-      );
     connection.enabled = true;
     config = await setPreset(config, config.preset);
     await saveConfig(root, config);
     human(
-      `${id} 키를 OS 자격 증명 저장소에 보관하고 경로를 다시 계산했습니다.`,
+      mode === "keychain"
+        ? `${id} 키를 OS 자격 증명 저장소에 보관하고 경로를 다시 계산했습니다.`
+        : `${id} 키를 ${describeStore("file")}에 보관하고 경로를 다시 계산했습니다.`,
     );
     return;
   }
@@ -983,7 +1050,7 @@ async function commandAuth(args: string[]): Promise<void> {
     return;
   }
   throw new RalphError(
-    "auth는 status, login, add, remove를 지원합니다.",
+    "auth는 setup, status, login, add, remove를 지원합니다.",
     "invalid_argument",
     2,
   );
@@ -1206,7 +1273,7 @@ async function commandShow(args: string[]): Promise<void> {
 }
 function help(): void {
   print(
-    `Ralph ${VERSION}\n\n사용법: ralph <command> [options]\n\ninit, doctor, plan, run, graph, explain, respond, draft, status, stop, resume, recover\nusage, capacity, dashboard, history, config, auth, providers\nintegrations, catalog, benchmark, migrate, show, logs\n\nGit 저장소 밖에서는 --project /absolute/path/to/project를 사용합니다.`,
+    `Ralph ${VERSION}\n\n사용법: ralph <command> [options]\n\ninit, doctor, plan, run, graph, explain, respond, draft, status, stop, resume, recover\nusage, capacity, dashboard, history, config, auth, providers\nintegrations, catalog, benchmark, migrate, show, logs\n\n공급자 연동: ralph auth setup — 연동 상태를 보고, 공급자·방식·모델을 고르고, API 키를 저장합니다.\\n\\nGit 저장소 밖에서는 --project /absolute/path/to/project를 사용합니다.`,
   );
 }
 
