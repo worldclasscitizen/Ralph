@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "capturedAt": "2026-09-27T22:21:00.000Z",
+  "capturedAt": "2026-09-27T22:32:00.000Z",
   "version": "0.3.1",
-  "sourceCommit": "2e6eb22496bf626f6037e8dc5f4184dbdc503cda",
+  "sourceCommit": "78251455104f31c6569e148ad7b97f1a78a595b4",
   "parentCommit": "1ace54688a18be6728a32c440c8d82ecef714a08",
   "sourceNote": "Every result below was produced from this exact commit with a clean working tree. Repeat the commands on a different tree before trusting the numbers.",
   "platform": "win32",
@@ -10,10 +10,10 @@
   "git": "git version 2.45.1.windows.1",
   "build": { "runtime": "pass", "ui": "pass" },
   "typecheck": "pass",
-  "unitIntegrationTests": { "files": 19, "passed": 150, "failed": 0 },
+  "unitIntegrationTests": { "files": 19, "passed": 151, "failed": 0 },
   "providerSetupTests": {
     "file": "tests/provider-setup.test.ts",
-    "passed": 12,
+    "passed": 13,
     "failed": 0,
     "covers": [
       "non-interactive run without --provider fails instead of hanging",
@@ -22,6 +22,7 @@
       "model ids absent from the catalog for that adapter are rejected",
       "interactive walk-through selects provider, connection, key and models",
       "login method reports a missing CLI",
+      "routable models are separated from ids the catalog no longer contains",
       "credential file store round-trips and removes a secret",
       "an explicit model selection survives a config refresh"
     ]
@@ -39,17 +40,18 @@
     ]
   },
   "globalCoverage": {
-    "lines": { "total": 12630, "covered": 7749, "skipped": 0, "pct": 61.35 },
-    "statements": { "total": 12630, "covered": 7749, "skipped": 0, "pct": 61.35 },
+    "files": 69,
+    "lines": { "total": 12653, "covered": 7764, "skipped": 0, "pct": 61.36 },
+    "statements": { "total": 12653, "covered": 7764, "skipped": 0, "pct": 61.36 },
     "functions": { "total": 362, "covered": 278, "skipped": 0, "pct": 76.79 },
-    "branches": { "total": 2335, "covered": 1755, "skipped": 0, "pct": 75.16 }
+    "branches": { "total": 2347, "covered": 1766, "skipped": 0, "pct": 75.24 }
   },
   "releaseGates": {
     "check:core": "pass (lines >= 57.77, branches >= 73.70, ten critical files >= 90)",
     "catalog:audit": "pass (v2 signature, trust anchor, evidence hosts, legacy catalog byte-identical)",
     "docs:check": "pass (27 documents, links, terminology, README parity, version badge)",
     "smoke": "pass (npm pack archive installed, ralph --version 0.3.1, bundled dashboard served, mock graph completed)",
-    "manualCliFlow": "pass (git init -> ralph init -> ralph auth status -> ralph auth setup --provider deepseek --method api --key-stdin --models deepseek-flash stored the key, enabled the connection and produced routes)"
+    "manualCliFlow": "pass (git init -> ralph init -> ralph auth status -> ralph auth setup --provider deepseek --method api --key-stdin --models deepseek-flash stored the key, enabled the connection and produced routes; a piped non-interactive ralph auth exited 2 with guidance instead of hanging; ralph auth setup --provider anthropic --method login applied the existing Claude Code session and saved claude-opus-5-5)"
   },
   "catalog": {
     "schemaVersion": 2,
@@ -60,7 +62,7 @@
     "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e"
   },
   "treeDigests": {
-    "runtimeDigest": "4ad13f17c4dec1e287efb3c9c19bd5833eb8c9febb5a6d45e1ab77d0553c6073",
+    "runtimeDigest": "220f9a9a87e306e7443b86312113714f34b53b63024ff35db0d93c9cd1adefb0",
     "dependencyDigest": "327aa8e691cb7fb69eaf9f81d75bbc28f43f773110bcb67a19f38c24f2d34958",
     "testDigest": "43acf8e807844ca12109c8f2c52f39d87e4ea4ff8421ab08c32cdc329b7971d1"
   },
@@ -68,7 +70,7 @@
     "The six-cell CI matrix (Windows/macOS/Linux x Node 22/24) is GitHub Actions work; this record is one win32/Node 24 host.",
     "Live provider conformance and the live end-to-end campaign were not run. No model in the 0.3.1 catalog has live support evidence, because the 0.3.0 certificate names gpt-5.6-luna and that id is no longer offered.",
     "npm run test:e2e (Playwright accessibility and 32-node browser cases) was not run locally; CI installs Chromium for it on ubuntu-latest.",
-    "A real interactive terminal session of ralph auth setup was not recorded; the interactive path is covered by scripted-prompt tests plus a non-interactive CLI run."
+    "A real interactive terminal session of ralph auth setup was not recorded; the interactive path is covered by scripted-prompt tests plus non-interactive CLI runs."
   ],
   "scope": "Local mock/protocol/Git/browser-independent evidence for 0.3.1 on one Windows host. It does not replace cross-platform CI, live-provider conformance or the published release gate."
 }
