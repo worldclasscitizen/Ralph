@@ -368,11 +368,15 @@ export async function runProviderSetup(
             );
           changed.push(`${connection.id}: CLI 로그인 완료`);
         } else {
-          // --no-login never pretends a session exists; the saved state stays disabled.
+          // --no-login never runs the provider CLI; the printed status shows the real state.
           changed.push(
-            `${connection.id}: 로그인하지 않아 비활성 상태로 저장 (${command[0]} ${command.slice(1).join(" ")} 실행 필요)`,
+            `${connection.id}: CLI 로그인을 실행하지 않았습니다 (${command[0]} ${command.slice(1).join(" ")}로 로그인 필요)`,
           );
         }
+        if (row.authentication === "unknown")
+          prompt.info(
+            `${connection.id}: 로그인 상태를 확인할 수 없습니다. 첫 호출에서 판정되며, 실패하면 해당 CLI에서 로그인해 주세요.`,
+          );
       } else {
         changed.push(`${connection.id}: 기존 로그인 세션 사용`);
       }
