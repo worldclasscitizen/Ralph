@@ -226,6 +226,15 @@ describe("provider setup", () => {
     ).rejects.toThrow(/CLI/);
   });
 
+  it("separates routable models from ids the catalog no longer contains", async () => {
+    const { config } = await project();
+    config.connections[0]!.models = ["deepseek-flash", "deepseek-v4-pro"];
+    const rows = await providerStatusRows(config);
+    const deepseek = rows.find((row) => row.connectionId === "deepseek:api")!;
+    expect(deepseek.models).toEqual(["deepseek-flash"]);
+    expect(deepseek.unavailableModels).toEqual(["deepseek-v4-pro"]);
+  });
+
   it("reports provider, method, credential store and catalog models", async () => {
     const { config } = await project();
     await setCredential("zai:general", "glm-key");

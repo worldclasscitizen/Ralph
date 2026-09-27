@@ -29,7 +29,10 @@ export interface ProviderStatusRow {
   support: string;
   store?: string;
   version?: string;
+  /** Routable catalog models for this connection. */
   models: string[];
+  /** Ids the connection lists but the signed catalog does not contain. */
+  unavailableModels?: string[];
 }
 
 /** Pure grouping used by both the status table and the wizard. */
@@ -58,6 +61,13 @@ export async function providerStatusRows(
       createAdapter(connection, config),
     );
     const method = connectionMethod(connection);
+    const catalogModels = catalogModelsFor(resolved, connection);
+    const models = connection.models?.length
+      ? connection.models.filter((id) => catalogModels.includes(id))
+      : catalogModels;
+    const unavailableModels = (connection.models ?? []).filter(
+      (id) => !catalogModels.includes(id),
+    );
     rows.push({
       provider: connection.provider,
       connectionId: connection.id,
@@ -75,7 +85,8 @@ export async function providerStatusRows(
           }
         : {}),
       ...(capability.version ? { version: capability.version } : {}),
-      models: connection.models ?? catalogModelsFor(resolved, connection),
+      models,
+      ...(unavailableModels.length ? { unavailableModels } : {}),
     });
   }
   return rows;
@@ -104,6 +115,10 @@ export function formatStatusTable(
     );
     const names = row.models.map((id) => modelLabel(catalog, id));
     lines.push(`    모델: ${names.join(", ") || "없음"}`);
+    if (row.unavailableModels?.length)
+      lines.push(
+        `    카탈로그 외 (라우팅 불가): ${row.unavailableModels.join(", ")}`,
+      );
   }
   lines.push("");
   return lines.join("\n");
@@ -162,10 +177,13 @@ export async function modelOptions(
     const discovered = await createAdapter(connection, config).listModels();
     for (const model of discovered)
       if (model.modelId && !options.some((option) => option.value === model.modelId))
+        // Visible so the gap is obvious, but never selectable: the router only
+        // routes signed catalog entries, so picking this would be a dead end.
         options.push({
           value: model.modelId,
           label: model.displayName ?? model.modelId,
-          note: "CLI 감지",
+          note: "CLI가 보고했지만 카탈로그에 없어 선택할 수 없음",
+          disabled: true,
         });
   } catch {
     // Live discovery is optional; the signed catalog stays authoritative.
@@ -349,6 +367,11 @@ export async function runProviderSetup(
               code,
             );
           changed.push(`${connection.id}: CLI 로그인 완료`);
+        } else {
+          // --no-login never pretends a session exists; the saved state stays disabled.
+          changed.push(
+            `${connection.id}: 로그인하지 않아 비활성 상태로 저장 (${command[0]} ${command.slice(1).join(" ")} 실행 필요)`,
+          );
         }
       } else {
         changed.push(`${connection.id}: 기존 로그인 세션 사용`);
@@ -362,14 +385,20 @@ export async function runProviderSetup(
       catalog,
       options.liveDiscovery ?? prompt.interactive,
     );
+    const selectable = optionsFor.filter((option) => !option.disabled);
+    const unavailable = optionsFor.filter((option) => option.disabled);
+    if (unavailable.length)
+      prompt.info(
+        `${connection.id}: ${unavailable.map((option) => option.value).join(", ")}는(은) 카탈로그에 없어 선택할 수 없습니다. 카탈로그 갱신이 필요합니다.`,
+      );
     const preselected = connection.models?.length
-      ? connection.models.filter((id) => optionsFor.some((option) => option.value === id))
-      : optionsFor.map((option) => option.value);
+      ? connection.models.filter((id) => selectable.some((option) => option.value === id))
+      : selectable.map((option) => option.value);
     const requestedModels =
       options.models?.[target] ?? options.models?.["*"];
     const chosen = requestedModels?.length
       ? requestedModels.filter((id) =>
-          optionsFor.some((option) => option.value === id),
+          selectable.some((option) => option.value === id),
         )
       : nonInteractive
         ? preselected
