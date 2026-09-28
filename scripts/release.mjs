@@ -2,7 +2,7 @@ import { resolve, join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readdir, readFile } from "node:fs/promises";
-import { atomicJson, json, report, createManifest, verifyManifest, subject, registryState, waitForRegistryState, publishUntilVisible, integrity } from "./lib/release.mjs";
+import { atomicJson, json, report, createManifest, verifyManifest, subject, registryState, waitForRegistryState, REGISTRY_VISIBILITY_ATTEMPTS, REGISTRY_VISIBILITY_DELAY_MS, integrity } from "./lib/release.mjs";
 const exec = promisify(execFile);
 const args = process.argv.slice(2), command = args[0];
 const value = (flag, fallback) => args.includes(flag) ? args[args.indexOf(flag) + 1] : fallback;
@@ -27,7 +27,7 @@ if (command === "record-ci") {
   if (process.env.GITHUB_REF !== "refs/heads/main" || !process.env.ACTIONS_ID_TOKEN_REQUEST_URL || process.env.GITHUB_EVENT_NAME !== "workflow_dispatch") throw new Error("Publishing requires the main-branch OIDC release workflow");
   if (!archive) throw new Error("--archive required");
   const target = await subject(), manifest = await json(join(dir, "manifest.json"));
-  if (target.version !== "0.3.2" || target.sourceCommit !== process.env.RELEASE_SHA) throw new Error("Release version/commit mismatch");
+  if (target.version !== "0.3.3" || target.sourceCommit !== process.env.RELEASE_SHA) throw new Error("Release version/commit mismatch");
   await verifyManifest(manifest, resolve(archive), dir, target);
   const name = "@worldclasscitizen/ralph";
   const state = await registryState(name, target.version, manifest.artifact.integrity);
@@ -35,30 +35,26 @@ if (command === "record-ci") {
   else {
     const npm = process.env.npm_execpath;
     if (!npm) throw new Error("Run via npm run release -- publish ...");
-    // npm output used to be discarded, which made a publish that took no effect
-    // indistinguishable from a slow registry. It is forwarded and kept for the error.
+    // npm output used to be discarded, which made a failed upload indistinguishable from
+    // a slow registry. It is forwarded and kept for the error message.
     let lastOutput = "";
-    const runPublish = async () => {
-      try {
-        const result = await exec(process.execPath, [npm, "publish", resolve(archive), "--ignore-scripts", "--access", "public", "--tag", "latest"], { maxBuffer: 8_000_000 });
-        lastOutput = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
-      } catch (error) {
-        lastOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`.trim() || String(error.message);
-        process.stdout.write(`${lastOutput}\n`);
-        throw new Error(lastOutput.slice(-2000) || "npm publish failed");
-      }
-      if (lastOutput) process.stdout.write(`${lastOutput}\n`);
-    };
-    const visible = await publishUntilVisible({
-      name,
-      version: target.version,
-      integrity: manifest.artifact.integrity,
-      publish: runPublish,
-      onEvent: (message) => console.log(message),
-    });
-    if (visible !== "identical")
-      throw new Error(`Published artifact not visible after the publish attempts. Last npm output: ${lastOutput.slice(-1500)}`);
+    try {
+      const result = await exec(process.execPath, [npm, "publish", resolve(archive), "--ignore-scripts", "--access", "public", "--tag", "latest"], { maxBuffer: 8_000_000 });
+      lastOutput = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+    } catch (error) {
+      lastOutput = `${error.stdout ?? ""}${error.stderr ?? ""}`.trim() || String(error.message);
+      process.stdout.write(`${lastOutput}\n`);
+      throw new Error(`npm publish failed: ${lastOutput.slice(-2000)}`);
+    }
+    if (lastOutput) process.stdout.write(`${lastOutput}\n`);
   }
+  // The upload is never repeated: npm rejects a second upload of the same version, and
+  // the measured delay is in propagation, not in the upload itself.
+  const visible = await waitForRegistryState(name, target.version, manifest.artifact.integrity, {
+    onWait: (attempt, attempts, delayMs) => console.log(`Registry has not reported ${target.version} yet; rechecking (${attempt}/${attempts - 1}) in ${Math.round(delayMs / 1000)}s`),
+  });
+  if (visible !== "identical")
+    throw new Error(`The registry did not expose ${target.version} within ${Math.round((REGISTRY_VISIBILITY_ATTEMPTS * REGISTRY_VISIBILITY_DELAY_MS) / 1000)}s. If npm accepted the upload, re-dispatch the release workflow: an identical existing archive continues verification.`);
 } else {
   console.log("release.mjs record-ci | manifest | verify | publish --evidence <directory> --archive <tgz>");
   if (command) process.exitCode = 2;
