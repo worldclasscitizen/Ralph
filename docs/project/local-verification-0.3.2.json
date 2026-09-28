@@ -1,16 +1,23 @@
 {
   "schemaVersion": 1,
-  "capturedAt": "2026-09-28T04:40:00.000Z",
+  "capturedAt": "2026-09-28T11:43:00.000Z",
   "version": "0.3.2",
   "sourceCommit": "60d166658fbeb3e6c9d8969f3260c5835d6d2a75",
   "parentCommit": "3ef66e2f36a4e038ea7818886ebbd9de04969648",
-  "sourceNote": "The measured tree is 60d16665. Later commits on this branch touch documentation, release evidence and assets/provider-verification.json only, none of which feed runtimeDigest, testDigest or dependencyDigest, so the measurements still describe the current tree.",
+  "sourceNote": "The measured tree is 60d16665; the linked provider and end-to-end evidence was checked at 2026-09-28T11:23Z and 2026-09-28T11:31Z. Later commits on this branch touch documentation, release evidence and assets/provider-verification.json only, none of which feed runtimeDigest, testDigest or dependencyDigest, so the measurements still describe the current tree.",
   "platform": "win32",
   "node": "v24.11.1",
   "git": "git version 2.45.1.windows.1",
-  "build": { "runtime": "pass", "ui": "pass" },
+  "build": {
+    "runtime": "pass",
+    "ui": "pass"
+  },
   "typecheck": "pass",
-  "unitIntegrationTests": { "files": 19, "passed": 158, "failed": 0 },
+  "unitIntegrationTests": {
+    "files": 19,
+    "passed": 158,
+    "failed": 0
+  },
   "releaseToolingTests": {
     "file": "tests/release.test.ts",
     "covers": [
@@ -34,10 +41,30 @@
   },
   "globalCoverage": {
     "files": 69,
-    "lines": { "total": 12771, "covered": 7804, "skipped": 0, "pct": 61.1 },
-    "statements": { "total": 12771, "covered": 7804, "skipped": 0, "pct": 61.1 },
-    "functions": { "total": 370, "covered": 284, "skipped": 0, "pct": 76.75 },
-    "branches": { "total": 2370, "covered": 1782, "skipped": 0, "pct": 75.18 }
+    "lines": {
+      "total": 12771,
+      "covered": 7804,
+      "skipped": 0,
+      "pct": 61.1
+    },
+    "statements": {
+      "total": 12771,
+      "covered": 7804,
+      "skipped": 0,
+      "pct": 61.1
+    },
+    "functions": {
+      "total": 370,
+      "covered": 284,
+      "skipped": 0,
+      "pct": 76.75
+    },
+    "branches": {
+      "total": 2370,
+      "covered": 1782,
+      "skipped": 0,
+      "pct": 75.18
+    }
   },
   "criticalCoverage": "ten critical files at or above 90% lines and 90% branches",
   "releaseGates": {
@@ -66,7 +93,12 @@
     "runId": "run-f4950e5e-757d-4e82-927e-d4d6f2c13955",
     "calls": 12,
     "durationMs": 464997,
-    "ledger": { "releaseId": "ralph-0.3.2", "calls": 16, "activeMs": 475375, "maxActiveMs": 1800000 }
+    "ledger": {
+      "releaseId": "ralph-0.3.2",
+      "calls": 16,
+      "activeMs": 475375,
+      "maxActiveMs": 1800000
+    }
   },
   "notRunLocally": [
     "The six-cell CI matrix (Windows/macOS/Linux x Node 22/24) is GitHub Actions work; this record is one win32/Node 24 host.",
