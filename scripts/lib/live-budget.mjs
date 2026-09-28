@@ -24,7 +24,23 @@ export class LiveBudget {
       await atomicJson(this.path, state);
     }
     assertReleaseSchema(LiveTestBudgetSchema, state);
-    if (state.releaseId !== this.releaseId) throw new Error("Budget belongs to another release");
+    if (state.releaseId !== this.releaseId) {
+      // An operator must never delete a retained ledger to start a later release.
+      // Archive the previous release's exact bytes beside it, then begin this
+      // release's own allowance under the same ceiling.
+      const digest = sha256(bytes), backup = `${this.path}.${state.releaseId}.json`;
+      try { await writeFile(backup, bytes, { flag: "wx", mode: 0o600 }); }
+      catch (e) {
+        if (e.code !== "EEXIST") throw e;
+        if (sha256(await readFile(backup)) !== digest) throw new Error("Previous release ledger archive integrity mismatch");
+      }
+      process.stderr.write(`${state.releaseId} 원장을 ${basename(backup)}(으)로 보존하고 ${this.releaseId} 회계를 새로 시작합니다.\n`);
+      state = { schemaVersion: 2, releaseId: this.releaseId, maxCalls: null, maxActiveMs: 1800000,
+        apiSpendUsd: 0, calls: 0, activeMs: 0, pending: null, attempts: [] };
+      assertReleaseSchema(LiveTestBudgetSchema, state);
+      await atomicJson(this.path, state);
+      return state;
+    }
     if (state.schemaVersion === 1) {
       const digest = sha256(bytes), backup = `${this.path}.v1-${digest}.json`;
       try { await writeFile(backup, bytes, { flag: "wx", mode: 0o600 }); }

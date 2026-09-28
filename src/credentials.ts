@@ -1,4 +1,5 @@
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { commandExists, runCommand } from "./util.js";
 import { globalConfigDir, globalCredentialFile } from "./paths.js";
 
@@ -97,30 +98,66 @@ async function readKeychain(connectionId: string): Promise<string | undefined> {
 }
 
 async function readFileStore(): Promise<CredentialFile> {
+  let raw: string;
   try {
-    const value = JSON.parse(
-      await readFile(globalCredentialFile(), "utf8"),
-    ) as CredentialFile;
+    raw = await readFile(globalCredentialFile(), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT")
+      return { schemaVersion: 1, credentials: {} };
+    throw error;
+  }
+  try {
+    const value = JSON.parse(raw) as CredentialFile;
     if (
       value?.schemaVersion === 1 &&
       value.credentials &&
       typeof value.credentials === "object"
     )
       return value;
+    throw new Error("지원하지 않는 자격 증명 저장 형식입니다.");
   } catch {
-    // First use, unreadable or corrupt store: the next write replaces it.
+    // Keep the unreadable bytes instead of letting the next write erase them.
+    const backup = `${globalCredentialFile()}.corrupt-${Date.now()}.json`;
+    await rename(globalCredentialFile(), backup);
+    process.stderr.write(
+      `자격 증명 파일을 읽지 못해 ${backup}로 보존하고 빈 저장소로 시작합니다.\n`,
+    );
+    return { schemaVersion: 1, credentials: {} };
   }
-  return { schemaVersion: 1, credentials: {} };
 }
 
 async function writeFileStore(store: CredentialFile): Promise<void> {
-  await mkdir(globalConfigDir(), { recursive: true });
+  const dir = globalConfigDir();
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  if (process.platform !== "win32")
+    try {
+      await chmod(dir, 0o700);
+    } catch {
+      // A directory we do not own keeps its existing permissions.
+    }
   const path = globalCredentialFile();
-  await writeFile(path, `${JSON.stringify(store, null, 2)}\n`, { mode: 0o600 });
+  const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    await chmod(path, 0o600);
-  } catch {
-    // Windows has no POSIX mode; the file stays inside the user's private profile.
+    // A fresh file with the right mode, then an atomic replace: an interrupted write
+    // can never truncate the store or leave an existing file at a looser mode.
+    await writeFile(temporary, `${JSON.stringify(store, null, 2)}\n`, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    if (process.platform !== "win32")
+      try {
+        await chmod(temporary, 0o600);
+      } catch {
+        // Windows has no POSIX mode; the file stays in the user's private profile.
+      }
+    await rename(temporary, path);
+  } catch (error) {
+    try {
+      await unlink(temporary);
+    } catch {
+      // The temporary file was never created or is already gone.
+    }
+    throw error;
   }
 }
 

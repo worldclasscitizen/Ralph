@@ -140,6 +140,11 @@ export function loginCommand(adapter: string): [string, string[]] | undefined {
   return mapping[adapter];
 }
 
+/** Renders a login command once, without repeating the executable name. */
+export function loginCommandText(command: [string, string[]]): string {
+  return [command[0], ...command[1]].join(" ");
+}
+
 export interface SetupOptions {
   providers?: string[];
   method?: "login" | "api";
@@ -357,11 +362,18 @@ export async function runProviderSetup(
         continue;
       }
       const command = loginCommand(connection.adapter);
-      if (row.authentication !== "authenticated" && command) {
-        const shouldLogin = options.login ?? true;
-        if (shouldLogin && loginRunner) {
-          prompt.info(`${connection.id}: ${command[0]} ${command.join(" ")} 실행`);
-          const code = await loginRunner(command[0], command[1]);
+      if (row.authentication === "authenticated") {
+        changed.push(`${connection.id}: 기존 로그인 세션 사용`);
+      } else {
+        if (!command) {
+          // No automatic login exists for this transport, so only the operator can
+          // vouch for it; the trust decision below decides whether it is enabled.
+          changed.push(
+            `${connection.id}: 자동 로그인 명령이 없어 세션을 확인할 수 없습니다`,
+          );
+        } else if (options.login ?? true) {
+          prompt.info(`${connection.id}: ${loginCommandText(command)} 실행`);
+          const code = await loginRunner!(command[0], command[1]);
           if (code !== 0)
             throw new RalphError(
               `${connection.id} 로그인이 완료되지 않았습니다 (종료 코드 ${code}).`,
@@ -372,11 +384,11 @@ export async function runProviderSetup(
         } else {
           // --no-login never runs the provider CLI; the printed status shows the real state.
           changed.push(
-            `${connection.id}: CLI 로그인을 실행하지 않았습니다 (${command[0]} ${command.slice(1).join(" ")}로 로그인 필요)`,
+            `${connection.id}: CLI 로그인을 실행하지 않았습니다 (${loginCommandText(command)}로 로그인 필요)`,
           );
         }
         if (row.authentication === "unknown") {
-          // This CLI cannot prove a session, so the operator has to vouch for it.
+          // This transport cannot prove a session, so the operator has to vouch for it.
           const trusted = options.assumeLogin ??
             (nonInteractive
               ? false
@@ -394,9 +406,12 @@ export async function runProviderSetup(
           changed.push(
             `${connection.id}: 확인 불가 상태를 ${trusted ? "신뢰함" : "신뢰하지 않음"}으로 기록`,
           );
+        } else {
+          connection.trusted = undefined;
+          changed.push(
+            `${connection.id}: 로그인이 확인되지 않아 실행 경로에서 제외됩니다`,
+          );
         }
-      } else {
-        changed.push(`${connection.id}: 기존 로그인 세션 사용`);
       }
       connection.enabled = true;
     }

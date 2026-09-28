@@ -18,7 +18,10 @@ if (args.includes("--help") || !args.includes("--live")) {
   );
   process.exit(0);
 }
+const adapterForProvider = { codex: "codex-builtin", claude: "claude-code-builtin", gemini: "gemini-cli-builtin" };
 const provider = value("--provider", "codex");
+const adapter = adapterForProvider[provider];
+if (!adapter) throw new Error(`Unknown provider ${provider}; expected one of ${Object.keys(adapterForProvider).join(", ")}`);
 const model = value("--model");
 const output = value("--output", "docs/project/evidence/live-provider.json");
 const budgetPath = resolve(value("--budget", ".release/live-budget.json"));
@@ -47,7 +50,7 @@ const checks = smoke.checks.map((check) => ({ name: check.name, passed: check.st
 const missing = PROVIDER_CHECKS.filter((name) => !checks.some((check) => check.name === name && check.passed));
 if (missing.length) throw new Error(`Conformance incomplete: ${missing.join(", ")}`);
 const providerReport = await report("provider", checks, {
-  adapter: "codex-builtin",
+  adapter,
   model,
   cliVersion: smoke.cliVersion,
   observations: smoke.checks,

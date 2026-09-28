@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +16,7 @@ import type { Prompt } from "../src/interaction/prompt.js";
 import {
   catalogModelsFor,
   loginCommand,
+  loginCommandText,
   providerStatusRows,
   runProviderSetup,
   statusLabel,
@@ -294,6 +295,16 @@ describe("credential fallback store", () => {
     expect(await credentialSource("test:api")).toBeUndefined();
   });
 
+  it("preserves an unreadable store instead of letting the next write erase it", async () => {
+    const home = process.env.RALPH_CONFIG_HOME!;
+    await writeFile(join(home, "credentials.json"), "{ this is not json", "utf8");
+    expect(await getCredential("corrupt:api")).toBeUndefined();
+    const files = await readdir(home);
+    expect(files.some((name) => name.startsWith("credentials.json.corrupt-"))).toBe(true);
+    await setCredential("corrupt:api", "fresh");
+    expect(await getCredential("corrupt:api")).toBe("fresh");
+  });
+
   it("prefers a stored secret over an empty environment variable", async () => {
     vi.stubEnv("TEST_API_KEY", "");
     await setCredential("env:api", "stored");
@@ -328,5 +339,11 @@ describe("login command mapping", () => {
     expect(loginCommand("codex-builtin")).toEqual(["codex", ["login"]]);
     expect(loginCommand("deepseek-api")).toBeUndefined();
     expect(loginCommand("antigravity-builtin")).toBeUndefined();
+  });
+
+  it("renders each login command once, without repeating the executable", () => {
+    expect(loginCommandText(["codex", ["login"]])).toBe("codex login");
+    expect(loginCommandText(["claude", ["auth", "login"]])).toBe("claude auth login");
+    expect(loginCommandText(["gemini", []])).toBe("gemini");
   });
 });
