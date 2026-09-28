@@ -17,7 +17,7 @@
     <a href="./docs/architecture/index.md">아키텍처</a>
   </p>
   <p>
-    <img alt="버전: 0.3.1" src="https://img.shields.io/badge/version-v0.3.1-2563eb?style=flat-square">
+    <img alt="버전: 0.3.2" src="https://img.shields.io/badge/version-v0.3.2-2563eb?style=flat-square">
     <a href="https://github.com/worldclasscitizen/Ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/Ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 또는 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Ralph 0.3.1:** 서명된 모델 카탈로그를 2026-09-27 기준 최신 라인업으로 갱신하고 대체된 모델 ID를 제거했습니다. 0.3.0에서 하나의 실행 그래프 안에서 격리된 Ralph Loop와 통합 검증을 도입했습니다. 전환 전 [마이그레이션 안내](./docs/migration/v0.3.md)와 [검증 범위](./docs/project/v0.3-readiness.md)를 확인하세요.
+> **Ralph 0.3.2:** 게시 단계가 npm 레지스트리를 제한된 간격으로 다시 확인하므로, 레지스트리 응답이 느려도 수동 재실행이 필요하지 않습니다. 0.3.1의 작업(2026-09-27 모델 라인업, 대화형 `ralph auth setup` 연동)은 그대로 포함합니다. 전환 전 [마이그레이션 안내](./docs/migration/v0.3.md)와 [검증 범위](./docs/project/v0.3-readiness.md)를 확인하세요.
 
 ## 왜 Ralph인가요?
 
@@ -72,10 +72,10 @@
 
 ### npm에서 설치
 
-다음 명령으로 0.3.1을 설치합니다.
+다음 명령으로 0.3.2를 설치합니다.
 
 ```bash
-npm install -g @worldclasscitizen/ralph@0.3.1
+npm install -g @worldclasscitizen/ralph@0.3.2
 ralph --version
 ```
 
@@ -84,7 +84,7 @@ ralph --version
 ### 소스에서 설치
 
 ```bash
-git clone --branch v0.3.1 https://github.com/worldclasscitizen/Ralph.git
+git clone --branch v0.3.2 https://github.com/worldclasscitizen/Ralph.git
 cd Ralph
 npm ci
 npm run build
@@ -411,9 +411,9 @@ Mock 테스트는 유료 모델을 호출하지 않습니다. 실제 출시 검�
 
 ## 프로젝트 상태
 
-실제 자연어 요청으로 계획을 생성하고 두 모듈의 격리 Worker·독립 평가·통합·승인된 검증 5개·시작 브랜치 반영·외부 검사를 완료했습니다. 확인한 환경은 Codex CLI 0.155.1, gpt-6-sol, Windows, Node.js 24.11.1이며 8회 호출로 완료했습니다. [검증 기록](./docs/project/release-campaign-2026-09-05.md)에 0.3.0의 실패와 측정한 사용량을 보존합니다. 일반적인 품질·속도·비용 우위를 주장하지 않습니다.
+실제 자연어 요청으로 계획을 생성하고 두 모듈의 격리 Worker·독립 평가·통합·승인된 검증 5개·시작 브랜치 반영·외부 검사를 완료했습니다. 확인한 환경은 Codex CLI 0.155.1, gpt-6-sol, Windows, Node.js 24.11.1이며 12회 호출로 완료했습니다. [검증 기록](./docs/project/release-campaign-2026-09-05.md)에 0.3.0의 실패와 측정한 사용량을 보존합니다. 일반적인 품질·속도·비용 우위를 주장하지 않습니다.
 
-0.3.1의 실행 범위는 한 컴퓨터입니다. 원격 실행, 자유 조건식 그래프, 모든 외부 동작의 자동 복구 보장은 포함하지 않습니다. 재현 가능한 결함은 [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues)에 남길 수 있습니다.
+0.3.2의 실행 범위는 한 컴퓨터입니다. 원격 실행, 자유 조건식 그래프, 모든 외부 동작의 자동 복구 보장은 포함하지 않습니다. 재현 가능한 결함은 [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues)에 남길 수 있습니다.
 
 ## 라이선스
 

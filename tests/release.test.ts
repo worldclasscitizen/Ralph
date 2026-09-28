@@ -14,6 +14,7 @@ import { loadCatalog, verifyCatalog, validateCatalog } from "../src/catalog.js";
 // @ts-ignore release orchestration deliberately stays outside the consumer runtime
 import {
   registryState,
+  waitForRegistryState,
   coverageChecks,
   validateReports,
   atomicJson,
@@ -317,6 +318,59 @@ it("enforces the active time ceiling and archives another release's retained led
   // The archive is byte-stable: repeating the migration cannot rewrite it.
   await new LiveBudget(path, "third-release").load();
   expect(await readFile(archived, "utf8")).toBe(original);
+});
+it("waits for registry propagation instead of failing on the first read", async () => {
+  let reads = 0;
+  const fetcher = async () => {
+    reads += 1;
+    return reads < 3 ? new Response("", { status: 404 }) : Response.json({ dist: { integrity: "hash" } });
+  };
+  expect(await waitForRegistryState("p", "0.3.2", "hash", { attempts: 5, delayMs: 0, fetcher })).toBe("identical");
+  expect(reads).toBe(3);
+});
+it("retries a failed or timed-out read and succeeds on a later attempt", async () => {
+  let reads = 0;
+  const fetcher = async () => {
+    reads += 1;
+    if (reads === 1) throw new Error("The operation was aborted due to timeout");
+    return Response.json({ dist: { integrity: "hash" } });
+  };
+  expect(await waitForRegistryState("p", "0.3.2", "hash", { attempts: 4, delayMs: 0, fetcher })).toBe("identical");
+  expect(reads).toBe(2);
+});
+it("reports a definite absence even when some reads fail", async () => {
+  let reads = 0;
+  const fetcher = async () => {
+    reads += 1;
+    if (reads === 1) throw new Error("Registry read failed: HTTP 503");
+    return new Response("", { status: 404 });
+  };
+  expect(await waitForRegistryState("p", "0.3.2", "hash", { attempts: 3, delayMs: 0, fetcher })).toBe("absent");
+  expect(reads).toBe(3);
+});
+it("surfaces the read error when every attempt fails", async () => {
+  const fetcher = async () => {
+    throw new Error("Registry read failed: HTTP 500");
+  };
+  await expect(waitForRegistryState("p", "0.3.2", "hash", { attempts: 2, delayMs: 0, fetcher })).rejects.toThrow(/HTTP 500/);
+});
+it("stops after the bounded recheck window and reports the last state", async () => {
+  let reads = 0;
+  const fetcher = async () => {
+    reads += 1;
+    return new Response("", { status: 404 });
+  };
+  expect(await waitForRegistryState("p", "0.3.2", "hash", { attempts: 3, delayMs: 0, fetcher })).toBe("absent");
+  expect(reads).toBe(3);
+});
+it("never waits on a conflicting artifact", async () => {
+  let reads = 0;
+  const fetcher = async () => {
+    reads += 1;
+    return Response.json({ dist: { integrity: "other" } });
+  };
+  await expect(waitForRegistryState("p", "0.3.2", "hash", { attempts: 4, delayMs: 0, fetcher })).rejects.toThrow(/different artifact/);
+  expect(reads).toBe(1);
 });
 it("distinguishes absent, identical, conflicting and unauthorized registry states", async () => {
   expect(

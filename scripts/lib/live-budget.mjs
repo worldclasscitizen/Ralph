@@ -6,7 +6,7 @@ import { LiveTestBudgetSchema, assertReleaseSchema } from "../../dist/release/sc
 
 /** Persistent call accounting with a shared active-time ceiling; no call-count cap. */
 export class LiveBudget {
-  constructor(path, releaseId = "ralph-0.3.1") { this.path = path; this.releaseId = releaseId; }
+  constructor(path, releaseId = "ralph-0.3.2") { this.path = path; this.releaseId = releaseId; }
   async locked(fn) {
     await mkdir(dirname(this.path), { recursive: true });
     const guard = await open(`${this.path}.lock`, "wx", 0o600);

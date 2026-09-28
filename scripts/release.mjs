@@ -2,7 +2,7 @@ import { resolve, join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readdir, readFile } from "node:fs/promises";
-import { atomicJson, json, report, createManifest, verifyManifest, subject, registryState, integrity } from "./lib/release.mjs";
+import { atomicJson, json, report, createManifest, verifyManifest, subject, registryState, waitForRegistryState, integrity } from "./lib/release.mjs";
 const exec = promisify(execFile);
 const args = process.argv.slice(2), command = args[0];
 const value = (flag, fallback) => args.includes(flag) ? args[args.indexOf(flag) + 1] : fallback;
@@ -27,7 +27,7 @@ if (command === "record-ci") {
   if (process.env.GITHUB_REF !== "refs/heads/main" || !process.env.ACTIONS_ID_TOKEN_REQUEST_URL || process.env.GITHUB_EVENT_NAME !== "workflow_dispatch") throw new Error("Publishing requires the main-branch OIDC release workflow");
   if (!archive) throw new Error("--archive required");
   const target = await subject(), manifest = await json(join(dir, "manifest.json"));
-  if (target.version !== "0.3.1" || target.sourceCommit !== process.env.RELEASE_SHA) throw new Error("Release version/commit mismatch");
+  if (target.version !== "0.3.2" || target.sourceCommit !== process.env.RELEASE_SHA) throw new Error("Release version/commit mismatch");
   await verifyManifest(manifest, resolve(archive), dir, target);
   const state = await registryState("@worldclasscitizen/ralph", target.version, manifest.artifact.integrity);
   if (state === "identical") console.log("Identical version already published; continuing verification");
@@ -36,7 +36,10 @@ if (command === "record-ci") {
     if (!npm) throw new Error("Run via npm run release -- publish ...");
     await exec(process.execPath, [npm, "publish", resolve(archive), "--ignore-scripts", "--access", "public", "--tag", "latest"], { maxBuffer: 2_000_000 });
   }
-  if (await registryState("@worldclasscitizen/ralph", target.version, manifest.artifact.integrity) !== "identical") throw new Error("Published artifact not visible");
+  const visible = await waitForRegistryState("@worldclasscitizen/ralph", target.version, manifest.artifact.integrity, {
+    onWait: (attempt, attempts, delayMs) => console.log(`Registry has not reported ${target.version} yet; rechecking (${attempt}/${attempts - 1}) in ${Math.round(delayMs / 1000)}s`),
+  });
+  if (visible !== "identical") throw new Error(`Published artifact not visible after the bounded recheck window. Re-dispatch the release workflow: an identical existing archive continues verification.`);
 } else {
   console.log("release.mjs record-ci | manifest | verify | publish --evidence <directory> --archive <tgz>");
   if (command) process.exitCode = 2;

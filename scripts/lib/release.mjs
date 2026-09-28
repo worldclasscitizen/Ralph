@@ -152,11 +152,46 @@ export async function verifyManifest(manifest, archive, dir, expected) {
   if (JSON.stringify(selected.required.map(r => r.file).sort()) !== JSON.stringify(manifest.reports.map(r => r.file).sort())) throw new Error("Required evidence was relabeled as reference");
   return true;
 }
-export async function registryState(name, version, expectedIntegrity, fetcher = fetch) {
-  const response = await fetcher(`https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`);
+export async function registryState(name, version, expectedIntegrity, fetcher = fetch, timeoutMs = 15_000) {
+  const response = await fetcher(`https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`, {
+    // Node's global fetch has no documented request deadline, so every read is bounded
+    // explicitly; otherwise one stalled read would block the whole retry window.
+    signal: AbortSignal.timeout(timeoutMs),
+  });
   if (response.status === 404) return "absent";
   if (!response.ok) throw new Error(`Registry read failed: HTTP ${response.status}`);
   const data = await response.json();
   if (data.dist?.integrity !== expectedIntegrity) throw new Error("Version exists with a different artifact");
   return "identical";
+}
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * npm can answer 404 for a moment after a successful publish, so the visibility check
+ * retries with a bounded backoff. A conflicting artifact still fails immediately, and a
+ * read that times out or fails is retried like an absent version; if every attempt fails
+ * the last error is surfaced instead of a misleading "not visible".
+ */
+export async function waitForRegistryState(name, version, expectedIntegrity, options = {}) {
+  const { attempts = 7, delayMs = 10_000, fetcher = fetch, timeoutMs = 15_000, onWait } = options;
+  let sawAbsent = false;
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const state = await registryState(name, version, expectedIntegrity, fetcher, timeoutMs);
+      lastError = undefined;
+      if (state === "identical") return state;
+      sawAbsent = true;
+    } catch (error) {
+      if (/different artifact/.test(String(error?.message))) throw error;
+      lastError = error;
+    }
+    if (attempt < attempts) {
+      onWait?.(attempt, attempts, delayMs, lastError);
+      if (delayMs > 0) await sleep(delayMs);
+    }
+  }
+  if (sawAbsent) return "absent";
+  throw lastError ?? new Error("Registry visibility could not be established");
 }
