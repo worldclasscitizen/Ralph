@@ -1,4 +1,4 @@
-# Releasing Ralph 0.3.1
+# Releasing Ralph 0.3.2
 
 Repository owners may run the release workflow after its evidence gate passes. Consumer commands never publish, push or deploy.
 
@@ -40,8 +40,8 @@ Initial npm account authentication or two-factor setup may require the owner. No
 
 Require PRs and the six CI checks on main, without another person's review approval. Merge with a merge commit to retain logical commits. After successful main CI, dispatch release.yml with the exact source_sha and ci_run_id.
 
-The workflow verifies that CI belongs to main and the selected commit, creates v0.3.1 and a draft Release, attaches all evidence, then publishes the validated tarball with public access and the explicit latest tag. It installs both the exact version and the default registry version, checks downloaded integrity, runs a mock graph and verifies the UI. Only then is the GitHub Release made public and Latest. Enable immutable releases before publication; drafts remain editable until their assets are complete. [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+The workflow verifies that CI belongs to main and the selected commit, creates v0.3.2 and a draft Release, attaches all evidence, then publishes the validated tarball with public access and the explicit latest tag. It installs both the exact version and the default registry version, checks downloaded integrity, runs a mock graph and verifies the UI. Only then is the GitHub Release made public and Latest. Enable immutable releases before publication; drafts remain editable until their assets are complete. [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
 
 ## Recovery of a publication
 
-If npm returns an unclear response, query version and integrity before retrying. An identical existing archive continues verification; a different existing archive blocks the workflow. Never overwrite or unpublish 0.3.1 to repair code. Use a subsequent patch release. After npm succeeds, a failed GitHub step resumes from the draft; already public immutable assets are not replaced. [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/)
+If npm returns an unclear response, query version and integrity before retrying. An identical existing archive continues verification; a different existing archive blocks the workflow. Never overwrite or unpublish 0.3.2 to repair code. Use a subsequent patch release. After npm succeeds, a failed GitHub step resumes from the draft; already public immutable assets are not replaced. [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/)

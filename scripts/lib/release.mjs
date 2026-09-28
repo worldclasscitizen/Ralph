@@ -160,3 +160,24 @@ export async function registryState(name, version, expectedIntegrity, fetcher = 
   if (data.dist?.integrity !== expectedIntegrity) throw new Error("Version exists with a different artifact");
   return "identical";
 }
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * npm can answer 404 for a moment after a successful publish, so the visibility check
+ * retries with a bounded backoff. A conflicting artifact still fails immediately: only
+ * "not visible yet" is worth waiting for.
+ */
+export async function waitForRegistryState(name, version, expectedIntegrity, options = {}) {
+  const { attempts = 7, delayMs = 10_000, fetcher = fetch, onWait } = options;
+  let state = "absent";
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    state = await registryState(name, version, expectedIntegrity, fetcher);
+    if (state === "identical") return state;
+    if (attempt < attempts) {
+      onWait?.(attempt, attempts, delayMs);
+      if (delayMs > 0) await sleep(delayMs);
+    }
+  }
+  return state;
+}
