@@ -53,6 +53,9 @@ const providerReport = await report("provider", checks, {
   observations: smoke.checks,
   scope: "CLI transport in the recorded local environment; fresh sessions, no API credentials",
 });
+// The end-to-end campaign validates this reusable original against VerificationReportV1Schema
+// and then republishes it as a V2 report with the reuse proof, so the stored shape stays V1.
+providerReport.schemaVersion = 1;
 providerReport.subject = target;
 await atomicJson(resolve(output), providerReport);
 console.log(

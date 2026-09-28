@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 1,
   "kind": "provider",
   "subject": {
     "version": "0.3.1",
