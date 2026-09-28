@@ -224,7 +224,7 @@ ralph config refresh
 <!-- provider-verification:start -->
 | Connection / model | Support | Verified environment |
 |---|---|---|
-| codex-builtin / gpt-5.6-luna | verified | codex-cli 0.153.4 · win32 · v24.11.1 · 2026-09-05 |
+| codex-builtin / gpt-6-sol | verified | codex-cli 0.155.1 · win32 · v24.11.1 · 2026-09-28 |
 | Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |
 | OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |
 | Antigravity | experimental | Requires a working automation interface |
@@ -411,7 +411,7 @@ Mock tests make no paid model calls. Live release checks are opt-in, with no cum
 
 ## Project status
 
-Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.153.4, gpt-5.6-luna, Windows and Node.js 24.11.1. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains earlier failures and measured usage. Historical comparisons are reference material; no general quality, speed or cost advantage is claimed.
+Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.155.1, gpt-6-sol, Windows and Node.js 24.11.1, in eight model calls. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains the earlier 0.3.0 failures and measured usage; no general quality, speed or cost advantage is claimed.
 
 Version 0.3.1 targets one local machine. Remote execution, arbitrary conditional graphs and guaranteed automatic recovery of every external action are outside its scope. Report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues).
 

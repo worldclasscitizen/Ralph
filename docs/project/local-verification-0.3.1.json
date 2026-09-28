@@ -70,7 +70,7 @@
   },
   "notRunLocally": [
     "The six-cell CI matrix (Windows/macOS/Linux x Node 22/24) is GitHub Actions work; this record is one win32/Node 24 host.",
-    "Live provider conformance and the live end-to-end campaign are recorded separately under docs/project/evidence. No model has live support evidence until that campaign passes.",
+    "The live provider and end-to-end campaign ran separately on 2026-09-28 against source de84bb79 and is recorded under docs/project/evidence. Its own scope statement, not this file, governs what it proves.",
     "npm run test:e2e (Playwright accessibility and 32-node browser cases) was not run locally; CI installs Chromium for it on ubuntu-latest.",
     "A real interactive terminal session of ralph auth setup was not recorded; the interactive path is covered by scripted-prompt tests plus non-interactive CLI runs."
   ],
