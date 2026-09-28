@@ -15,6 +15,7 @@ import { loadCatalog, verifyCatalog, validateCatalog } from "../src/catalog.js";
 import {
   registryState,
   waitForRegistryState,
+  publishUntilVisible,
   coverageChecks,
   validateReports,
   atomicJson,
@@ -353,6 +354,63 @@ it("surfaces the read error when every attempt fails", async () => {
     throw new Error("Registry read failed: HTTP 500");
   };
   await expect(waitForRegistryState("p", "0.3.2", "hash", { attempts: 2, delayMs: 0, fetcher })).rejects.toThrow(/HTTP 500/);
+});
+it("retries a publish that leaves no visible artifact", async () => {
+  let publishes = 0;
+  let reads = 0;
+  const fetcher = async () => {
+    reads += 1;
+    return publishes >= 2 ? Response.json({ dist: { integrity: "hash" } }) : new Response("", { status: 404 });
+  };
+  const result = await publishUntilVisible({
+    name: "p",
+    version: "0.3.2",
+    integrity: "hash",
+    attempts: 3,
+    visibilityAttempts: 1,
+    delayMs: 0,
+    fetcher,
+    publish: async () => {
+      publishes += 1;
+    },
+  });
+  expect(result).toBe("identical");
+  expect(publishes).toBe(2);
+  expect(reads).toBe(2);
+});
+it("reports an absent artifact when every publish takes no effect", async () => {
+  let publishes = 0;
+  expect(
+    await publishUntilVisible({
+      name: "p",
+      version: "0.3.2",
+      integrity: "hash",
+      attempts: 2,
+      visibilityAttempts: 1,
+      delayMs: 0,
+      fetcher: async () => new Response("", { status: 404 }),
+      publish: async () => {
+        publishes += 1;
+      },
+    }),
+  ).toBe("absent");
+  expect(publishes).toBe(2);
+});
+it("surfaces the npm failure when every publish attempt errors", async () => {
+  await expect(
+    publishUntilVisible({
+      name: "p",
+      version: "0.3.2",
+      integrity: "hash",
+      attempts: 2,
+      visibilityAttempts: 1,
+      delayMs: 0,
+      fetcher: async () => new Response("", { status: 404 }),
+      publish: async () => {
+        throw new Error("npm error code E401");
+      },
+    }),
+  ).rejects.toThrow(/E401/);
 });
 it("stops after the bounded recheck window and reports the last state", async () => {
   let reads = 0;

@@ -195,3 +195,49 @@ export async function waitForRegistryState(name, version, expectedIntegrity, opt
   if (sawAbsent) return "absent";
   throw lastError ?? new Error("Registry visibility could not be established");
 }
+
+/**
+ * A publish that leaves no trace in the registry has been observed in practice (the
+ * subprocess exits successfully but the version never appears), so the publish itself is
+ * retried, not just the read. The registry is consulted before every attempt, which keeps
+ * a re-dispatch from publishing twice, and a conflicting artifact still stops immediately.
+ */
+export async function publishUntilVisible(options) {
+  const {
+    name,
+    version,
+    integrity,
+    publish,
+    attempts = 3,
+    visibilityAttempts = 3,
+    delayMs = 10_000,
+    fetcher = fetch,
+    onEvent,
+  } = options;
+  const target = `${name}@${version}`;
+  const errors = [];
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    if (attempt > 1) {
+      onEvent?.(`Retrying npm publish for ${target} (attempt ${attempt}/${attempts})`);
+      if (delayMs > 0) await sleep(delayMs);
+    }
+    try {
+      await publish(attempt);
+    } catch (error) {
+      errors.push(error);
+      onEvent?.(`npm publish attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    const visible = await waitForRegistryState(name, version, integrity, {
+      attempts: visibilityAttempts,
+      delayMs,
+      fetcher,
+      onWait: (current, total) => onEvent?.(`Registry has not reported ${target} yet; rechecking (${current}/${total - 1})`),
+    });
+    if (visible === "identical") return "identical";
+    onEvent?.(`npm publish attempt ${attempt} left no visible artifact`);
+  }
+  if (errors.length === attempts)
+    throw new Error(`npm publish failed on every attempt: ${errors.map((error) => (error instanceof Error ? error.message : String(error))).join(" | ").slice(-2000)}`);
+  return "absent";
+}
