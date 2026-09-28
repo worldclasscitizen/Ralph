@@ -17,7 +17,7 @@
     <a href="./docs/architecture/index.md">Architecture</a>
   </p>
   <p>
-    <img alt="Version: 0.3.0" src="https://img.shields.io/badge/version-v0.3.0-2563eb?style=flat-square">
+    <img alt="Version: 0.3.1" src="https://img.shields.io/badge/version-v0.3.1-2563eb?style=flat-square">
     <a href="https://github.com/worldclasscitizen/Ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/Ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 or 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Ralph 0.3.0:** isolated Ralph Loops and integration checks now run within one execution graph. v0.2 history and configuration are preserved, but old approval hashes do not authorize new graphs. Read the [migration guide](./docs/migration/v0.3.md) and [verification scope](./docs/project/v0.3-readiness.md) before upgrading.
+> **Ralph 0.3.1:** the signed model catalog is refreshed to the 2026-09-27 frontier lineup; superseded model ids are removed. Release 0.3.0 added isolated Ralph Loops and integration checks within one execution graph. Read the [migration guide](./docs/migration/v0.3.md) and [verification scope](./docs/project/v0.3-readiness.md) before upgrading.
 
 ## Why Ralph?
 
@@ -72,10 +72,10 @@ An autonomous coding task needs more than another model call. It needs a clear s
 
 ### Install from npm
 
-Install version 0.3.0 with:
+Install version 0.3.1 with:
 
 ```bash
-npm install -g @worldclasscitizen/ralph@0.3.0
+npm install -g @worldclasscitizen/ralph@0.3.1
 ralph --version
 ```
 
@@ -84,7 +84,7 @@ Omit the version to install the npm `latest` version. Earlier betas remain avail
 ### Install from source
 
 ```bash
-git clone --branch v0.3.0 https://github.com/worldclasscitizen/Ralph.git
+git clone --branch v0.3.1 https://github.com/worldclasscitizen/Ralph.git
 cd Ralph
 npm ci
 npm run build
@@ -97,9 +97,12 @@ ralph --version
 ```bash
 cd /absolute/path/to/a/clean/git-project
 ralph init
+ralph auth setup
 ralph doctor
 ralph plan "Improve login accessibility and add tests" --json
 ```
+
+`ralph auth setup` shows which providers are connected, asks which ones to connect, offers the transports each provider supports (CLI login or API key), reads the key without echoing it, and lets you choose any number of models. Answer with Enter to accept defaults, or skip it to keep using environment variables. Non-interactive hosts pass `--provider`, `--method`, `--key-stdin` or `--key-env` and `--models`.
 
 Ralph collects context, resolves configured providers, and saves a contract and graph. Review the paths, acceptance criteria, verifier commands, models and budget. Then use the returned `runId` to approve that exact plan:
 
@@ -209,19 +212,19 @@ Approved capabilities and availability are checked before assignment. Fixed rout
 | Compatible API | DeepSeek, GLM, configured compatible endpoints | Provider API-key reference |
 | Custom process | Ralph JSON/NDJSON protocol | Defined by the process adapter |
 
-CLI login and API connections remain separate. Configure only what you use: DeepSeek and GLM can supply planning, work and evaluation without a Codex login. Credential storage depends on the operating system; Windows currently uses environment variables.
+CLI login and API connections remain separate. Configure only what you use: DeepSeek and GLM can supply planning, work and evaluation without a Codex login. `ralph auth setup` stores an API key in the OS keychain when one exists, otherwise in a per-user `credentials.json` outside every repository (DPAPI-encrypted on Windows); environment variables remain supported for CI and `RALPH_CREDENTIAL_STORE=file` forces the file store. A CLI that cannot report its login state is enabled only after you confirm it.
 
 ```bash
-ralph providers detect
-ralph providers list
+ralph auth setup
 ralph auth status
+ralph providers list
 ralph config refresh
 ```
 
 <!-- provider-verification:start -->
 | Connection / model | Support | Verified environment |
 |---|---|---|
-| codex-builtin / gpt-5.6-luna | verified | codex-cli 0.153.4 · win32 · v24.11.1 · 2026-09-05 |
+| codex-builtin / gpt-6-sol | verified | codex-cli 0.155.1 · win32 · v24.11.1 · 2026-09-28 |
 | Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |
 | OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |
 | Antigravity | experimental | Requires a working automation interface |
@@ -249,6 +252,7 @@ Installation and login are distinct from verified behavior. Support records iden
 | Command | Purpose |
 | :--- | :--- |
 | `ralph doctor` | Diagnose Git, authentication and routing |
+| `ralph auth setup` | Connect providers: status, transports, API key and model selection |
 | `ralph config explain` | Explain routes and policies |
 | `ralph providers list` | Inspect connections and verification scope |
 | `ralph auth status` | Inspect authentication separately from installation |
@@ -407,9 +411,9 @@ Mock tests make no paid model calls. Live release checks are opt-in, with no cum
 
 ## Project status
 
-Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.153.4, gpt-5.6-luna, Windows and Node.js 24.11.1. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains earlier failures and measured usage. Historical comparisons are reference material; no general quality, speed or cost advantage is claimed.
+Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.155.1, gpt-6-sol, Windows and Node.js 24.11.1, in eight model calls. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains the earlier 0.3.0 failures and measured usage; no general quality, speed or cost advantage is claimed.
 
-Version 0.3.0 targets one local machine. Remote execution, arbitrary conditional graphs and guaranteed automatic recovery of every external action are outside its scope. Report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues).
+Version 0.3.1 targets one local machine. Remote execution, arbitrary conditional graphs and guaranteed automatic recovery of every external action are outside its scope. Report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues).
 
 ## License
 

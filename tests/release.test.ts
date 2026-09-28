@@ -1,7 +1,7 @@
 import { it, expect } from "vitest";
 import { mkdtemp, readFile, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname, basename } from "node:path";
 import { createHash } from "node:crypto";
 import {
   assertReleaseSchema,
@@ -294,7 +294,7 @@ it("passes cancellation to the provider and records the unsuccessful call", asyn
   expect(state.pending).toBeNull();
   expect(state.attempts[0].outcome).toBe("failed");
 });
-it("enforces the active time ceiling and ownership of an allowance", async () => {
+it("enforces the active time ceiling and archives another release's retained ledger", async () => {
   const path = join(
       await mkdtemp(join(tmpdir(), "ralph-budget-")),
       "budget.json",
@@ -306,9 +306,17 @@ it("enforces the active time ceiling and ownership of an allowance", async () =>
   await expect(budget.invoke("extra", async () => null)).rejects.toThrow(
     /exhausted/,
   );
-  await expect(new LiveBudget(path, "another-release").load()).rejects.toThrow(
-    /another release/,
-  );
+  // A later release must be able to start without deleting the retained ledger.
+  const original = await readFile(path, "utf8");
+  const next = await new LiveBudget(path, "another-release").load();
+  expect(next.releaseId).toBe("another-release");
+  expect(next.activeMs).toBe(0);
+  expect(next.attempts).toEqual([]);
+  const archived = join(dirname(path), `${basename(path)}.${budget.releaseId}.json`);
+  expect(await readFile(archived, "utf8")).toBe(original);
+  // The archive is byte-stable: repeating the migration cannot rewrite it.
+  await new LiveBudget(path, "third-release").load();
+  expect(await readFile(archived, "utf8")).toBe(original);
 });
 it("distinguishes absent, identical, conflicting and unauthorized registry states", async () => {
   expect(

@@ -8,9 +8,12 @@ npm run build
 npm link
 cd /absolute/path/to/a/clean/git-project
 ralph init
+ralph auth setup
 ralph doctor
 ralph plan "Implement a bounded change and verify it" --json
 ```
+
+`ralph auth setup` lists every provider with its current state, then asks which providers to connect, which transport to use (an installed CLI login or an API key), the key itself when needed, and which of that provider's models to enable. Press Enter to accept the defaults. Skip it to keep using environment variables. In a non-interactive host, pass `--provider`, `--method` and either `--key-stdin` or `--key-env NAME`.
 
 Review the contract, graph, paths, verification commands, provider candidates and budget. Use the returned run ID:
 

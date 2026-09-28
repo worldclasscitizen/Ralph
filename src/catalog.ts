@@ -232,7 +232,9 @@ export async function loadCatalog(): Promise<ModelCatalog> {
   if (!bundled.signatureValid)
     throw new Error("내장 모델 카탈로그의 Ed25519 서명이 올바르지 않습니다.");
   const cached = await readCache();
-  if (cached && cached.catalog.version >= bundled.catalog.version)
+  // Only a strictly newer cache wins. An equal version must resolve to the bundled,
+  // signature-verified artifact, or a stale cache could shadow a rebuilt catalog.
+  if (cached && cached.catalog.version > bundled.catalog.version)
     return cached.catalog;
   return bundled.catalog;
 }
@@ -243,7 +245,7 @@ export async function catalogStatus(
   const bundled = await readBundled();
   const cached = await readCache();
   const selected =
-    cached && cached.catalog.version >= bundled.catalog.version
+    cached && cached.catalog.version > bundled.catalog.version
       ? cached.catalog
       : bundled.catalog;
   const lastCheckedAt = cached?.meta.lastCheckedAt;
@@ -352,7 +354,7 @@ export async function updateCatalog(): Promise<ModelCatalog> {
   if (!bundled.signatureValid)
     throw new Error("내장 모델 카탈로그의 Ed25519 서명이 올바르지 않습니다.");
   const current =
-    cached && cached.catalog.version >= bundled.catalog.version
+    cached && cached.catalog.version > bundled.catalog.version
       ? cached.catalog
       : bundled.catalog;
   const currentVersion = current.version;
@@ -455,7 +457,7 @@ export async function previewCatalogUpdate(): Promise<
   if (!bundled.signatureValid) return undefined;
   const cached = await readCache();
   const current =
-    cached && cached.catalog.version >= bundled.catalog.version
+    cached && cached.catalog.version > bundled.catalog.version
       ? cached.catalog
       : bundled.catalog;
   const remote = await fetchRemote(cached?.meta.etag);

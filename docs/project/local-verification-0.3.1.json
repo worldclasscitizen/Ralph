@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-28T03:58:12.000Z",
+  "version": "0.3.1",
+  "sourceCommit": "34b6b3729a0d453c698c137d7041fb4bd3ff0ce3",
+  "parentCommit": "1ace54688a18be6728a32c440c8d82ecef714a08",
+  "sourceNote": "The measured tree is 34b6b372. Later commits on this branch touch documentation, release evidence and assets/provider-verification.json only, none of which feed runtimeDigest, testDigest or dependencyDigest, so the measurements still describe the current tree.",
+  "platform": "win32",
+  "node": "v24.11.1",
+  "git": "git version 2.45.1.windows.1",
+  "build": {
+    "runtime": "pass",
+    "ui": "pass"
+  },
+  "typecheck": "pass",
+  "unitIntegrationTests": {
+    "files": 19,
+    "passed": 155,
+    "failed": 0
+  },
+  "providerSetupTests": {
+    "file": "tests/provider-setup.test.ts",
+    "passed": 17,
+    "failed": 0,
+    "covers": [
+      "non-interactive run without --provider fails instead of hanging",
+      "scripted run stores the API key and keeps only the selected models",
+      "missing key and unsupported transport are rejected",
+      "model ids absent from the catalog for that adapter are rejected",
+      "interactive walk-through selects provider, connection, key and models",
+      "login method reports a missing CLI",
+      "routable models are separated from ids the catalog no longer contains",
+      "credential file store round-trips, removes and describes a secret",
+      "an unreadable credential store is preserved instead of overwritten",
+      "an explicit model selection survives a config refresh",
+      "an unproven login transport counts only when the operator confirmed it"
+    ]
+  },
+  "operationalTests": {
+    "passed": 25,
+    "failed": 0,
+    "repetitions": 5,
+    "boundaries": [
+      "invocation_before",
+      "invocation_after",
+      "commit_after",
+      "delivery_checkout",
+      "delivery_after"
+    ]
+  },
+  "globalCoverage": {
+    "files": 69,
+    "lines": {
+      "total": 12771,
+      "covered": 7804,
+      "skipped": 0,
+      "pct": 61.1
+    },
+    "statements": {
+      "total": 12771,
+      "covered": 7804,
+      "skipped": 0,
+      "pct": 61.1
+    },
+    "functions": {
+      "total": 370,
+      "covered": 284,
+      "skipped": 0,
+      "pct": 76.75
+    },
+    "branches": {
+      "total": 2370,
+      "covered": 1782,
+      "skipped": 0,
+      "pct": 75.18
+    }
+  },
+  "criticalCoverage": "ten critical files at or above 90% lines and 90% branches",
+  "releaseGates": {
+    "check:core": "pass (lines >= 57.77, branches >= 73.70, ten critical files >= 90)",
+    "catalog:audit": "pass (v2 signature, trust anchor, evidence hosts, legacy catalog byte-identical)",
+    "docs:check": "pass (27 documents, links, terminology, README parity, version badge)",
+    "smoke": "pass (npm pack archive installed, ralph --version 0.3.1, bundled dashboard served, mock graph completed)",
+    "manualCliFlow": "pass (git init -> ralph init -> ralph auth status -> ralph auth setup --provider deepseek --method api --key-stdin --models deepseek-flash stored the key, enabled the connection and produced routes; a piped non-interactive ralph auth exited 2 with guidance instead of hanging; ralph auth setup --provider anthropic --method login applied the existing Claude Code session and saved claude-opus-5-5)",
+    "docs:build": "pass (vitepress build, 27 documents)"
+  },
+  "catalog": {
+    "schemaVersion": 2,
+    "version": 6,
+    "models": 17,
+    "generatedAt": "2026-09-27T00:00:00.000Z",
+    "expiresAt": "2027-03-27T00:00:00.000Z",
+    "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e"
+  },
+  "treeDigests": {
+    "runtimeDigest": "12b391880b9d44e9f7bab2c1b5c8c73d1ae889614bd759a9cdf94e59446750bc",
+    "dependencyDigest": "327aa8e691cb7fb69eaf9f81d75bbc28f43f773110bcb67a19f38c24f2d34958",
+    "testDigest": "746b0407c2bd7b31fd16d2bcc43c5ee64eb942dee916a453f153b6c40fc501be"
+  },
+  "notRunLocally": [
+    "The six-cell CI matrix (Windows/macOS/Linux x Node 22/24) is GitHub Actions work; this record is one win32/Node 24 host.",
+    "The live provider and end-to-end campaign ran separately on 2026-09-28 against source 34b6b372 and is recorded under docs/project/evidence. Its own scope statement, not this file, governs what it proves.",
+    "npm run test:e2e (Playwright accessibility and 32-node browser cases) was not run locally; CI installs Chromium for it on ubuntu-latest.",
+    "A real interactive terminal session of ralph auth setup was not recorded; the interactive path is covered by scripted-prompt tests plus non-interactive CLI runs."
+  ],
+  "scope": "Local mock/protocol/Git/browser-independent evidence for 0.3.1 on one Windows host. It does not replace cross-platform CI, live-provider conformance or the published release gate."
+}

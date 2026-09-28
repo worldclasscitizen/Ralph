@@ -1,4 +1,4 @@
-# Releasing Ralph 0.3.0
+# Releasing Ralph 0.3.1
 
 Repository owners may run the release workflow after its evidence gate passes. Consumer commands never publish, push or deploy.
 
@@ -10,7 +10,15 @@ Run npm run check:core locally and npm run check:release with the complete evide
 
 ## Bounded real verification
 
-Use npm run test:live:release -- --dry-run before npm run test:live:release -- --live --model gpt-5.6-luna. Only Codex's existing subscription CLI is used. The generated-graph normal path is estimated at eight calls: three planning, two worker/review pairs, and final review. This estimate is not a quota or a completion guarantee. The owner removed the cumulative call-count cap; the shared 1,800,000-active-millisecond ceiling and no additional paid API connection remain. All calls, failures and cancellations continue to be recorded in .release/live-budget.json. At the policy change, its V2 migration archived the exact V1 bytes and preserved the then-consumed 17 attempts and 515,096 active milliseconds; later calls continue in the same ledger. Do not delete or reset this file to retry a release. A pending interrupted call blocks more spending until process inspection. The separate functional campaign also refuses implicit reruns of a retained outcome.
+A patch that changes the offered model, the CLI version or the release environment invalidates the stored provider certificate, because evidence never transfers to a different model id, CLI version or platform by analogy. Regenerate it before the end-to-end run:
+
+```bash
+npm run provider:evidence -- --live --provider codex --model gpt-6-sol --output docs/project/evidence/live-provider.json
+```
+
+That command runs the documented four-check conformance smoke (`scripts/provider-conformance.mjs`) through the recorded CLI connection, converts the raw result into a VerificationReportV2 provider report for the current source, and refuses to run on a dirty tree or to overwrite an existing certificate. Archive the previous `live-provider.json` under `docs/project/evidence/history/` with its file hash as the name; the historical record is never rewritten.
+
+Then use npm run test:live:release -- --dry-run before npm run test:live:release -- --live --model gpt-6-sol. Only Codex's existing subscription CLI is used. The generated-graph normal path is estimated at eight calls: three planning, two worker/review pairs, and final review. This estimate is not a quota or a completion guarantee. The owner removed the cumulative call-count cap; the shared 1,800,000-active-millisecond ceiling and no additional paid API connection remain. All calls, failures and cancellations continue to be recorded in .release/live-budget.json. At the policy change, its V2 migration archived the exact V1 bytes and preserved the then-consumed 17 attempts and 515,096 active milliseconds; later calls continue in the same ledger. Do not delete or reset this file to retry a release. A pending interrupted call blocks more spending until process inspection. The separate functional campaign also refuses implicit reruns of a retained outcome.
 
 Passing conformance reports are reused only after exact request, adapter dependency, lockfile and environment checks. EvidenceReuseV2 separates release accounting from the provider protocol; accounting changes require deterministic count, time, cancellation and ownership tests. Old V1 certificates retain their original dependency scope and are never reinterpreted as V2. The original live report and date are preserved. The end-to-end harness digest still includes accounting code, so this change cannot reuse an old complete functional run.
 
@@ -32,8 +40,8 @@ Initial npm account authentication or two-factor setup may require the owner. No
 
 Require PRs and the six CI checks on main, without another person's review approval. Merge with a merge commit to retain logical commits. After successful main CI, dispatch release.yml with the exact source_sha and ci_run_id.
 
-The workflow verifies that CI belongs to main and the selected commit, creates v0.3.0 and a draft Release, attaches all evidence, then publishes the validated tarball with public access and the explicit latest tag. It installs both the exact version and the default registry version, checks downloaded integrity, runs a mock graph and verifies the UI. Only then is the GitHub Release made public and Latest. Enable immutable releases before publication; drafts remain editable until their assets are complete. [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+The workflow verifies that CI belongs to main and the selected commit, creates v0.3.1 and a draft Release, attaches all evidence, then publishes the validated tarball with public access and the explicit latest tag. It installs both the exact version and the default registry version, checks downloaded integrity, runs a mock graph and verifies the UI. Only then is the GitHub Release made public and Latest. Enable immutable releases before publication; drafts remain editable until their assets are complete. [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
 
 ## Recovery of a publication
 
-If npm returns an unclear response, query version and integrity before retrying. An identical existing archive continues verification; a different existing archive blocks the workflow. Never overwrite or unpublish 0.3.0 to repair code. Use a subsequent patch release. After npm succeeds, a failed GitHub step resumes from the draft; already public immutable assets are not replaced. [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/)
+If npm returns an unclear response, query version and integrity before retrying. An identical existing archive continues verification; a different existing archive blocks the workflow. Never overwrite or unpublish 0.3.1 to repair code. Use a subsequent patch release. After npm succeeds, a failed GitHub step resumes from the draft; already public immutable assets are not replaced. [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/)

@@ -51,8 +51,8 @@ jobs:
           run-id: ${{ inputs.ci_run_id }}
           github-token: ${{ github.token }}
       - run: cp docs/project/evidence/live-*.json .release/evidence/
-      - run: npm run release -- manifest --archive .release/package/worldclasscitizen-ralph-0.3.0.tgz
-      - run: npm run release -- verify --archive .release/package/worldclasscitizen-ralph-0.3.0.tgz
+      - run: npm run release -- manifest --archive .release/package/worldclasscitizen-ralph-0.3.1.tgz
+      - run: npm run release -- verify --archive .release/package/worldclasscitizen-ralph-0.3.1.tgz
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: verified-release
@@ -84,44 +84,44 @@ jobs:
         with:
           name: verified-release
           path: .release
-      - run: npm run release -- verify --archive .release/package/worldclasscitizen-ralph-0.3.0.tgz
+      - run: npm run release -- verify --archive .release/package/worldclasscitizen-ralph-0.3.1.tgz
       - name: Prepare release tag and draft
         id: draft
         run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
-          if git rev-parse v0.3.0 >/dev/null 2>&1; then
-            test "$(git rev-parse v0.3.0^{commit})" = "$RELEASE_SHA"
+          if git rev-parse v0.3.1 >/dev/null 2>&1; then
+            test "$(git rev-parse v0.3.1^{commit})" = "$RELEASE_SHA"
           else
-            git tag -a v0.3.0 "$RELEASE_SHA" -m "Ralph 0.3.0"
-            git push origin refs/tags/v0.3.0
+            git tag -a v0.3.1 "$RELEASE_SHA" -m "Ralph 0.3.1"
+            git push origin refs/tags/v0.3.1
           fi
-          gh release view v0.3.0 >/dev/null 2>&1 || gh release create v0.3.0 --draft --verify-tag --title 'Ralph 0.3.0' --notes-file docs/releases/0.3.0.md
-          draft=$(gh release view v0.3.0 --json isDraft --jq .isDraft)
+          gh release view v0.3.1 >/dev/null 2>&1 || gh release create v0.3.1 --draft --verify-tag --title 'Ralph 0.3.1' --notes-file docs/releases/0.3.1.md
+          draft=$(gh release view v0.3.1 --json isDraft --jq .isDraft)
           echo "is_draft=$draft" >> "$GITHUB_OUTPUT"
           if [ "$draft" = true ]; then
-            gh release upload v0.3.0 .release/package/*.tgz .release/evidence/*.json assets/catalog.json assets/catalog.sig assets/catalog-v2.json assets/catalog-v2.sig --clobber
+            gh release upload v0.3.1 .release/package/*.tgz .release/evidence/*.json assets/catalog.json assets/catalog.sig assets/catalog-v2.json assets/catalog-v2.sig --clobber
             sha256sum .release/package/*.tgz .release/evidence/*.json assets/catalog*.json assets/catalog*.sig > .release/SHA256SUMS.txt
-            gh release upload v0.3.0 .release/SHA256SUMS.txt --clobber
+            gh release upload v0.3.1 .release/SHA256SUMS.txt --clobber
           fi
-      - run: npm run release -- publish --archive .release/package/worldclasscitizen-ralph-0.3.0.tgz
-      - run: npm run smoke -- --package @worldclasscitizen/ralph@0.3.0 --expected-version 0.3.0
-      - run: npm run smoke -- --package @worldclasscitizen/ralph --expected-version 0.3.0
+      - run: npm run release -- publish --archive .release/package/worldclasscitizen-ralph-0.3.1.tgz
+      - run: npm run smoke -- --package @worldclasscitizen/ralph@0.3.1 --expected-version 0.3.1
+      - run: npm run smoke -- --package @worldclasscitizen/ralph --expected-version 0.3.1
       - run: node scripts/verify-published.mjs --registry-only
       - if: steps.draft.outputs.is_draft == 'true'
         run: |
-          gh release upload v0.3.0 .release/evidence/installation.json --clobber
+          gh release upload v0.3.1 .release/evidence/installation.json --clobber
           sha256sum .release/package/*.tgz .release/evidence/*.json assets/catalog*.json assets/catalog*.sig > .release/SHA256SUMS.txt
-          gh release upload v0.3.0 .release/SHA256SUMS.txt --clobber
+          gh release upload v0.3.1 .release/SHA256SUMS.txt --clobber
       - if: steps.draft.outputs.is_draft != 'true'
         name: Preserve immutable installation evidence during a registry recheck
         run: |
           mv .release/evidence/installation.json .release/evidence/installation-recheck.json
-          gh release download v0.3.0 --pattern installation.json --dir .release/evidence --clobber
-          gh release download v0.3.0 --pattern SHA256SUMS.txt --dir .release --clobber
+          gh release download v0.3.1 --pattern installation.json --dir .release/evidence --clobber
+          gh release download v0.3.1 --pattern SHA256SUMS.txt --dir .release --clobber
       - name: Publish GitHub release after registry verification
         run: |
-          gh release edit v0.3.0 --draft=false --prerelease=false --latest
+          gh release edit v0.3.1 --draft=false --prerelease=false --latest
           node scripts/verify-published.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

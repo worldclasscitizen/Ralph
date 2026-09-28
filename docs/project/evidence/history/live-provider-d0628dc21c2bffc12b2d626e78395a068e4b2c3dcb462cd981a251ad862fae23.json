@@ -3,13 +3,13 @@
   "kind": "provider",
   "subject": {
     "version": "0.3.1",
-    "sourceCommit": "3df5cb3bdb2f12284e2cd0ba2aa90b8ba0e4fe34",
-    "sourceTree": "137e706e762c7c748623e54b867d972619d63c67",
-    "runtimeDigest": "12b391880b9d44e9f7bab2c1b5c8c73d1ae889614bd759a9cdf94e59446750bc",
+    "sourceCommit": "f5775568f8e8bcda2351e0d8eb78329b23cd6aa6",
+    "sourceTree": "3988334fb56ccb91f124f2c2396a5497fa9eff07",
+    "runtimeDigest": "8684af8779b3cc68b08b8f993a21e41e9a3e01f3f1886c5654d83f6e136eebf0",
     "dependencyDigest": "327aa8e691cb7fb69eaf9f81d75bbc28f43f773110bcb67a19f38c24f2d34958",
-    "testDigest": "746b0407c2bd7b31fd16d2bcc43c5ee64eb942dee916a453f153b6c40fc501be"
+    "testDigest": "43acf8e807844ca12109c8f2c52f39d87e4ea4ff8421ab08c32cdc329b7971d1"
   },
-  "checkedAt": "2026-09-28T03:50:15.155Z",
+  "checkedAt": "2026-09-28T03:13:42.413Z",
   "runner": {
     "platform": "win32",
     "node": "v24.11.1"
@@ -41,44 +41,44 @@
       {
         "name": "structured_output",
         "status": "pass",
-        "durationMs": 5778,
+        "durationMs": 9680,
         "usage": {
-          "inputTokens": 15603,
+          "inputTokens": 17366,
           "outputTokens": 16,
           "cachedTokens": 0,
           "reasoningTokens": 0,
-          "totalTokens": 15619
+          "totalTokens": 17382
         }
       },
       {
         "name": "file_change_and_deterministic_verification",
         "status": "pass",
-        "durationMs": 22738,
+        "durationMs": 16627,
         "usage": {
-          "inputTokens": 33248,
-          "outputTokens": 228,
+          "inputTokens": 33193,
+          "outputTokens": 187,
           "cachedTokens": 16256,
           "reasoningTokens": 0,
-          "totalTokens": 33476
+          "totalTokens": 33380
         },
         "artifact": "conformance.txt"
       },
       {
         "name": "fresh_request_isolation",
         "status": "pass",
-        "durationMs": 5269,
+        "durationMs": 6326,
         "usage": {
-          "inputTokens": 15604,
+          "inputTokens": 15602,
           "outputTokens": 12,
-          "cachedTokens": 14976,
+          "cachedTokens": 0,
           "reasoningTokens": 0,
-          "totalTokens": 15616
+          "totalTokens": 15614
         }
       },
       {
         "name": "cancel_and_await_close",
         "status": "pass",
-        "durationMs": 709,
+        "durationMs": 720,
         "confirmed": "adapter returned after subprocess close"
       }
     ],

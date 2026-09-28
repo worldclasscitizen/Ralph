@@ -2,14 +2,14 @@
   "schemaVersion": 2,
   "kind": "provider",
   "subject": {
-    "version": "0.3.0",
-    "sourceCommit": "2396bce5decab06b2952d066bdc548c53c0dbbe9",
-    "sourceTree": "b82458ce53fc99cfe1e32d1a7544d42ea168e690",
-    "runtimeDigest": "9549b335150434b82dffbea263efb857b9eb9a537cbc1df6d59d645620be2c44",
-    "dependencyDigest": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311",
-    "testDigest": "3d0c6f846b8d3312a153764d81b018fcd30bbd46953e86fb847c55640dd46923"
+    "version": "0.3.1",
+    "sourceCommit": "34b6b3729a0d453c698c137d7041fb4bd3ff0ce3",
+    "sourceTree": "ddcef2e6d4c4bf62001b6ca555d2808ae77ca3a7",
+    "runtimeDigest": "12b391880b9d44e9f7bab2c1b5c8c73d1ae889614bd759a9cdf94e59446750bc",
+    "dependencyDigest": "327aa8e691cb7fb69eaf9f81d75bbc28f43f773110bcb67a19f38c24f2d34958",
+    "testDigest": "746b0407c2bd7b31fd16d2bcc43c5ee64eb942dee916a453f153b6c40fc501be"
   },
-  "checkedAt": "2026-09-05T21:45:17.637Z",
+  "checkedAt": "2026-09-28T03:50:15.155Z",
   "runner": {
     "platform": "win32",
     "node": "v24.11.1"
@@ -35,66 +35,66 @@
   ],
   "details": {
     "adapter": "codex-builtin",
-    "model": "gpt-5.6-luna",
-    "cliVersion": "codex-cli 0.153.4",
+    "model": "gpt-6-sol",
+    "cliVersion": "codex-cli 0.155.1",
     "observations": [
       {
         "name": "structured_output",
         "status": "pass",
-        "durationMs": 4000,
+        "durationMs": 5778,
         "usage": {
-          "inputTokens": 14305,
+          "inputTokens": 15603,
           "outputTokens": 16,
-          "cachedTokens": 9984,
+          "cachedTokens": 0,
           "reasoningTokens": 0,
-          "totalTokens": 14321
+          "totalTokens": 15619
         }
       },
       {
         "name": "file_change_and_deterministic_verification",
         "status": "pass",
-        "durationMs": 15977,
+        "durationMs": 22738,
         "usage": {
-          "inputTokens": 45952,
-          "outputTokens": 305,
-          "cachedTokens": 40192,
-          "reasoningTokens": 96,
-          "totalTokens": 46257
+          "inputTokens": 33248,
+          "outputTokens": 228,
+          "cachedTokens": 16256,
+          "reasoningTokens": 0,
+          "totalTokens": 33476
         },
         "artifact": "conformance.txt"
       },
       {
         "name": "fresh_request_isolation",
         "status": "pass",
-        "durationMs": 4068,
+        "durationMs": 5269,
         "usage": {
-          "inputTokens": 14306,
+          "inputTokens": 15604,
           "outputTokens": 12,
-          "cachedTokens": 14080,
+          "cachedTokens": 14976,
           "reasoningTokens": 0,
-          "totalTokens": 14318
+          "totalTokens": 15616
         }
       },
       {
         "name": "cancel_and_await_close",
         "status": "pass",
-        "durationMs": 520,
+        "durationMs": 709,
         "confirmed": "adapter returned after subprocess close"
       }
     ],
-    "scope": "CLI transport in the recorded local environment; fresh sessions, per-invocation Windows Git trust, no API credentials"
+    "scope": "CLI transport in the recorded local environment; fresh sessions, no API credentials"
   },
   "reuse": {
     "schemaVersion": 2,
     "protocol": "codex-conformance-v2",
     "originalFile": "live-provider.json",
-    "originalSha256": "d2ad9eff2ebac61aa17eda5e027520b1a5d65829ed24e7078a85bef1c5f2446f",
-    "originalCheckedAt": "2026-09-05T21:45:17.637Z",
-    "sourceCommit": "050139452bed2dbc09417d1f67b83b81aca7eca1",
+    "originalSha256": "3895315071f8d51d91e3e25120425f63d53ed2663d2e467c917804f707bd7270",
+    "originalCheckedAt": "2026-09-28T03:50:15.155Z",
+    "sourceCommit": "3df5cb3bdb2f12284e2cd0ba2aa90b8ba0e4fe34",
     "sourceFiles": [
       {
         "path": "package-lock.json",
-        "sha256": "e0d2ccd8f840e5a424b21f3068708b8e76bfbb4c20f7f1debaf4b10fcc25c311"
+        "sha256": "327aa8e691cb7fb69eaf9f81d75bbc28f43f773110bcb67a19f38c24f2d34958"
       },
       {
         "path": "scripts/provider-conformance.mjs",
@@ -118,7 +118,7 @@
       },
       {
         "path": "src/providers/cli.ts",
-        "sha256": "9cadde8f7459903410839d9ffa61dc3a2e542a6135d180cbd67c26d19d05f919"
+        "sha256": "e97eea1644eee03e1530f006d56404aa6923c24b63ea33fdec25bd34d3a5d9d5"
       },
       {
         "path": "src/providers/errors.ts",
@@ -138,7 +138,7 @@
       },
       {
         "path": "src/types.ts",
-        "sha256": "1f98a527b368085a81232ad83c23b4fe33c646cf8787cab053bc4664273e9d7d"
+        "sha256": "3db8b3dbabfadc813ea966f9bd32706f875529fb15101a6b9e3f968a36b7e6b7"
       },
       {
         "path": "src/util.ts",
@@ -151,11 +151,11 @@
     ],
     "observed": {
       "adapter": "codex-builtin",
-      "model": "gpt-5.6-luna",
-      "cliVersion": "codex-cli 0.153.4",
+      "model": "gpt-6-sol",
+      "cliVersion": "codex-cli 0.155.1",
       "platform": "win32",
       "node": "v24.11.1"
     },
-    "verifiedAt": "2026-09-05T22:10:08.317Z"
+    "verifiedAt": "2026-09-28T03:50:37.544Z"
   }
 }

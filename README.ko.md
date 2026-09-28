@@ -17,7 +17,7 @@
     <a href="./docs/architecture/index.md">아키텍처</a>
   </p>
   <p>
-    <img alt="버전: 0.3.0" src="https://img.shields.io/badge/version-v0.3.0-2563eb?style=flat-square">
+    <img alt="버전: 0.3.1" src="https://img.shields.io/badge/version-v0.3.1-2563eb?style=flat-square">
     <a href="https://github.com/worldclasscitizen/Ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/Ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 또는 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Ralph 0.3.0:** 하나의 실행 그래프 안에서 격리된 Ralph Loop와 통합 검증을 사용합니다. v0.2의 이력·설정은 보존하지만 기존 승인 해시는 새 그래프 실행을 승인하지 않습니다. 전환 전 [마이그레이션 안내](./docs/migration/v0.3.md)와 [검증 범위](./docs/project/v0.3-readiness.md)를 확인하세요.
+> **Ralph 0.3.1:** 서명된 모델 카탈로그를 2026-09-27 기준 최신 라인업으로 갱신하고 대체된 모델 ID를 제거했습니다. 0.3.0에서 하나의 실행 그래프 안에서 격리된 Ralph Loop와 통합 검증을 도입했습니다. 전환 전 [마이그레이션 안내](./docs/migration/v0.3.md)와 [검증 범위](./docs/project/v0.3-readiness.md)를 확인하세요.
 
 ## 왜 Ralph인가요?
 
@@ -72,10 +72,10 @@
 
 ### npm에서 설치
 
-다음 명령으로 0.3.0을 설치합니다.
+다음 명령으로 0.3.1을 설치합니다.
 
 ```bash
-npm install -g @worldclasscitizen/ralph@0.3.0
+npm install -g @worldclasscitizen/ralph@0.3.1
 ralph --version
 ```
 
@@ -84,7 +84,7 @@ ralph --version
 ### 소스에서 설치
 
 ```bash
-git clone --branch v0.3.0 https://github.com/worldclasscitizen/Ralph.git
+git clone --branch v0.3.1 https://github.com/worldclasscitizen/Ralph.git
 cd Ralph
 npm ci
 npm run build
@@ -97,9 +97,12 @@ ralph --version
 ```bash
 cd /absolute/path/to/a/clean/git-project
 ralph init
+ralph auth setup
 ralph doctor
 ralph plan "Improve login accessibility and add tests" --json
 ```
+
+`ralph auth setup`는 어떤 공급자가 연결되어 있는지 보여주고, 연결할 공급자를 고르게 한 뒤, 각 공급자가 지원하는 방식(CLI 로그인 또는 API 키)을 제시합니다. API 키는 화면에 표시하지 않고 입력받고, 사용할 모델은 복수로 선택할 수 있습니다. Enter로 기본값을 그대로 받아들이거나, 건너뛰고 환경 변수를 계속 사용해도 됩니다. 비대화형 호스트는 `--provider`, `--method`, `--key-stdin` 또는 `--key-env`, `--models`를 전달합니다.
 
 Ralph는 컨텍스트를 수집하고 설정된 공급자를 확인한 뒤 계약과 그래프를 저장합니다. 경로·완료 기준·검증 명령·모델·예산을 검토합니다. 반환된 `runId`로 확인한 바로 그 계획을 승인합니다.
 
@@ -209,19 +212,19 @@ ralph config route list
 | 호환 API | DeepSeek·GLM·명시적으로 설정한 호환 엔드포인트 | 공급자 API 키 참조 |
 | 사용자 프로세스 | Ralph JSON/NDJSON 프로토콜 | 프로세스 어댑터에서 정의 |
 
-CLI 로그인과 API 연결은 별개입니다. 사용하는 연결만 설정합니다. DeepSeek와 GLM만으로 계획·작업·평가를 구성할 수 있으며 Codex 로그인을 요구하지 않습니다. 자격 증명 저장 방식은 운영체제에 따라 다르고, Windows에서는 현재 환경 변수를 사용합니다.
+CLI 로그인과 API 연결은 별개입니다. 사용하는 연결만 설정합니다. DeepSeek와 GLM만으로 계획·작업·평가를 구성할 수 있으며 Codex 로그인을 요구하지 않습니다. `ralph auth setup`은 API 키를 OS 키체인이 있으면 거기에, 없으면 저장소 밖 사용자 디렉터리의 `credentials.json`에 보관합니다(Windows에서는 DPAPI로 암호화). 환경 변수도 그대로 지원하며 CI에서는 그 방식만으로 충분하고, `RALPH_CREDENTIAL_STORE=file`로 파일 저장을 강제할 수 있습니다. 로그인 상태를 보고하지 못하는 CLI는 사용자가 확인한 뒤에만 활성화됩니다.
 
 ```bash
-ralph providers detect
-ralph providers list
+ralph auth setup
 ralph auth status
+ralph providers list
 ralph config refresh
 ```
 
 <!-- provider-verification:start -->
 | Connection / model | Support | Verified environment |
 |---|---|---|
-| codex-builtin / gpt-5.6-luna | verified | codex-cli 0.153.4 · win32 · v24.11.1 · 2026-09-05 |
+| codex-builtin / gpt-6-sol | verified | codex-cli 0.155.1 · win32 · v24.11.1 · 2026-09-28 |
 | Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |
 | OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |
 | Antigravity | experimental | Requires a working automation interface |
@@ -249,6 +252,7 @@ ralph config refresh
 | 명령 | 용도 |
 | :--- | :--- |
 | `ralph doctor` | Git·인증·라우팅 진단 |
+| `ralph auth setup` | 공급자 연결: 상태·방식·API 키·모델 선택 |
 | `ralph config explain` | 경로와 정책 설명 |
 | `ralph providers list` | 연결과 검증 범위 확인 |
 | `ralph auth status` | 설치 여부와 구분된 인증 상태 확인 |
@@ -407,9 +411,9 @@ Mock 테스트는 유료 모델을 호출하지 않습니다. 실제 출시 검�
 
 ## 프로젝트 상태
 
-실제 자연어 요청으로 계획을 생성하고 두 모듈의 격리 Worker·독립 평가·통합·승인된 검증 5개·시작 브랜치 반영·외부 검사를 완료했습니다. 확인한 환경은 Codex CLI 0.153.4, gpt-5.6-luna, Windows, Node.js 24.11.1입니다. [검증 기록](./docs/project/release-campaign-2026-09-05.md)에 이전 실패와 측정한 사용량을 보존합니다. 과거 비교는 참고 자료이며 일반적인 품질·속도·비용 우위를 주장하지 않습니다.
+실제 자연어 요청으로 계획을 생성하고 두 모듈의 격리 Worker·독립 평가·통합·승인된 검증 5개·시작 브랜치 반영·외부 검사를 완료했습니다. 확인한 환경은 Codex CLI 0.155.1, gpt-6-sol, Windows, Node.js 24.11.1이며 8회 호출로 완료했습니다. [검증 기록](./docs/project/release-campaign-2026-09-05.md)에 0.3.0의 실패와 측정한 사용량을 보존합니다. 일반적인 품질·속도·비용 우위를 주장하지 않습니다.
 
-0.3.0의 실행 범위는 한 컴퓨터입니다. 원격 실행, 자유 조건식 그래프, 모든 외부 동작의 자동 복구 보장은 포함하지 않습니다. 재현 가능한 결함은 [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues)에 남길 수 있습니다.
+0.3.1의 실행 범위는 한 컴퓨터입니다. 원격 실행, 자유 조건식 그래프, 모든 외부 동작의 자동 복구 보장은 포함하지 않습니다. 재현 가능한 결함은 [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues)에 남길 수 있습니다.
 
 ## 라이선스
 

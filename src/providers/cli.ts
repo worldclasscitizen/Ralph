@@ -194,7 +194,7 @@ export class CodexBuiltinAdapter extends CliAdapter {
       });
       child.on("error", () => finish([]));
       child.stdin.write(
-        `${JSON.stringify({ id: 1, method: "initialize", params: { clientInfo: { name: "ralph", title: "Ralph CLI", version: "0.3.0" }, capabilities: null } })}\n`,
+        `${JSON.stringify({ id: 1, method: "initialize", params: { clientInfo: { name: "ralph", title: "Ralph CLI", version: "0.3.1" }, capabilities: null } })}\n`,
       );
       child.stdin.write(
         `${JSON.stringify({ id: 2, method: "model/list", params: { limit: 100 } })}\n`,
