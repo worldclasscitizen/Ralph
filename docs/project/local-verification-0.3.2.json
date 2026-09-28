@@ -15,15 +15,17 @@
   "typecheck": "pass",
   "unitIntegrationTests": {
     "files": 19,
-    "passed": 158,
+    "passed": 164,
     "failed": 0
   },
   "releaseToolingTests": {
     "file": "tests/release.test.ts",
     "covers": [
       "the registry visibility check waits for propagation instead of failing on the first read",
-      "the recheck window is bounded and reports the last observed state",
+      "a failed or timed-out read is retried and a definite absence is still reported",
+      "the recheck window is bounded and every attempt failing surfaces the read error",
       "a conflicting artifact fails immediately and is never retried",
+      "a publish that leaves no visible artifact is retried, and an npm failure is surfaced",
       "a retained ledger from another release is archived byte-for-byte and a fresh allowance starts"
     ]
   },
