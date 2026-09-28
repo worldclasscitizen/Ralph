@@ -1,26 +1,19 @@
 {
   "schemaVersion": 1,
-  "capturedAt": "2026-09-27T22:37:45.000Z",
+  "capturedAt": "2026-09-27T23:10:00.000Z",
   "version": "0.3.1",
-  "sourceCommit": "490771c9919c40b9b7bbac7db56825c048e2d8aa",
+  "sourceCommit": "8df35f798e1e5af2b4f92530637462008fabf4ab",
   "parentCommit": "1ace54688a18be6728a32c440c8d82ecef714a08",
   "sourceNote": "Every result below was produced from this exact commit with a clean working tree. Repeat the commands on a different tree before trusting the numbers.",
   "platform": "win32",
   "node": "v24.11.1",
   "git": "git version 2.45.1.windows.1",
-  "build": {
-    "runtime": "pass",
-    "ui": "pass"
-  },
+  "build": { "runtime": "pass", "ui": "pass" },
   "typecheck": "pass",
-  "unitIntegrationTests": {
-    "files": 19,
-    "passed": 151,
-    "failed": 0
-  },
+  "unitIntegrationTests": { "files": 19, "passed": 153, "failed": 0 },
   "providerSetupTests": {
     "file": "tests/provider-setup.test.ts",
-    "passed": 13,
+    "passed": 15,
     "failed": 0,
     "covers": [
       "non-interactive run without --provider fails instead of hanging",
@@ -30,8 +23,9 @@
       "interactive walk-through selects provider, connection, key and models",
       "login method reports a missing CLI",
       "routable models are separated from ids the catalog no longer contains",
-      "credential file store round-trips and removes a secret",
-      "an explicit model selection survives a config refresh"
+      "credential file store round-trips, removes and describes a secret",
+      "an explicit model selection survives a config refresh",
+      "an unproven login transport counts only when the operator confirmed it"
     ]
   },
   "operationalTests": {
@@ -48,31 +42,12 @@
   },
   "globalCoverage": {
     "files": 69,
-    "lines": {
-      "total": 12657,
-      "covered": 7764,
-      "skipped": 0,
-      "pct": 61.34
-    },
-    "statements": {
-      "total": 12657,
-      "covered": 7764,
-      "skipped": 0,
-      "pct": 61.34
-    },
-    "functions": {
-      "total": 362,
-      "covered": 278,
-      "skipped": 0,
-      "pct": 76.79
-    },
-    "branches": {
-      "total": 2348,
-      "covered": 1767,
-      "skipped": 0,
-      "pct": 75.25
-    }
+    "lines": { "total": 12727, "covered": 7783, "skipped": 0, "pct": 61.15 },
+    "statements": { "total": 12727, "covered": 7783, "skipped": 0, "pct": 61.15 },
+    "functions": { "total": 369, "covered": 283, "skipped": 0, "pct": 76.69 },
+    "branches": { "total": 2362, "covered": 1777, "skipped": 0, "pct": 75.23 }
   },
+  "criticalCoverage": "ten critical files at or above 90% lines and 90% branches",
   "releaseGates": {
     "check:core": "pass (lines >= 57.77, branches >= 73.70, ten critical files >= 90)",
     "catalog:audit": "pass (v2 signature, trust anchor, evidence hosts, legacy catalog byte-identical)",
@@ -82,20 +57,20 @@
   },
   "catalog": {
     "schemaVersion": 2,
-    "version": 5,
-    "models": 16,
+    "version": 6,
+    "models": 17,
     "generatedAt": "2026-09-27T00:00:00.000Z",
     "expiresAt": "2027-03-27T00:00:00.000Z",
     "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e"
   },
   "treeDigests": {
-    "runtimeDigest": "d50d3baac0a1b1d9724a4001f81fb003009c4b356c102add8fe2ae9af803e772",
+    "runtimeDigest": "8684af8779b3cc68b08b8f993a21e41e9a3e01f3f1886c5654d83f6e136eebf0",
     "dependencyDigest": "327aa8e691cb7fb69eaf9f81d75bbc28f43f773110bcb67a19f38c24f2d34958",
     "testDigest": "43acf8e807844ca12109c8f2c52f39d87e4ea4ff8421ab08c32cdc329b7971d1"
   },
   "notRunLocally": [
     "The six-cell CI matrix (Windows/macOS/Linux x Node 22/24) is GitHub Actions work; this record is one win32/Node 24 host.",
-    "Live provider conformance and the live end-to-end campaign were not run. No model in the 0.3.1 catalog has live support evidence, because the 0.3.0 certificate names gpt-5.6-luna and that id is no longer offered.",
+    "Live provider conformance and the live end-to-end campaign are recorded separately under docs/project/evidence. No model has live support evidence until that campaign passes.",
     "npm run test:e2e (Playwright accessibility and 32-node browser cases) was not run locally; CI installs Chromium for it on ubuntu-latest.",
     "A real interactive terminal session of ralph auth setup was not recorded; the interactive path is covered by scripted-prompt tests plus non-interactive CLI runs."
   ],
