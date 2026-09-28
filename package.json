@@ -44,6 +44,7 @@
     "test:operational": "node scripts/test-operational.mjs",
     "test:live:release": "node scripts/live-functional.mjs",
     "test:live:comparison": "node scripts/live-release.mjs",
+    "provider:evidence": "node scripts/provider-evidence.mjs",
     "catalog:audit": "node scripts/audit-catalog.mjs",
     "support:sync": "node scripts/sync-provider-support.mjs"
   },
