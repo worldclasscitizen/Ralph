@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e",
-  "version": 5,
+  "version": 6,
   "generatedAt": "2026-09-27T00:00:00.000Z",
   "models": [
     {
@@ -640,6 +640,46 @@
       "evidence": [
         {
           "source": "https://docs.z.ai/guides/llm/glm-5.3",
+          "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "zai",
+      "adapter": "zai-coding-plan",
+      "modelId": "glm-5.3-flash",
+      "displayName": "GLM-5.3 Flash",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-09-27T00:00:00.000Z",
+      "expiresAt": "2027-03-27T00:00:00.000Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "high",
+        "max"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://docs.z.ai/guides/vlm/glm-5.3-flash",
           "checkedAt": "2026-09-27"
         }
       ]

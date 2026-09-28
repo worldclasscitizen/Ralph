@@ -212,7 +212,7 @@ ralph config route list
 | 호환 API | DeepSeek·GLM·명시적으로 설정한 호환 엔드포인트 | 공급자 API 키 참조 |
 | 사용자 프로세스 | Ralph JSON/NDJSON 프로토콜 | 프로세스 어댑터에서 정의 |
 
-CLI 로그인과 API 연결은 별개입니다. 사용하는 연결만 설정합니다. DeepSeek와 GLM만으로 계획·작업·평가를 구성할 수 있으며 Codex 로그인을 요구하지 않습니다. `ralph auth setup`은 API 키를 OS 키체인이 있으면 거기에, 없으면 저장소 밖 사용자 디렉터리의 `credentials.json`에 보관합니다. 환경 변수도 그대로 지원하며 CI에서는 그 방식만으로 충분하고, `RALPH_CREDENTIAL_STORE=file`로 파일 저장을 강제할 수 있습니다.
+CLI 로그인과 API 연결은 별개입니다. 사용하는 연결만 설정합니다. DeepSeek와 GLM만으로 계획·작업·평가를 구성할 수 있으며 Codex 로그인을 요구하지 않습니다. `ralph auth setup`은 API 키를 OS 키체인이 있으면 거기에, 없으면 저장소 밖 사용자 디렉터리의 `credentials.json`에 보관합니다(Windows에서는 DPAPI로 암호화). 환경 변수도 그대로 지원하며 CI에서는 그 방식만으로 충분하고, `RALPH_CREDENTIAL_STORE=file`로 파일 저장을 강제할 수 있습니다. 로그인 상태를 보고하지 못하는 CLI는 사용자가 확인한 뒤에만 활성화됩니다.
 
 ```bash
 ralph auth setup

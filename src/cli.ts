@@ -945,6 +945,7 @@ async function commandAuth(args: string[]): Promise<void> {
         ...(apiKey ? { apiKeys: { "*": apiKey } } : {}),
         ...(modelList.length ? { models: { "*": modelList } } : {}),
         login: !takeFlag(args, "--no-login"),
+        assumeLogin: takeFlag(args, "--assume-login"),
       },
       spawnInteractive,
     );

@@ -35,7 +35,9 @@ ralph auth setup --provider zai --method api --key-env GLM_API_KEY   # read the 
 | zai:general | zai | Chat completions | GLM_GENERAL_API_KEY |
 | zai:coding-plan | zai | Chat completions | GLM_API_KEY |
 
-A key entered through `ralph auth setup` is stored in the macOS Keychain or the Freedesktop Secret Service when available. On Windows and other hosts without a keychain it is written to `credentials.json` in the per-user Ralph directory (`%APPDATA%\ralph`, `~/Library/Application Support/ralph` or `$XDG_CONFIG_HOME/ralph`), created with owner-only permissions and never written into a project or committed. Set `RALPH_CREDENTIAL_STORE=file` to skip the keychain deliberately on a headless or shared machine. Environment variables still work and remain the only path needed in CI.
+A key entered through `ralph auth setup` is stored in the macOS Keychain or the Freedesktop Secret Service when available. Otherwise it is written to `credentials.json` in the per-user Ralph directory (`%APPDATA%\ralph`, `~/Library/Application Support/ralph` or `$XDG_CONFIG_HOME/ralph`), created with owner-only permissions and never written into a project or committed. On Windows that file is additionally encrypted with DPAPI for the current user, so a copied file is useless elsewhere; `RALPH_CREDENTIAL_ENCRYPTION=none` stores plaintext and `RALPH_CREDENTIAL_STORE=file` skips the keychain deliberately on a headless or shared machine. `ralph auth status` reports the location and whether it is protected. Environment variables still work and remain the only path needed in CI.
+
+Some CLIs (Gemini CLI, Antigravity) cannot report whether they are logged in. An unknown state is never treated as connected on its own: `ralph auth setup` asks you to confirm the session, and a non-interactive run must pass `--assume-login`. The confirmation is recorded as `trusted` on that connection, so a later `ralph init` or `ralph config refresh` keeps the decision instead of silently reversing it. Installation alone never enables a route.
 
 For a DeepSeek + GLM-only environment, set just the corresponding environment variables before initialization. Remove or disable other entries from the reviewed project configuration if unrelated local CLI logins were automatically detected. `ralph config refresh` recalculates routes from configured connections. All planner/worker/critic roles can use the remaining portfolio.
 
@@ -45,7 +47,7 @@ For another compatible endpoint, add an explicit connection with adapter `openai
 
 The candidate model pool is data, not code. The router reads only the Ed25519-signed `assets/catalog-v2.json` (with `assets/catalog-v2.sig` and the public trust anchor in `src/catalog-key.ts`), filtered by configured connection adapter, capability and expiry in `src/router.ts`. Inspect it with `ralph catalog show`, `ralph catalog diff` and `ralph catalog update`; `npm run catalog:audit` verifies the v2 signature, the trust anchor, the six official evidence hosts and that the legacy `assets/catalog.json`/`catalog.sig` pair stays byte-identical to the frozen v0.2 channel.
 
-Catalog version 5 (checked 2026-09-27, expires 2027-03-27) lists only the newest model of each tier; superseded ids are removed instead of kept as silent fallbacks. A cached catalog is used only when it is strictly newer than the bundled one, so a stale cache can never shadow the signature-verified artifact shipped with the package.
+Catalog version 6 (checked 2026-09-27, expires 2027-03-27) lists only the newest model of each tier; superseded ids are removed instead of kept as silent fallbacks. A cached catalog is used only when it is strictly newer than the bundled one, so a stale cache can never shadow the signature-verified artifact shipped with the package.
 
 | Adapter | Candidate models | Vision | Effort strings |
 |---|---|---|---|
@@ -57,7 +59,7 @@ Catalog version 5 (checked 2026-09-27, expires 2027-03-27) lists only the newest
 | gemini-api | gemini-3.8-flash | yes | low, medium, high |
 | deepseek-api | deepseek-flash (`DeepSeek-V4.1-Flash`) | yes | low, medium, high |
 | zai-general-api | glm-5.3, glm-5.3-flash | glm-5.3 no, flash yes | low, high, max |
-| zai-coding-plan | glm-5.3 | no | low, high, max |
+| zai-coding-plan | glm-5.3, glm-5.3-flash | glm-5.3 no, flash yes | low, high, max |
 
 Every entry is `qualityTier: "unrated"` with null scores and cites one official provider page from an allow-listed host (`learn.chatgpt.com`, `developers.openai.com`, `platform.claude.com`, `ai.google.dev`, `api-docs.deepseek.com`, `docs.z.ai`). Entries expire after six months, so an unrefreshed catalog drops models instead of routing to them forever. No measured benchmark value is published for these models; adding one requires provenance recorded in `gateway/measurements.ts`, never an estimate.
 

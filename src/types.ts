@@ -223,6 +223,11 @@ export interface ConnectionConfig {
   baseUrl?: string;
   command?: string[];
   models?: string[];
+  /**
+   * Operator confirmation for a transport that cannot report its login state.
+   * Set by `ralph auth setup`; without it an unknown state is not treated as connected.
+   */
+  trusted?: boolean;
 }
 
 export interface RouteEntry {

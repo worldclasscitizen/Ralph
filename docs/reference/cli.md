@@ -33,7 +33,7 @@ All graph commands resolve the project through `--project <absolute-git-root>` o
 | migrate --to 0.3 --dry-run | Classify legacy state without writing |
 | migrate --to 0.3 | Preserve legacy state and write migration manifest |
 
-`ralph auth setup` is the only command that needs interactive input. It fails instead of hanging when stdin is not a terminal, and it accepts `--provider`, `--method login|api`, `--connection`, `--key-stdin`, `--key-env NAME`, `--models a,b` and `--no-login` for scripted hosts. Host integrations run this same CLI, so provider setup behaves identically from Codex, Claude Code, Gemini CLI and Antigravity.
+`ralph auth setup` is the only command that needs interactive input. It fails instead of hanging when stdin is not a terminal, and it accepts `--provider`, `--method login|api`, `--connection`, `--key-stdin`, `--key-env NAME`, `--models a,b`, `--no-login` and `--assume-login` for scripted hosts. `--assume-login` is required when a transport cannot report its own login state (Gemini CLI, Antigravity); the confirmation is stored as `trusted` on that connection. Host integrations run this same CLI, so provider setup behaves identically from Codex, Claude Code, Gemini CLI and Antigravity.
 
 Host context JSON is `{ "summary": "Explicit context supplied by the host" }`. It cannot extend approval scope. A clarification response is `{ "clarify": "Target paths, desired behavior and completion checks" }`; use the actual question IDs returned by the run.
 

@@ -65,6 +65,18 @@ async function syncApiAuthentication(connections: ConnectionConfig[]): Promise<C
     : connection));
 }
 
+/**
+ * A login transport counts as connected only when the provider proves a session, or when
+ * the operator vouched for a transport that cannot report its state (`ralph auth setup`).
+ * Installations alone never enable a route.
+ */
+export function loginConnectionEnabled(
+  status: string,
+  trusted: boolean | undefined,
+): boolean {
+  return status === "authenticated" || (status === "unknown" && trusted === true);
+}
+
 async function syncAuthentication(config: ProjectConfig): Promise<ConnectionConfig[]> {
   const apiSynced = await syncApiAuthentication(config.connections);
   const provisional = { ...config, connections: apiSynced };
@@ -72,7 +84,7 @@ async function syncAuthentication(config: ProjectConfig): Promise<ConnectionConf
     if (connection.mode === "api" || connection.mode === "process") return connection;
     try {
       const auth = await createAdapter(connection, provisional).authStatus();
-      return { ...connection, enabled: auth.status !== "unauthenticated" && auth.status !== "unavailable" };
+      return { ...connection, enabled: loginConnectionEnabled(auth.status, connection.trusted) };
     } catch {
       return { ...connection, enabled: false };
     }

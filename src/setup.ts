@@ -150,6 +150,8 @@ export interface SetupOptions {
   login?: boolean;
   /** Ask the installed CLI/API for models beyond the signed catalog. Defaults to interactive mode. */
   liveDiscovery?: boolean;
+  /** Trust a login transport that cannot report its state, without asking. */
+  assumeLogin?: boolean;
 }
 
 export interface SetupResult {
@@ -373,10 +375,26 @@ export async function runProviderSetup(
             `${connection.id}: CLI 로그인을 실행하지 않았습니다 (${command[0]} ${command.slice(1).join(" ")}로 로그인 필요)`,
           );
         }
-        if (row.authentication === "unknown")
-          prompt.info(
-            `${connection.id}: 로그인 상태를 확인할 수 없습니다. 첫 호출에서 판정되며, 실패하면 해당 CLI에서 로그인해 주세요.`,
+        if (row.authentication === "unknown") {
+          // This CLI cannot prove a session, so the operator has to vouch for it.
+          const trusted = options.assumeLogin ??
+            (nonInteractive
+              ? false
+              : await prompt.confirm(
+                  `${connection.id}는 로그인 상태를 확인할 수 없습니다. 이 세션을 신뢰하고 실행 경로에 포함할까요?`,
+                  false,
+                ));
+          if (!trusted && nonInteractive)
+            throw new RalphError(
+              `${connection.id}의 로그인 상태를 확인할 수 없습니다. --assume-login으로 명시하거나 해당 CLI에서 로그인해 주세요.`,
+              "login_unverified",
+              2,
+            );
+          connection.trusted = trusted;
+          changed.push(
+            `${connection.id}: 확인 불가 상태를 ${trusted ? "신뢰함" : "신뢰하지 않음"}으로 기록`,
           );
+        }
       } else {
         changed.push(`${connection.id}: 기존 로그인 세션 사용`);
       }

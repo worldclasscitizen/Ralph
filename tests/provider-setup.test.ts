@@ -3,9 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadCatalog } from "../src/catalog.js";
-import { refreshProjectConfig } from "../src/config.js";
+import { loginConnectionEnabled, refreshProjectConfig } from "../src/config.js";
 import {
   credentialSource,
+  describeStore,
+  fileStoreProtected,
   getCredential,
   removeCredential,
   setCredential,
@@ -100,7 +102,7 @@ async function project(connections: ConnectionConfig[] = API_CONNECTIONS) {
     overrides: {},
     routePolicies: {},
     verifierCommands: ["git diff --check"],
-    catalogVersion: 5,
+    catalogVersion: 6,
   };
   await saveConfig(root, config);
   return { root, config };
@@ -112,6 +114,7 @@ describe("provider setup", () => {
     homes.push(home);
     vi.stubEnv("RALPH_CONFIG_HOME", home);
     vi.stubEnv("RALPH_CREDENTIAL_STORE", "file");
+    vi.stubEnv("RALPH_CREDENTIAL_ENCRYPTION", "none");
     vi.stubEnv("DEEPSEEK_API_KEY", "");
     vi.stubEnv("GLM_API_KEY", "");
     vi.stubEnv("GLM_GENERAL_API_KEY", "");
@@ -274,6 +277,7 @@ describe("credential fallback store", () => {
     homes.push(home);
     vi.stubEnv("RALPH_CONFIG_HOME", home);
     vi.stubEnv("RALPH_CREDENTIAL_STORE", "file");
+    vi.stubEnv("RALPH_CREDENTIAL_ENCRYPTION", "none");
   });
   afterEach(async () => {
     vi.unstubAllEnvs();
@@ -294,6 +298,26 @@ describe("credential fallback store", () => {
     vi.stubEnv("TEST_API_KEY", "");
     await setCredential("env:api", "stored");
     expect(await getCredential("env:api", "TEST_API_KEY")).toBe("stored");
+  });
+
+  it("names the storage location and whether it is protected", async () => {
+    await setCredential("described:api", "value");
+    expect(describeStore(await credentialSource("described:api", undefined).then(() => "file"))).toMatch(/credentials\.json/);
+    expect(describeStore("keychain")).toBe("OS 키체인");
+    expect(describeStore("environment")).toBe("환경변수");
+    expect(describeStore(undefined)).toBe("미설정");
+    expect(fileStoreProtected()).toBe(false);
+  });
+});
+
+describe("login transports that cannot prove a session", () => {
+  it("counts only a proven session or an operator-confirmed one", () => {
+    expect(loginConnectionEnabled("authenticated", undefined)).toBe(true);
+    expect(loginConnectionEnabled("unknown", true)).toBe(true);
+    expect(loginConnectionEnabled("unknown", false)).toBe(false);
+    expect(loginConnectionEnabled("unknown", undefined)).toBe(false);
+    expect(loginConnectionEnabled("unauthenticated", true)).toBe(false);
+    expect(loginConnectionEnabled("unavailable", true)).toBe(false);
   });
 });
 

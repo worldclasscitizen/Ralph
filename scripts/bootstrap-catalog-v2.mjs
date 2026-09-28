@@ -42,11 +42,12 @@ const definitions = [
   ["zai", "zai-general-api", "glm-5.3", "GLM-5.3", "https://docs.z.ai/guides/llm/glm-5.3", false, true, "zai"],
   ["zai", "zai-general-api", "glm-5.3-flash", "GLM-5.3 Flash", "https://docs.z.ai/guides/vlm/glm-5.3-flash", true, true, "zai"],
   ["zai", "zai-coding-plan", "glm-5.3", "GLM-5.3", "https://docs.z.ai/guides/llm/glm-5.3", false, true, "zai"],
+  ["zai", "zai-coding-plan", "glm-5.3-flash", "GLM-5.3 Flash", "https://docs.z.ai/guides/vlm/glm-5.3-flash", true, true, "zai"],
 ];
 const EFFORTS = { standard: ["low", "medium", "high"], zai: ["low", "high", "max"] };
 const CHECKED_AT = "2026-09-27";
 const tasks = ["planning_architecture", "frontend_visual", "backend_core", "tdd_debugging", "static_review", "delivery_evidence"];
-const catalog = { schemaVersion: 2, keyId, version: 5, generatedAt: `${CHECKED_AT}T00:00:00.000Z`, models: definitions.map(([provider, adapter, modelId, displayName, source, vision, longContext, effort]) => ({
+const catalog = { schemaVersion: 2, keyId, version: 6, generatedAt: `${CHECKED_AT}T00:00:00.000Z`, models: definitions.map(([provider, adapter, modelId, displayName, source, vision, longContext, effort]) => ({
   provider, adapter, modelId, displayName, qualityTier: "unrated", checkedAt: `${CHECKED_AT}T00:00:00.000Z`, expiresAt: "2027-03-27T00:00:00.000Z",
   capabilities: { reasoning: null, coding: null, structuredOutput: true, vision, toolUse: true, longContext },
   taskAffinity: Object.fromEntries(tasks.map((t) => [t, null])), costTier: null, latencyTier: null, reliabilityBaseline: null,

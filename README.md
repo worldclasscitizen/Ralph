@@ -212,7 +212,7 @@ Approved capabilities and availability are checked before assignment. Fixed rout
 | Compatible API | DeepSeek, GLM, configured compatible endpoints | Provider API-key reference |
 | Custom process | Ralph JSON/NDJSON protocol | Defined by the process adapter |
 
-CLI login and API connections remain separate. Configure only what you use: DeepSeek and GLM can supply planning, work and evaluation without a Codex login. `ralph auth setup` stores an API key in the OS keychain when one exists, otherwise in a per-user `credentials.json` outside every repository; environment variables remain supported for CI and `RALPH_CREDENTIAL_STORE=file` forces the file store.
+CLI login and API connections remain separate. Configure only what you use: DeepSeek and GLM can supply planning, work and evaluation without a Codex login. `ralph auth setup` stores an API key in the OS keychain when one exists, otherwise in a per-user `credentials.json` outside every repository (DPAPI-encrypted on Windows); environment variables remain supported for CI and `RALPH_CREDENTIAL_STORE=file` forces the file store. A CLI that cannot report its login state is enabled only after you confirm it.
 
 ```bash
 ralph auth setup
