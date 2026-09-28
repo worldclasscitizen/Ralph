@@ -411,7 +411,7 @@ Mock tests make no paid model calls. Live release checks are opt-in, with no cum
 
 ## Project status
 
-Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.155.1, gpt-6-sol, Windows and Node.js 24.11.1, in eight model calls. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains the earlier 0.3.0 failures and measured usage; no general quality, speed or cost advantage is claimed.
+Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.155.1, gpt-6-sol, Windows and Node.js 24.11.1, in twelve model calls. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains the earlier 0.3.0 failures and measured usage; no general quality, speed or cost advantage is claimed.
 
 Version 0.3.2 targets one local machine. Remote execution, arbitrary conditional graphs and guaranteed automatic recovery of every external action are outside its scope. Report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues).
 
