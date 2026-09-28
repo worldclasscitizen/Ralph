@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-28T12:24:00.000Z",
+  "version": "0.3.3",
+  "sourceCommit": "348b82cee467587a9ec8735c3a579037766f143f",
+  "parentCommit": "755faeb2feedd1ee69e016f943a2e8124ec39da6",
+  "sourceNote": "The measured tree is 348b82ce. Later commits on this branch touch documentation and release evidence only, none of which feed runtimeDigest, testDigest or dependencyDigest, so the measurements still describe the current tree.",
+  "platform": "win32",
+  "node": "v24.11.1",
+  "git": "git version 2.45.1.windows.1",
+  "build": { "runtime": "pass", "ui": "pass" },
+  "typecheck": "pass",
+  "unitIntegrationTests": { "files": 19, "passed": 162, "failed": 0 },
+  "releaseToolingTests": {
+    "file": "tests/release.test.ts",
+    "covers": [
+      "the visibility window stays long enough for the measured two-to-three minute propagation",
+      "the visibility check waits for propagation instead of failing on the first read",
+      "a failed or timed-out read is retried and a definite absence is still reported",
+      "the recheck window is bounded and every attempt failing surfaces the read error",
+      "a conflicting artifact fails immediately and is never retried",
+      "a retained ledger from another release is archived byte-for-byte and a fresh allowance starts"
+    ]
+  },
+  "operationalTests": {
+    "passed": 25,
+    "failed": 0,
+    "repetitions": 5,
+    "boundaries": [
+      "invocation_before",
+      "invocation_after",
+      "commit_after",
+      "delivery_checkout",
+      "delivery_after"
+    ]
+  },
+  "globalCoverage": {
+    "files": 69,
+    "lines": { "total": 12771, "covered": 7804, "skipped": 0, "pct": 61.1 },
+    "statements": { "total": 12771, "covered": 7804, "skipped": 0, "pct": 61.1 },
+    "functions": { "total": 370, "covered": 284, "skipped": 0, "pct": 76.75 },
+    "branches": { "total": 2372, "covered": 1784, "skipped": 0, "pct": 75.21 }
+  },
+  "criticalCoverage": "ten critical files at or above 90% lines and 90% branches",
+  "releaseGates": {
+    "check:core": "pass (lines >= 57.77, branches >= 73.70, ten critical files >= 90)",
+    "catalog:audit": "pass (v2 signature, trust anchor, evidence hosts, legacy catalog byte-identical)",
+    "docs:check": "pass (29 documents, links, terminology, README parity, version badge)",
+    "docs:build": "pass (vitepress build)",
+    "smoke": "pass (npm pack archive installed, ralph --version 0.3.3, bundled dashboard served, mock graph completed)"
+  },
+  "catalog": {
+    "schemaVersion": 2,
+    "version": 6,
+    "models": 17,
+    "generatedAt": "2026-09-27T00:00:00.000Z",
+    "expiresAt": "2027-03-27T00:00:00.000Z",
+    "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e"
+  },
+  "treeDigests": {
+    "runtimeDigest": "c678014fdd00e1539fefad993a497a3dbf17e5ce69c7f63e21e6146a3168ea0c",
+    "dependencyDigest": "7dfbada0c46b4cf3ffe05f17e2f866aac223fd1b85828d23e4e558fc98035c2e",
+    "testDigest": "8b9bcea9b93943bad78838dead6bdb3d8ebfd5a50ed5d174b08638a93486344c"
+  },
+  "liveCampaign": {
+    "model": "gpt-6-sol",
+    "cliVersion": "codex-cli 0.155.1",
+    "providerCheckedAt": "2026-09-28T12:15:15.767Z",
+    "runId": "run-8d38103a-ba36-41e9-9ee8-233a0c0031a9",
+    "calls": 8,
+    "durationMs": 272549,
+    "ledger": { "releaseId": "ralph-0.3.3", "calls": 12, "activeMs": 292782, "maxActiveMs": 1800000 }
+  },
+  "notRunLocally": [
+    "The six-cell CI matrix (Windows/macOS/Linux x Node 22/24) is GitHub Actions work; this record is one win32/Node 24 host.",
+    "The comparison campaign (npm run test:live:comparison) was not run; the release gate does not require it and its reports are references.",
+    "npm run test:e2e (Playwright accessibility and 32-node browser cases) was not run locally; CI installs Chromium for it on ubuntu-latest.",
+    "A real interactive terminal session of ralph auth setup was not recorded; the interactive path is covered by scripted-prompt tests plus non-interactive CLI runs."
+  ],
+  "scope": "Local mock/protocol/Git evidence for 0.3.3 on one Windows host, plus the linked live provider and end-to-end campaign. It does not replace the six-cell CI matrix that publication requires."
+}

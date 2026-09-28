@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Ralph
   text: Graph-native agent orchestration
-  tagline: Isolated Ralph Loops, durable evidence, and guarded Git results. Version 0.3.2.
+  tagline: Isolated Ralph Loops, durable evidence, and guarded Git results. Version 0.3.3.
   actions:
     - theme: brand
       text: Get started

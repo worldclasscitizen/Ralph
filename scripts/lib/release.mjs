@@ -168,13 +168,21 @@ export async function registryState(name, version, expectedIntegrity, fetcher = 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * npm can answer 404 for a moment after a successful publish, so the visibility check
- * retries with a bounded backoff. A conflicting artifact still fails immediately, and a
- * read that times out or fails is retried like an absent version; if every attempt fails
- * the last error is surfaced instead of a misleading "not visible".
+ * npm has been measured accepting an upload and exposing the version roughly two to three
+ * minutes later (0.3.1 appeared 2m13s after the upload, 0.3.2 2m40s), so the visibility
+ * window covers well beyond that. Extend these rather than shortening them.
+ */
+export const REGISTRY_VISIBILITY_ATTEMPTS = 18;
+export const REGISTRY_VISIBILITY_DELAY_MS = 20_000;
+
+/**
+ * Retries the registry read with a bounded backoff while the version is missing. A
+ * conflicting artifact fails immediately, and a read that times out or fails is retried
+ * like an absent version; if every attempt fails the last error is surfaced instead of a
+ * misleading "not visible".
  */
 export async function waitForRegistryState(name, version, expectedIntegrity, options = {}) {
-  const { attempts = 7, delayMs = 10_000, fetcher = fetch, timeoutMs = 15_000, onWait } = options;
+  const { attempts = REGISTRY_VISIBILITY_ATTEMPTS, delayMs = REGISTRY_VISIBILITY_DELAY_MS, fetcher = fetch, timeoutMs = 15_000, onWait } = options;
   let sawAbsent = false;
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -194,50 +202,4 @@ export async function waitForRegistryState(name, version, expectedIntegrity, opt
   }
   if (sawAbsent) return "absent";
   throw lastError ?? new Error("Registry visibility could not be established");
-}
-
-/**
- * A publish that leaves no trace in the registry has been observed in practice (the
- * subprocess exits successfully but the version never appears), so the publish itself is
- * retried, not just the read. The registry is consulted before every attempt, which keeps
- * a re-dispatch from publishing twice, and a conflicting artifact still stops immediately.
- */
-export async function publishUntilVisible(options) {
-  const {
-    name,
-    version,
-    integrity,
-    publish,
-    attempts = 3,
-    visibilityAttempts = 3,
-    delayMs = 10_000,
-    fetcher = fetch,
-    onEvent,
-  } = options;
-  const target = `${name}@${version}`;
-  const errors = [];
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    if (attempt > 1) {
-      onEvent?.(`Retrying npm publish for ${target} (attempt ${attempt}/${attempts})`);
-      if (delayMs > 0) await sleep(delayMs);
-    }
-    try {
-      await publish(attempt);
-    } catch (error) {
-      errors.push(error);
-      onEvent?.(`npm publish attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`);
-      continue;
-    }
-    const visible = await waitForRegistryState(name, version, integrity, {
-      attempts: visibilityAttempts,
-      delayMs,
-      fetcher,
-      onWait: (current, total) => onEvent?.(`Registry has not reported ${target} yet; rechecking (${current}/${total - 1})`),
-    });
-    if (visible === "identical") return "identical";
-    onEvent?.(`npm publish attempt ${attempt} left no visible artifact`);
-  }
-  if (errors.length === attempts)
-    throw new Error(`npm publish failed on every attempt: ${errors.map((error) => (error instanceof Error ? error.message : String(error))).join(" | ").slice(-2000)}`);
-  return "absent";
 }

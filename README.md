@@ -17,7 +17,7 @@
     <a href="./docs/architecture/index.md">Architecture</a>
   </p>
   <p>
-    <img alt="Version: 0.3.2" src="https://img.shields.io/badge/version-v0.3.2-2563eb?style=flat-square">
+    <img alt="Version: 0.3.3" src="https://img.shields.io/badge/version-v0.3.3-2563eb?style=flat-square">
     <a href="https://github.com/worldclasscitizen/Ralph/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/worldclasscitizen/Ralph/ci.yml?branch=main&style=flat-square&label=CI"></a>
     <img alt="Node.js 22 or 24" src="https://img.shields.io/badge/Node.js-22%20%7C%2024-339933?style=flat-square&logo=nodedotjs&logoColor=white">
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white">
@@ -26,7 +26,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Ralph 0.3.2:** the publish step now rechecks the npm registry with a bounded backoff instead of failing on a single read, so a slow registry response no longer needs a manual re-dispatch. It carries the 0.3.1 work unchanged: the 2026-09-27 model lineup and guided `ralph auth setup` onboarding. Read the [migration guide](./docs/migration/v0.3.md) and [verification scope](./docs/project/v0.3-readiness.md) before upgrading.
+> **Ralph 0.3.3:** the publish step now waits out npm's measured two-to-three minute registry propagation, forwards npm's own output instead of discarding it, and never uploads the same version twice. It carries the 0.3.1 work unchanged: the 2026-09-27 model lineup and guided `ralph auth setup` onboarding. Read the [migration guide](./docs/migration/v0.3.md) and [verification scope](./docs/project/v0.3-readiness.md) before upgrading.
 
 ## Why Ralph?
 
@@ -72,10 +72,10 @@ An autonomous coding task needs more than another model call. It needs a clear s
 
 ### Install from npm
 
-Install version 0.3.2 with:
+Install version 0.3.3 with:
 
 ```bash
-npm install -g @worldclasscitizen/ralph@0.3.2
+npm install -g @worldclasscitizen/ralph@0.3.3
 ralph --version
 ```
 
@@ -84,7 +84,7 @@ Omit the version to install the npm `latest` version. Earlier betas remain avail
 ### Install from source
 
 ```bash
-git clone --branch v0.3.2 https://github.com/worldclasscitizen/Ralph.git
+git clone --branch v0.3.3 https://github.com/worldclasscitizen/Ralph.git
 cd Ralph
 npm ci
 npm run build
@@ -411,9 +411,9 @@ Mock tests make no paid model calls. Live release checks are opt-in, with no cum
 
 ## Project status
 
-Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.155.1, gpt-6-sol, Windows and Node.js 24.11.1, in twelve model calls. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains the earlier 0.3.0 failures and measured usage; no general quality, speed or cost advantage is claimed.
+Live verification completed natural-language planning, two isolated module workers, independent reviews, integration, all five approved checks, starting-branch delivery and an external oracle. The recorded environment is Codex CLI 0.155.1, gpt-6-sol, Windows and Node.js 24.11.1, in eight model calls. The [campaign review](./docs/project/release-campaign-2026-09-05.md) retains the earlier 0.3.0 failures and measured usage; no general quality, speed or cost advantage is claimed.
 
-Version 0.3.2 targets one local machine. Remote execution, arbitrary conditional graphs and guaranteed automatic recovery of every external action are outside its scope. Report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues).
+Version 0.3.3 targets one local machine. Remote execution, arbitrary conditional graphs and guaranteed automatic recovery of every external action are outside its scope. Report reproducible defects through [GitHub Issues](https://github.com/worldclasscitizen/Ralph/issues).
 
 ## License
 

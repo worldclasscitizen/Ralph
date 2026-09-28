@@ -2,14 +2,14 @@
   "schemaVersion": 2,
   "kind": "provider",
   "subject": {
-    "version": "0.3.2",
-    "sourceCommit": "60d166658fbeb3e6c9d8969f3260c5835d6d2a75",
-    "sourceTree": "c5f4ee0c2ff93766f3eb679904a3d1b8123106e1",
-    "runtimeDigest": "c19425897aba173689a8ed09a744935109a3d129010593881948e3661ce45e9b",
-    "dependencyDigest": "e71b740ac2d9db5c85a617d3e09e589739133b56496228f58e0c3cf481e0e1c5",
-    "testDigest": "3ebafaa2ef15b93177c18e544bbefddc23f78d061b56082715b6a3b017486bfd"
+    "version": "0.3.3",
+    "sourceCommit": "348b82cee467587a9ec8735c3a579037766f143f",
+    "sourceTree": "f526240017a1ac30b2bd2794fe520c21bc298de6",
+    "runtimeDigest": "c678014fdd00e1539fefad993a497a3dbf17e5ce69c7f63e21e6146a3168ea0c",
+    "dependencyDigest": "7dfbada0c46b4cf3ffe05f17e2f866aac223fd1b85828d23e4e558fc98035c2e",
+    "testDigest": "8b9bcea9b93943bad78838dead6bdb3d8ebfd5a50ed5d174b08638a93486344c"
   },
-  "checkedAt": "2026-09-28T11:23:06.832Z",
+  "checkedAt": "2026-09-28T12:15:15.767Z",
   "runner": {
     "platform": "win32",
     "node": "v24.11.1"
@@ -41,44 +41,44 @@
       {
         "name": "structured_output",
         "status": "pass",
-        "durationMs": 5785,
+        "durationMs": 11374,
         "usage": {
-          "inputTokens": 18183,
+          "inputTokens": 15599,
           "outputTokens": 16,
           "cachedTokens": 0,
           "reasoningTokens": 0,
-          "totalTokens": 18199
+          "totalTokens": 15615
         }
       },
       {
         "name": "file_change_and_deterministic_verification",
         "status": "pass",
-        "durationMs": 15774,
+        "durationMs": 13632,
         "usage": {
-          "inputTokens": 33216,
-          "outputTokens": 232,
-          "cachedTokens": 16256,
+          "inputTokens": 33203,
+          "outputTokens": 238,
+          "cachedTokens": 23552,
           "reasoningTokens": 0,
-          "totalTokens": 33448
+          "totalTokens": 33441
         },
         "artifact": "conformance.txt"
       },
       {
         "name": "fresh_request_isolation",
         "status": "pass",
-        "durationMs": 5692,
+        "durationMs": 4890,
         "usage": {
-          "inputTokens": 15604,
+          "inputTokens": 15600,
           "outputTokens": 12,
-          "cachedTokens": 0,
+          "cachedTokens": 14976,
           "reasoningTokens": 0,
-          "totalTokens": 15616
+          "totalTokens": 15612
         }
       },
       {
         "name": "cancel_and_await_close",
         "status": "pass",
-        "durationMs": 575,
+        "durationMs": 611,
         "confirmed": "adapter returned after subprocess close"
       }
     ],
@@ -88,13 +88,13 @@
     "schemaVersion": 2,
     "protocol": "codex-conformance-v2",
     "originalFile": "live-provider.json",
-    "originalSha256": "9244df6047de581bd4360c09995b92f7551e88d5aaba1d8bd2261e23b96dce5a",
-    "originalCheckedAt": "2026-09-28T11:23:06.832Z",
-    "sourceCommit": "3ef66e2f36a4e038ea7818886ebbd9de04969648",
+    "originalSha256": "f6f34178620c218f38cf31bc441ed797f8e050c0a443c0ebdcc190f89bba5e86",
+    "originalCheckedAt": "2026-09-28T12:15:15.767Z",
+    "sourceCommit": "755faeb2feedd1ee69e016f943a2e8124ec39da6",
     "sourceFiles": [
       {
         "path": "package-lock.json",
-        "sha256": "e71b740ac2d9db5c85a617d3e09e589739133b56496228f58e0c3cf481e0e1c5"
+        "sha256": "7dfbada0c46b4cf3ffe05f17e2f866aac223fd1b85828d23e4e558fc98035c2e"
       },
       {
         "path": "scripts/provider-conformance.mjs",
@@ -118,7 +118,7 @@
       },
       {
         "path": "src/providers/cli.ts",
-        "sha256": "41ce94ece139af83ab6c7977ad674bf0c08ac5df8b8f94c40e0ed0c899698af9"
+        "sha256": "6b71afedfa540d7a03c107ffb9ca16641934ccefd24dddafd2fd45bee243ac66"
       },
       {
         "path": "src/providers/errors.ts",
@@ -156,6 +156,6 @@
       "platform": "win32",
       "node": "v24.11.1"
     },
-    "verifiedAt": "2026-09-28T11:23:14.460Z"
+    "verifiedAt": "2026-09-28T12:15:22.503Z"
   }
 }

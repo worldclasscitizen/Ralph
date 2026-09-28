@@ -7,17 +7,17 @@ const exec = promisify(execFile), registryOnly = process.argv.includes("--regist
 const manifest = await json(".release/evidence/manifest.json");
 const checks = [];
 const fetchJson = async url => { const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status}: ${url}`); return r.json(); };
-for (const version of ["0.3.2", "latest"]) {
+for (const version of ["0.3.3", "latest"]) {
   const pkg = await fetchJson(`https://registry.npmjs.org/@worldclasscitizen%2Fralph/${version}`);
-  if (pkg.version !== "0.3.2" || pkg.dist.integrity !== manifest.artifact.integrity) throw new Error("Registry version/integrity mismatch");
+  if (pkg.version !== "0.3.3" || pkg.dist.integrity !== manifest.artifact.integrity) throw new Error("Registry version/integrity mismatch");
   const response = await fetch(pkg.dist.tarball);
   if (!response.ok || integrity(Buffer.from(await response.arrayBuffer())) !== manifest.artifact.integrity) throw new Error("Registry tarball bytes differ");
   checks.push({ name: `registry ${version}: version and exact tarball`, passed: true });
 }
 if (!registryOnly) {
-  const release = JSON.parse((await exec("gh", ["api", "repos/worldclasscitizen/Ralph/releases/tags/v0.3.2"])).stdout);
-  if (release.draft || release.prerelease || release.tag_name !== "v0.3.2" || !release.immutable) throw new Error("Expected public immutable stable release");
-  const tag = (await exec("git", ["rev-parse", "v0.3.2^{commit}"])).stdout.trim();
+  const release = JSON.parse((await exec("gh", ["api", "repos/worldclasscitizen/Ralph/releases/tags/v0.3.3"])).stdout);
+  if (release.draft || release.prerelease || release.tag_name !== "v0.3.3" || !release.immutable) throw new Error("Expected public immutable stable release");
+  const tag = (await exec("git", ["rev-parse", "v0.3.3^{commit}"])).stdout.trim();
   if (tag !== manifest.subject.sourceCommit) throw new Error("Release tag commit mismatch");
   const latest = await fetchJson("https://api.github.com/repos/worldclasscitizen/Ralph/releases/latest");
   if (latest.id !== release.id) throw new Error("Latest GitHub release mismatch");
