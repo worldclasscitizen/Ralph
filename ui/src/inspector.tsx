@@ -13,6 +13,7 @@ import {
   type Row,
 } from "./presentation";
 import { VirtualLog } from "./virtual-log";
+import { useExplanations, type Explain } from "./explanations";
 
 export type InspectorTab = "work" | "report" | "activity";
 const tabs = { work: "작업", report: "보고", activity: "활동" } as const;
@@ -23,6 +24,22 @@ const activityNames: Record<string, string> = {
   "invocation.finished": "모델 호출 종료",
   "evidence.saved": "검증 기록 저장",
 };
+
+function activityNote(event: Row): string | undefined {
+  const payload = event.payload;
+  return payload.error || payload.summary || payload.result?.summary ||
+    payload.reason || payload.message;
+}
+
+function activityDescription(event: Row) {
+  const payload = event.payload;
+  if (event.type === "node.status") return `작업 상태가 ‘${statusLabel(payload.status)}’로 바뀌었어요.`;
+  if (event.type === "invocation.started") return `${payload.modelId || "배정된 모델"}에 작업을 요청했어요.`;
+  if (event.type === "invocation.finished") return `${payload.modelId || "배정된 모델"} 호출이 끝났어요.`;
+  if (event.type === "route.selected") return `${payload.modelId || "이 모델"}을 이 작업에 배정했어요.`;
+  if (event.type === "evidence.saved") return "검증에서 확인한 내용을 저장했어요.";
+  return "실행 중 발생한 활동을 기록했어요.";
+}
 
 function DirectionForm({
   send,
@@ -58,6 +75,8 @@ export function Inspector({
   spec,
   detail,
   runId,
+  explain,
+  easyKorean,
   tab,
   setTab,
   onClose,
@@ -67,6 +86,8 @@ export function Inspector({
   spec: Row;
   detail?: Row;
   runId: string;
+  explain: Explain;
+  easyKorean: boolean;
   tab: InspectorTab;
   setTab: (tab: InspectorTab) => void;
   onClose: () => void;
@@ -116,8 +137,20 @@ export function Inspector({
   const latestReport: string | undefined =
     artifact?.summary || detail?.result?.summary || detail?.error;
   const recent = events.slice(-60).reverse();
+  const explainDetail = useExplanations(runId, easyKorean, [
+    { kind: "report", text: artifact?.summary },
+    ...checks.map((check) => ({ kind: "check" as const, text: check.command })),
+    { kind: "activity", text: detail?.rationale },
+    ...recent.map((event) => ({ kind: "activity" as const, text: activityNote(event) })),
+  ]);
   const title = nodeTitle(spec);
   const description = spec.direction || criteria[0];
+  const easyTitle = explain("title", spec.goal) || title;
+  const easyDescription = (spec.direction
+    ? explain("description", spec.direction)
+    : explain("criterion", criteria[0])) || description;
+  const easyReport = (text?: string) =>
+    explainDetail("report", text) || explain("report", text) || text;
   const criteriaDone = status === "completed" ? criteria.length : 0;
 
   function latestUpdate() {
@@ -129,7 +162,7 @@ export function Inspector({
             {modelLabel({ ...spec, ...detail }) || "실행 결과"} ·{" "}
             {statusLabel(status)}
           </strong>
-          <p title={latestReport}>{latestReport}</p>
+          <p title={latestReport}>{easyReport(latestReport)}</p>
         </div>
       )
     );
@@ -147,8 +180,8 @@ export function Inspector({
         </button>
         <div className="inspector-heading">
           <div className="eyebrow">노드 상세&nbsp; / &nbsp;{spec.nodeId}</div>
-          <h2 title={title}>{title}</h2>
-          {description && <p title={description}>{description}</p>}
+          <h2 title={title}>{easyTitle}</h2>
+          {description && <p title={description}>{easyDescription}</p>}
           <div className="inspector-state" data-tone={tone}>
             <StatusBadge status={status} />
             <strong>
@@ -199,7 +232,7 @@ export function Inspector({
                   <StatusBadge
                     status={status === "completed" ? status : undefined}
                   />
-                  <span title={criterion}>{criterion}</span>
+                  <span title={criterion}>{explain("criterion", criterion) || criterion}</span>
                   <small>{status === "completed" ? "완료" : "완료 기준"}</small>
                 </div>
               ))}
@@ -208,7 +241,7 @@ export function Inspector({
                   <StatusBadge
                     status={check.exitCode === 0 ? "completed" : "failed"}
                   />
-                  <span title={check.command}>{check.command}</span>
+                  <span title={check.command}>{explainDetail("check", check.command) || check.command}</span>
                   <small>{check.exitCode === 0 ? "통과" : "실패"}</small>
                 </div>
               ))}
@@ -232,33 +265,43 @@ export function Inspector({
             {latestUpdate() || <p>아직 저장된 보고가 없습니다.</p>}
             {detail?.result?.summary &&
               detail.result.summary !== latestReport && (
-                <p title={detail.result.summary}>{detail.result.summary}</p>
+                <p title={detail.result.summary}>{easyReport(detail.result.summary)}</p>
               )}
           </section>
         )}
         {spec.direction && (
-          <p className="worker-direction" title={spec.direction}>{description}</p>
+          <p className="worker-direction" title={spec.direction}>{easyDescription}</p>
         )}
         {tab === "activity" && (
           <div className="inspector-section activity-list">
             <h3>활동 기록</h3>
-            {recent.map((event) => (
-              <details key={event.eventId ?? event.seq}>
-                <summary>
-                  <Icon name={event.type === "evidence.saved" ? "file" : "tool"} />
-                  <span>{activityNames[event.type] ?? event.type}</span>
-                  <time>{formatTime(event.timestamp)}</time>
-                </summary>
-                <VirtualLog
-                  text={JSON.stringify(event.payload, null, 2)}
-                  label="활동 상세 기록"
-                />
-              </details>
-            ))}
+            {recent.map((event) => {
+              const note = activityNote(event);
+              const explanation = explainDetail("activity", note);
+              return (
+                <details key={event.eventId ?? event.seq}>
+                  <summary>
+                    <Icon name={event.type === "evidence.saved" ? "file" : "tool"} />
+                    <span>{explanation || activityNames[event.type] || "활동 기록"}</span>
+                    <time>{formatTime(event.timestamp)}</time>
+                  </summary>
+                  <p className="activity-description">
+                    {explanation ? activityDescription(event) : note || activityDescription(event)}
+                  </p>
+                  <details>
+                    <summary>원문 기록</summary>
+                    <VirtualLog
+                      text={JSON.stringify(event.payload, null, 2)}
+                      label="활동 상세 기록"
+                    />
+                  </details>
+                </details>
+              );
+            })}
             {!events.length && <p>아직 저장된 활동이 없습니다.</p>}
             <dl>
               <dt>모델 선택 근거</dt>
-              <dd title={detail?.rationale}>{detail?.rationale ?? "—"}</dd>
+              <dd title={detail?.rationale}>{explainDetail("activity", detail?.rationale) || detail?.rationale || "—"}</dd>
               <dt>실행 횟수</dt>
               <dd>{detail?.iteration ?? "—"}</dd>
               <dt>시작 시각</dt>

@@ -1102,6 +1102,16 @@ summary {
 .activity-list summary .icon {
   color: var(--muted);
 }
+.activity-list details details {
+  border-bottom: 0;
+  margin-left: 20px;
+}
+.activity-description {
+  margin: 1px 0 3px 20px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 .activity-list time {
   margin-left: auto;
   color: var(--faint);

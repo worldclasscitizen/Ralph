@@ -368,3 +368,68 @@ test("a packet reaches the end of its edge and a resolved alert clears", async (
   });
   await expect(packet).toHaveCount(0);
 });
+
+test("simple Korean follows node changes while model IDs and activity originals stay accessible", async ({ page }) => {
+  const { path, graph, snapshot, send } = await observeDashboardEvents(page);
+  const batches = [];
+  const descriptions = new Map([
+    ["Artifact exists", "결과 파일이 만들어졌는지 확인해요."],
+    ["Build a verified artifact", "작업 결과를 만들어요"],
+    ["Review ranking against all repositories", "빠진 저장소가 없는지 확인해요"],
+    ["Collect sources for the ranking", "순위에 쓸 자료를 모아요"],
+    ["Validate against the repository manifest", "저장소가 전부 포함됐는지 확인했어요."],
+  ]);
+  await page.route(`**${path}/explanations`, async (route) => {
+    const { items } = route.request().postDataJSON();
+    batches.push(...items);
+    await route.fulfill({ json: {
+      status: "ready",
+      explanations: items.map(({ text }) => descriptions.get(text) ?? null),
+    } });
+  });
+  const work = graph.nodes.find((node) => node.nodeId === "work");
+  const event = {
+    seq: 8, timestamp: new Date().toISOString(), type: "evidence.saved",
+    payload: {
+      summary: "Validate against the repository manifest",
+      artifactId: snapshot.nodes.work.result.evidenceIds[0],
+    },
+  };
+  await page.route(`**${path}/nodes/work`, (route) =>
+    route.fulfill({ json: { ...snapshot.nodes.work, events: [event] } }),
+  );
+  await page.goto("/");
+  const task = page.getByRole("button", { name: "Inspect work", exact: true });
+  await expect(task.locator("strong")).toHaveText("작업 결과를 만들어요");
+  await expect(task).toContainText("mock-1");
+  await task.click();
+  await expect(page.locator(".subtask").filter({
+    hasText: "결과 파일이 만들어졌는지 확인해요.",
+  })).toHaveCount(1);
+  await page.getByRole("button", { name: /^활동\s*1$/ }).click();
+  const activity = page.locator(".activity-list");
+  await activity.getByText("저장소가 전부 포함됐는지 확인했어요.", { exact: true }).click();
+  await activity.getByText("원문 기록", { exact: true }).click();
+  await expect(activity.getByRole("region", { name: "활동 상세 기록" }))
+    .toContainText(event.payload.summary);
+
+  const previous = batches.length;
+  graph.revision++;
+  work.generation++;
+  work.goal = "Review ranking against all repositories";
+  graph.nodes = graph.nodes.map((node) => node.nodeId === "right"
+    ? { ...node, nodeId: "new", goal: "Collect sources for the ranking" }
+    : node,
+  );
+  graph.edges = graph.edges.map((edge) => edge.from === "right"
+    ? { ...edge, from: "new" }
+    : edge,
+  );
+  await send("graph.revised", { graph });
+  await expect(task.locator("strong")).toHaveText("빠진 저장소가 없는지 확인해요");
+  await expect(page.getByRole("button", { name: "Inspect right", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Inspect new", exact: true }).locator("strong"))
+    .toHaveText("순위에 쓸 자료를 모아요");
+  expect(batches.slice(previous)).toContainEqual({ kind: "title", text: work.goal });
+  expect(batches.slice(previous)).not.toContainEqual({ kind: "criterion", text: "Artifact exists" });
+});

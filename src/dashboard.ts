@@ -1,4 +1,5 @@
 import { controlToken, handleGraphApi } from "./dashboard/api.js";
+import { DashboardExplanations } from "./dashboard/explanations.js";
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
@@ -133,6 +134,7 @@ export async function startDashboard(
 ): Promise<{ server: Server; url: string }> {
   const port = options.port ?? 7331;
   const projects = options.all ? await registeredProjects() : [projectRoot];
+  const explanations = new DashboardExplanations();
   const server = createServer(async (request, response) => {
     try {
       const url = new URL(
@@ -154,7 +156,7 @@ export async function startDashboard(
           : projectRoot;
       if (!projects.includes(requestedRoot))
         return json(response, 403, { error: "등록되지 않은 프로젝트입니다." });
-      if (await handleGraphApi(request, response, url, requestedRoot)) return;
+      if (await handleGraphApi(request, response, url, requestedRoot, explanations)) return;
       if (request.method === "GET" && url.pathname === "/api/snapshot")
         return json(
           response,

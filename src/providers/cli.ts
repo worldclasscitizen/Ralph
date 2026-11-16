@@ -1,6 +1,6 @@
 import { resolveExecutable } from "../util.js";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -200,6 +200,39 @@ export class CodexBuiltinAdapter extends CliAdapter {
         `${JSON.stringify({ id: 2, method: "model/list", params: { limit: 100 } })}\n`,
       );
     });
+  }
+
+  async invokeText(
+    modelId: string,
+    prompt: string,
+    schema: object,
+    signal: AbortSignal,
+  ): Promise<AgentResult> {
+    const directory = await mkdtemp(join(tmpdir(), "ralph-dashboard-text-"));
+    try {
+      const output = join(directory, "response.txt");
+      const schemaPath = join(directory, "schema.json");
+      await writeFile(schemaPath, JSON.stringify(schema), "utf8");
+      const result = await runCommand("codex", [
+        "exec", "--ignore-user-config", "--ignore-rules", "--skip-git-repo-check",
+        "--ephemeral", "--sandbox", "read-only", "--cd", directory,
+        "--disable", "shell_tool", "--disable", "apps", "--disable", "plugins",
+        "--disable", "multi_agent_v2", "-c", 'web_search="disabled"',
+        "-c", 'approval_policy="never"', "-c", 'model_provider="openai"',
+        "-c", 'model_reasoning_effort="low"', "--model", modelId,
+        "--output-schema", schemaPath, "--output-last-message", output, "-",
+      ], {
+        cwd: directory,
+        env: cleanCodexEnv(),
+        input: prompt,
+        signal,
+        timeoutMs: 45_000,
+      });
+      const text = await readFile(output, "utf8").catch(() => "");
+      return this.resultFrom(text, result.exitCode, result.stderr);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 
   async invoke(

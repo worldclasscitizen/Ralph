@@ -16,6 +16,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import type ELKType from "elkjs/lib/elk.bundled.js";
+import type { Explain } from "./explanations";
 import {
   Elapsed,
   Icon,
@@ -57,7 +58,7 @@ function Card({ data }: NodeProps) {
       <Handle type="target" position={Position.Left} />
       <div className="node-label">
         <TaskIcon task={task} />
-        <strong>{title}</strong>
+        <strong>{task.easyTitle || title}</strong>
         <small>{modelLabel(task)}</small>
       </div>
       <div className="node-state">
@@ -263,12 +264,14 @@ function GraphControls({
 export function RunGraph({
   graph,
   run,
+  explain,
   inspected,
   onInspect,
   onClose,
 }: {
   graph?: Row;
   run?: Row;
+  explain: Explain;
   inspected: string;
   onInspect: (id: string) => void;
   onClose: () => void;
@@ -372,11 +375,12 @@ export function RunGraph({
         data: {
           ...task.data,
           ...run?.nodes?.[task.id],
+          easyTitle: explain("title", task.data.goal as string | undefined),
           inspected: inspected === task.id,
           onInspect,
         },
       })),
-    [positioned, run, inspected, onInspect],
+    [positioned, run, explain, inspected, onInspect],
   );
   const edges = useMemo(
     () =>

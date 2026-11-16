@@ -17,6 +17,7 @@ import {
   type Row,
 } from "./presentation";
 import { projectEvent } from "./projection";
+import { useExplanations } from "./explanations";
 
 type Theme = "light" | "dark";
 type View = "runs" | "settings" | "metrics";
@@ -190,11 +191,15 @@ function Settings({
   setTheme,
   notify,
   setNotify,
+  easyKorean,
+  setEasyKorean,
 }: {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   notify: boolean;
   setNotify: (notify: boolean) => void;
+  easyKorean: boolean;
+  setEasyKorean: (enabled: boolean) => void;
 }) {
   return (
     <div className="settings-pane">
@@ -214,6 +219,22 @@ function Settings({
               {theme === option.key && <span>선택됨</span>}
             </button>
           ))}
+        </div>
+      </section>
+      <section className="settings-card">
+        <h2>설명</h2>
+        <div className="settings-row">
+          <div>
+            <strong>쉬운 한국어</strong>
+            <p>로그인한 Codex의 경량 모델로 작업과 활동을 쉽게 풀어 써요.</p>
+          </div>
+          <button
+            aria-label="쉬운 한국어 설명"
+            aria-pressed={easyKorean}
+            onClick={() => setEasyKorean(!easyKorean)}
+          >
+            {easyKorean ? "켜짐" : "꺼짐"}
+          </button>
         </div>
       </section>
       <section className="settings-card">
@@ -259,6 +280,9 @@ function App() {
     () => localStorage.getItem("ralph.dashboard.notify") !== "off",
   );
   const [readReports, setReadReports] = useState(savedReports);
+  const [easyKorean, setEasyKorean] = useState(
+    () => localStorage.getItem("ralph.dashboard.easyKorean") !== "off",
+  );
   const [toast, setToast] = useState<Report>();
   const [directionRequest, setDirectionRequest] = useState<{
     runId: string;
@@ -299,6 +323,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem("ralph.dashboard.notify", notify ? "on" : "off");
   }, [notify]);
+  useEffect(() => {
+    localStorage.setItem("ralph.dashboard.easyKorean", easyKorean ? "on" : "off");
+  }, [easyKorean]);
   useEffect(() => {
     localStorage.setItem(
       "ralph.dashboard.readReports",
@@ -395,6 +422,20 @@ function App() {
     (revision === "latest" || graph?.revision === Number(revision))
       ? graph
       : undefined;
+  const specs: Row[] = currentGraph?.nodes ?? [];
+  const explain = useExplanations(selected, easyKorean && view === "runs", [
+    ...specs.map((spec) => ({ kind: "title" as const, text: spec.goal })),
+    ...specs.flatMap((spec) => [
+      { kind: "description" as const, text: spec.direction },
+      ...(spec.acceptanceCriteria ?? []).map((text: string) => ({ kind: "criterion" as const, text })),
+    ]),
+    ...Object.values<Row>(currentRun?.nodes ?? {}).map((entry) => ({
+      kind: "report" as const,
+      text: entry.error || entry.result?.summary,
+    })),
+    { kind: "report", text: currentRun?.latestRecovery?.diagnosis },
+    { kind: "report", text: currentRun?.message },
+  ]);
   const selectedRun = runs.find((item) => item.runId === selected);
   const inspected = currentGraph?.nodes.find(
     (entry: Row) => entry.nodeId === node,
@@ -719,7 +760,7 @@ function App() {
                         key={nodeRows[index].nodeId}
                         className="lamp"
                         data-tone={tone}
-                        title={`${nodeTitle(nodeRows[index])} · ${statusLabel(currentRun?.nodes?.[nodeRows[index].nodeId]?.status)}`}
+                        title={`${explain("title", nodeRows[index].goal) || nodeTitle(nodeRows[index])} · ${statusLabel(currentRun?.nodes?.[nodeRows[index].nodeId]?.status)}`}
                       />
                     ))}
                   </div>
@@ -746,6 +787,8 @@ function App() {
             setTheme={setTheme}
             notify={notify}
             setNotify={setNotify}
+            easyKorean={easyKorean}
+            setEasyKorean={setEasyKorean}
           />
         )}
         {view === "metrics" && (
@@ -757,13 +800,14 @@ function App() {
               key={`${selected}/${revision}`}
               graph={currentGraph}
               run={currentRun}
+              explain={explain}
               inspected={node}
               onInspect={inspect}
               onClose={closeNode}
             />
             {currentRun?.message && (
               <div className="notice">
-                {currentRun.message}
+                {explain("report", currentRun.message) || currentRun.message}
                 {latest && currentRun.message.includes("T3") && (
                   <button onClick={() => command("approve_final")}>
                     최종 결과 확인
@@ -799,7 +843,7 @@ function App() {
               <div className="notice">
                 <span>
                   {currentRun.latestRecovery.nodeId} 복구 ·{" "}
-                  {currentRun.latestRecovery.diagnosis}
+                  {explain("report", currentRun.latestRecovery.diagnosis) || currentRun.latestRecovery.diagnosis}
                   {currentRun.latestRecovery.reused.length > 0 &&
                     ` · 완료 노드 ${currentRun.latestRecovery.reused.length}개 재사용`}
                 </span>
@@ -819,7 +863,7 @@ function App() {
                 <span>
                   <strong>
                     {lastNode
-                      ? `${nodeTitle(lastNode.spec)} · ${statusLabel(lastNode.info.status)}`
+                      ? `${explain("title", lastNode.spec.goal) || nodeTitle(lastNode.spec)} · ${statusLabel(lastNode.info.status)}`
                       : state
                         ? statusLabel(state)
                         : "아직 실행 기록이 없습니다"}
@@ -848,6 +892,8 @@ function App() {
           </div>
           {inspected && (
             <Inspector
+              explain={explain}
+              easyKorean={easyKorean && view === "runs"}
               key={`${selected}/${node}/${revision}`}
               spec={inspected}
               detail={detail ?? currentRun?.nodes?.[node]}
@@ -923,7 +969,7 @@ function App() {
                       {report.goal}
                       {report.nodeId && ` · ${report.nodeId}`}
                     </strong>
-                    <small>{report.text}</small>
+                    <small title={report.text}>{explain("report", report.text) || report.text}</small>
                   </span>
                   <time>{formatTime(report.timestamp)}</time>
                 </button>

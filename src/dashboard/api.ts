@@ -13,6 +13,7 @@ import { submitCommand, type RunCommand } from "../runtime/commands.js";
 import { RalphError } from "../util.js";
 import { createAdapter } from "../providers/index.js";
 import { probeProvider } from "../gateway/capabilities.js";
+import { readExplanationItems, type DashboardExplanations } from "./explanations.js";
 export const controlToken = randomUUID();
 function json(res: ServerResponse, status: number, value: unknown) {
   res.writeHead(status, {
@@ -21,6 +22,18 @@ function json(res: ServerResponse, status: number, value: unknown) {
   });
   res.end(JSON.stringify(value));
 }
+async function readBody(req: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > 64_000)
+      throw new RalphError("Request too large", "invalid_request", 4);
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
 export async function listGraphRuns(projectRoot: string) {
   const paths = await statePaths(projectRoot);
   const names = await readdir(paths.runs).catch(() => []);
@@ -59,6 +72,7 @@ export async function handleGraphApi(
   res: ServerResponse,
   url: URL,
   root: string,
+  explanations: DashboardExplanations,
 ): Promise<boolean> {
   if (!url.pathname.startsWith("/api/v2/")) return false;
   try {
@@ -245,18 +259,13 @@ export async function handleGraphApi(
       });
       return true;
     }
+    if (parts[5] === "explanations" && parts.length === 6 && req.method === "POST") {
+      const items = readExplanationItems(await readBody(req));
+      json(res, 200, await explanations.request(root, items));
+      return true;
+    }
     if (parts[5] === "commands" && req.method === "POST") {
-      const chunks: Buffer[] = [];
-      let size = 0;
-      for await (const chunk of req) {
-        size += chunk.length;
-        if (size > 64_000)
-          throw new RalphError("Request too large", "invalid_request", 4);
-        chunks.push(chunk);
-      }
-      const command = JSON.parse(Buffer.concat(chunks).toString("utf8")) as
-        | RunCommand
-        | { commandId: string; expectedRevision: number; type: "resume" };
+      const command = await readBody(req) as RunCommand;
       const submitted = await submitCommand(store, command);
       if (command.type === "resume" && submitted.created) {
         const child = spawn(
