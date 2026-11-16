@@ -113,6 +113,26 @@ export interface NodeResult {
   workspace?: string;
   summary: string;
 }
+const FailureSchema = Type.Object({
+  code: Type.String({ minLength: 1, maxLength: 100 }),
+  stage: Type.Union([Type.Literal("execution"), Type.Literal("review")]),
+}, object);
+export type NodeFailure = Static<typeof FailureSchema>;
+
+const RecoverySchema = Type.Object({
+  nodeId: id,
+  generation: Type.Integer({ minimum: 0 }),
+  action: Type.Union([Type.Literal("retry"), Type.Literal("repair"), Type.Literal("dependency")]),
+  diagnosis: Type.String({ minLength: 1, maxLength: 1000 }),
+  workerId: Type.Optional(id),
+  inputHead: Type.Optional(Type.String()),
+  patchBase: Type.Optional(Type.String()),
+  evidenceId: Type.Optional(Type.String({ pattern: "^[a-f0-9]{64}$" })),
+  rerun: Type.Array(id),
+  reused: Type.Array(id),
+}, object);
+export type AppliedRecovery = Static<typeof RecoverySchema>;
+
 export interface NodeState {
   modelId?: string;
   connectionId?: string;
@@ -124,6 +144,7 @@ export interface NodeState {
   endedAt?: string;
   result?: NodeResult;
   error?: string;
+  failure?: NodeFailure;
 }
 export interface GraphRunState {
   schemaVersion: 2;
@@ -139,6 +160,7 @@ export interface GraphRunState {
   resultHead?: string;
   message?: string;
   commands: Record<string, unknown>;
+  latestRecovery?: AppliedRecovery;
 }
 export type RunEvent =
   | {
@@ -149,7 +171,7 @@ export type RunEvent =
         resultHead?: string;
       };
     }
-  | { type: "graph.revised"; payload: { graph: GraphRevision } }
+  | { type: "graph.revised"; payload: { graph: GraphRevision; recovery?: AppliedRecovery } }
   | {
       type: "node.status";
       payload: {
@@ -158,6 +180,7 @@ export type RunEvent =
         status: NodeStatus;
         iteration?: number;
         error?: string;
+        failure?: NodeFailure;
         result?: NodeResult;
       };
     }
@@ -325,7 +348,10 @@ const payloads = {
     },
     object,
   ),
-  "graph.revised": Type.Object({ graph: GraphSchema }, object),
+  "graph.revised": Type.Object({
+    graph: GraphSchema,
+    recovery: Type.Optional(RecoverySchema),
+  }, object),
   "node.status": Type.Object(
     {
       nodeId: id,
@@ -346,6 +372,7 @@ const payloads = {
       ),
       iteration: Type.Optional(Type.Integer({ minimum: 0, maximum: 6 })),
       error: Type.Optional(Type.String()),
+      failure: Type.Optional(FailureSchema),
       result: Type.Optional(NodeResultSchema),
     },
     object,

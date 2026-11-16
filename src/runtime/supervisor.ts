@@ -10,14 +10,12 @@ import {
 import { statePaths } from "../state.js";
 import { RunStore } from "../storage/run-store.js";
 import { durableWrite } from "../storage/journal.js";
-import { schedule } from "../graph/scheduler.js";
+import { NodeExecutionError, schedule } from "../graph/scheduler.js";
 import {
   artifactAncestors,
   topological,
-  descendants,
   compileGraph,
 } from "../graph/compiler.js";
-import { reviseGraph } from "../graph/revisions.js";
 import {
   digest,
   type NodeResult,
@@ -28,6 +26,7 @@ import { ProviderGateway } from "../gateway/gateway.js";
 import { routesFor } from "../gateway/routing.js";
 import { BudgetCounter } from "./budget.js";
 import { pendingCommands } from "./commands.js";
+import { recoverFailedNode, reviewerRepairAudit } from "./failure-recovery.js";
 import {
   IntegrationConflict,
   WorkspaceManager,
@@ -154,8 +153,11 @@ export async function startRun(
       store,
       plan.baseHead,
     );
-    let finalApproved = Object.values(state.commands).some(
-      (x) => (x as { finalApproval?: boolean })?.finalApproval,
+    const deliveryReceipt = join(store.directory, "integration", "delivery.json");
+    let finalApproved = events.some(
+      (e) => e.graphRevision === plan.graph.revision &&
+        e.type === "command.applied" &&
+        (e.payload.result as { finalApproval?: boolean })?.finalApproval,
     );
     lastClock = Date.now();
     clockActive = true;
@@ -245,7 +247,7 @@ export async function startRun(
           );
       }
     }
-    const dependencies = async (node: NodeSpec): Promise<NodeResult[]> => {
+    const dependencies = async (node: NodeSpec, plan: ExecutionPlan): Promise<NodeResult[]> => {
       const current = await store.state();
       return topological(plan.graph)
         .filter((id) => artifactAncestors(plan.graph, node.nodeId).has(id))
@@ -259,43 +261,51 @@ export async function startRun(
           ),
         );
     };
-    const execute = async (node: NodeSpec): Promise<NodeResult> => {
+    const execute = async (node: NodeSpec, signal: AbortSignal, plan: ExecutionPlan): Promise<NodeResult> => {
       if (node.kind === "worker") {
-        const source =
-          node.nodeId === "repair" && plan.graph.reason === "repair"
-            ? (await store.readAfter()).findLast(
-                (e) =>
-                  e.graphRevision === plan.graph.parentRevision &&
-                  e.type === "node.status" &&
-                  e.payload.status === "failed" &&
-                  ["integrate", "validate"].includes(
-                    plan.graph.nodes.find((n) => n.nodeId === e.payload.nodeId)
-                      ?.kind ?? "",
-                  ),
-              )
-            : undefined;
-        return runRalphLoop({
-          inputBase:
-            source?.type === "node.status"
-              ? source.payload.result?.outputHead
-              : undefined,
-          repairEvidence:
-            source?.type === "node.status"
-              ? await Promise.all(
-                  (source.payload.result?.evidenceIds ?? []).map((id) =>
-                    store.artifact(id),
-                  ),
-                )
-              : undefined,
+        const rows = node.nodeId === "repair" || node.nodeId.startsWith("recover-")
+          ? await store.readAfter()
+          : [];
+        const event = rows.findLast(
+          (e) => e.type === "graph.revised" && e.payload.recovery?.workerId === node.nodeId &&
+            e.payload.graph.nodes.some((n) => n.nodeId === node.nodeId && n.generation === node.generation),
+        );
+        const recovery = event?.type === "graph.revised" ? event.payload.recovery : undefined;
+        const source = rows.findLast((e) =>
+          e.type === "node.status" &&
+          (recovery
+            ? e.seq < event!.seq && e.payload.nodeId === recovery.nodeId &&
+              e.payload.generation === recovery.generation && ["blocked", "failed"].includes(e.payload.status)
+            : node.nodeId === "repair" && plan.graph.reason === "repair" &&
+              e.graphRevision === plan.graph.parentRevision && e.payload.status === "failed" &&
+              plan.graph.nodes.some((n) => n.nodeId === e.payload.nodeId && ["integrate", "validate"].includes(n.kind))),
+        );
+        const previous = source?.type === "node.status" ? source.payload.result : undefined;
+        const fix = recovery?.evidenceId
+          ? await store.artifact(recovery.evidenceId) as { paths: string[]; instruction: string }
+          : undefined;
+        const outcome = await runRalphLoop({
+          inputBase: recovery?.inputHead ?? previous?.outputHead,
+          repairEvidence: rows.length
+            ? {
+                instruction: fix?.instruction,
+                evidence: await Promise.all((previous?.evidenceIds ?? []).map((id) => store.artifact(id))),
+              }
+            : undefined,
+          repairPaths: fix?.paths,
+          reviewRoute: fix && node.nodeId === "repair" ? reviewerRepairAudit(plan) : undefined,
           plan,
           node,
           store,
           gateway,
           manager,
-          dependencies: await dependencies(node),
+          dependencies: await dependencies(node, plan),
           signal,
           verificationLimits,
         });
+        return recovery?.patchBase
+          ? { ...outcome, inputHead: recovery.patchBase }
+          : outcome;
       }
       if (node.kind === "read") {
         const r = routesFor(plan.config, plan.contract, "contractPlanner");
@@ -335,7 +345,7 @@ export async function startRun(
           input = await manager.prepare(
             node.nodeId,
             node.generation,
-            repair?.outputHead ? [] : await dependencies(node),
+            repair?.outputHead ? [] : await dependencies(node, plan),
             { baseHead: repair?.outputHead, retainConflicts: true },
           );
         } catch (e) {
@@ -376,14 +386,15 @@ export async function startRun(
         .filter((e) => e.to === node.nodeId)
         .map((e) => current.nodes[e.from]?.result)
         .find((r) => r?.workspace);
-      if (!parent?.workspace)
+      const workspace = parent?.workspace;
+      if (!parent || !workspace)
         throw new RalphError(
           "Final validation requires integrated input",
           "invalid_graph",
           4,
         );
       const result = await runVerifier(
-        parent.workspace,
+        workspace,
         plan.config,
         plan.envelope.verifierIds,
         plan.contract.requiredArtifacts,
@@ -394,13 +405,12 @@ export async function startRun(
           baseHead: plan.baseHead,
         },
       );
-      const diff = await git(parent.workspace, [
+      const diff = await git(workspace, [
         "diff",
         plan.baseHead,
         "HEAD",
         "--",
       ]);
-      const r = routesFor(plan.config, plan.contract, "critic");
       const scope = {
         stage: "integration" as const,
         nodeId: node.nodeId,
@@ -413,36 +423,42 @@ export async function startRun(
           return { nodeId: n.nodeId, outcome: result.outcome, evidenceIds: result.evidenceIds };
         }),
       };
-      const review = await gateway.invoke(
-        r.routes,
-        {
-          runId: plan.runId,
-          nodeId: node.nodeId,
-          role: "critic",
-          projectRoot: parent.workspace,
-          prompt: await criticPrompt(plan.contract, "post", {
-            head: await gitHead(parent.workspace),
-            status: await gitStatus(parent.workspace),
-            diff,
-            verifier: result.summary,
-            scope,
-          }),
-        },
-        signal,
-        (text) => {
-          if (!validateAssessment(parseJsonObject(text)))
-            throw new Error("Invalid final assessment");
-        },
-        r.hardPin,
-      );
-      const assessment = parseJsonObject(review.result.text);
-      if (!validateAssessment(assessment))
-        throw new Error("Invalid assessment");
-      const evaluation = await evaluateAssessment(
-        plan.contract.taskType,
-        assessment,
-        { workerOk: true, verifierOk: result.ok },
-      );
+      const { assessment, evaluation } = await (async () => {
+        const { routes, hardPin } = routesFor(plan.config, plan.contract, "critic");
+        const review = await gateway.invoke(
+          routes,
+          {
+            runId: plan.runId,
+            nodeId: node.nodeId,
+            generation: node.generation,
+            role: "critic",
+            projectRoot: workspace,
+            prompt: await criticPrompt(plan.contract, "post", {
+              head: await gitHead(workspace),
+              status: await gitStatus(workspace),
+              diff,
+              verifier: result.summary,
+              scope,
+            }),
+          },
+          signal,
+          (text) => {
+            if (!validateAssessment(parseJsonObject(text)))
+              throw new Error("Invalid final assessment");
+          },
+          hardPin,
+        );
+        const assessment = parseJsonObject(review.result.text);
+        if (!validateAssessment(assessment))
+          throw new Error("Invalid assessment");
+        const evaluation = await evaluateAssessment(plan.contract.taskType, assessment, {
+          workerOk: true,
+          verifierOk: result.ok,
+        });
+        return { assessment, evaluation };
+      })().catch((error) => {
+        throw new NodeExecutionError("review", error);
+      });
       const artifactId = await store.putArtifact({
         scope,
         verifier: result,
@@ -484,7 +500,7 @@ export async function startRun(
         plan.graph,
         store,
         plan.budget.concurrency,
-        execute,
+        (node, nodeSignal, graph) => execute(node, nodeSignal, { ...plan, graph }),
         signal,
       );
       if (signal.aborted) {
@@ -500,94 +516,20 @@ export async function startRun(
         );
         break;
       }
-      const failed = plan.graph.nodes.find(
-        (n) =>
-          ["integrate", "validate"].includes(n.kind) &&
-          state.nodes[n.nodeId]?.status === "failed",
-      );
-      const workersDone = plan.graph.nodes
-        .filter((n) => n.kind === "worker")
-        .every((n) => state.nodes[n.nodeId]?.status === "completed");
-      if (failed && workersDone && repairs < plan.budget.maxRepairs) {
-        const workers = plan.graph.nodes.filter((n) => n.kind === "worker");
-        const repair: NodeSpec = {
-          ...workers[0]!,
-          nodeId: "repair",
-          generation: state.nodes.repair?.generation ?? 0,
-          goal: `Repair final integration: ${state.nodes[failed.nodeId]?.result?.summary}`,
-          readPaths: plan.envelope.readPaths,
-          writePaths: plan.envelope.writePaths,
-          acceptanceCriteria: plan.contract.acceptanceCriteria,
-          verifierIds: plan.envelope.verifierIds,
-        };
-        const original = workers.filter((n) => n.nodeId !== "repair");
-        const integration = {
-          ...plan.graph.nodes.find((n) => n.kind === "integrate")!,
-        };
-        const validation = {
-          ...plan.graph.nodes.find((n) => n.kind === "validate")!,
-        };
-        const proposal = {
-          ...plan.graph,
-          reason: "repair" as const,
-          nodes: [...original, repair, integration, validation],
-          edges: [
-            ...plan.graph.edges.filter(
-              (e) =>
-                original.some((n) => n.nodeId === e.from) &&
-                original.some((n) => n.nodeId === e.to),
-            ),
-            ...original.map((n) => ({
-              from: n.nodeId,
-              to: "repair",
-              kind: "artifact" as const,
-            })),
-            {
-              from: "repair",
-              to: integration.nodeId,
-              kind: "artifact" as const,
-            },
-            {
-              from: integration.nodeId,
-              to: validation.nodeId,
-              kind: "artifact" as const,
-            },
-          ],
-        };
-        plan.graph = reviseGraph(
-          plan.graph,
-          proposal,
-          state.nodes,
-          plan.envelope,
-        );
-        const generations = new Set(
-          (await store.readAfter()).flatMap((e) =>
-            e.type === "graph.revised"
-              ? e.payload.graph.nodes.map((n) => `${n.nodeId}/${n.generation}`)
-              : [],
-          ),
-        );
-        for (const n of plan.graph.nodes)
-          generations.add(`${n.nodeId}/${n.generation}`);
-        if (generations.size > plan.budget.maxTotalNodes)
-          throw new RalphError(
-            "Total node budget exhausted",
-            "budget_exhausted",
-            10,
-          );
-        await store.append(
-          { type: "graph.revised", payload: { graph: plan.graph } },
-          plan.graph.revision,
-        );
-        continue;
-      }
       if (Object.values(state.nodes).some((n) => n.status !== "completed")) {
+        const recovery = await recoverFailedNode(store, plan, state, gateway, manager, signal, repairs);
+        if (recovery && "graph" in recovery) {
+          plan = { ...plan, graph: recovery.graph };
+          finalApproved = false;
+          continue;
+        }
+        if (signal.aborted) continue;
         await store.append(
           {
             type: "run.status",
             payload: {
               status: "awaiting_input",
-              message:
+              message: recovery?.waiting ??
                 "One or more required nodes are blocked; inspect node evidence",
             },
           },
@@ -617,7 +559,7 @@ export async function startRun(
           plan.baseHead,
           plan.baseBranch,
           plan.runId,
-          join(store.directory, "integration", "delivery.json"),
+          deliveryReceipt,
         );
         await store.append(
           {

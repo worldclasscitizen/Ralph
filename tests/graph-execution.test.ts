@@ -17,6 +17,7 @@ import { singleGraph } from "../src/graph/compiler.js";
 import { storeFor } from "../src/runtime/supervisor.js";
 import { workerContract } from "../src/loop/runner.js";
 import { criticPrompt } from "../src/prompts.js";
+import { ProviderGateway } from "../src/gateway/gateway.js";
 import { loadRubric } from "../src/evaluator.js";
 export async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "ralph-graph-e2e-"));
@@ -452,3 +453,198 @@ it("records stale queued commands as conflicts and keeps provider failures block
   expect(result.nodes.answer?.status).toBe("blocked");
   expect(result.attempts).toBe(0);
 });
+
+it.each(["relative", "absolute", "without-audit"])(
+  "diagnoses a final review exception and respects the %s adapter worktree boundary",
+  async (location) => {
+    const { root, config, contract } = await fixture();
+    const path = "review.mjs";
+    const working = await readFile(resolve("tests/fixtures/mock-agent.mjs"), "utf8");
+    const faulty = working.replace('let text = "";', `let text = "";
+if (request.nodeId === "validate") {
+  console.error("ENOENT: evidence/validate.json");
+  process.exit(1);
+}`);
+    await writeFile(join(root, path), faulty);
+    await git(root, ["add", path]);
+    await git(root, ["commit", "-m", "Add review adapter"]);
+    const reviewConnection = "mock:review";
+    config.connections.push({
+      ...config.connections[0]!,
+      id: reviewConnection,
+      command: [process.execPath, location === "absolute" ? join(root, path) : "./" + path],
+    });
+    config.routes.critic = [{ ...config.routes.critic[0]!, connectionId: reviewConnection }];
+    if (location === "without-audit") config.routes.adjudicator = config.routes.critic;
+    const plan = approvePlan(await planRun(root, contract.goal, {
+      contract: { ...contract, include: [...contract.include, path] },
+      mode: "single",
+      config,
+    }));
+    const original = ProviderGateway.prototype.invoke;
+    const spy = vi.spyOn(ProviderGateway.prototype, "invoke").mockImplementation(
+      async function (this: ProviderGateway, ...args) {
+        const [routes, request] = args;
+        if (request.role === "contractPlanner" && request.nodeId === "validate") {
+          expect(request.prompt).toContain("evidence/validate.json");
+          expect(request.writePaths).toEqual([]);
+          return {
+            route: routes[0]!,
+            result: { exitCode: 0, text: JSON.stringify({
+              action: "repair", diagnosis: "Review adapter reads the wrong evidence path.",
+              instruction: "Correct the final evidence path.", paths: [path],
+            }) },
+          };
+        }
+        if (request.role === "worker" && request.nodeId === "repair") {
+          expect(request.writePaths).toEqual([path]);
+          await writeFile(join(request.projectRoot, path), working);
+          return { route: routes[0]!, result: { exitCode: 0, text: "Corrected review adapter." } };
+        }
+        return original.apply(this, args);
+      },
+    );
+    let result;
+    try {
+      result = await startRun(plan);
+    } finally {
+      spy.mockRestore();
+    }
+    const store = await storeFor(root, plan.runId);
+    const events = await store.readAfter();
+    expect(events).toEqual(expect.arrayContaining([expect.objectContaining({
+      type: "node.status", payload: expect.objectContaining({
+        nodeId: "validate", status: "blocked", failure: { code: "unknown", stage: "review" },
+      }),
+    })]));
+    if (location !== "relative") {
+      expect(result.status).toBe("awaiting_input");
+      if (location === "without-audit") expect(result.message).toContain("별도 승인 경로");
+      expect(result.latestRecovery).toBeUndefined();
+      expect(result.nodes.validate?.error).toContain("evidence/validate.json");
+      expect(await readFile(join(root, path), "utf8")).toBe(faulty);
+    } else {
+      expect(result.status).toBe("completed");
+      expect(result.message).toBeUndefined();
+      expect(result.latestRecovery).toMatchObject({
+        nodeId: "validate", action: "repair", workerId: "repair", reused: ["work"],
+      });
+      expect(result.nodes.work?.generation).toBe(0);
+      expect(result.nodes.validate?.generation).toBe(1);
+      expect(events).toEqual(expect.arrayContaining([expect.objectContaining({
+        type: "invocation.started", payload: expect.objectContaining({
+          nodeId: "repair", role: "critic", connectionId: "mock:process",
+        }),
+      })]));
+      expect(await readFile(join(root, path), "utf8")).toBe(working);
+    }
+  },
+);
+
+it("retries a transient final review without running the completed nodes again", async () => {
+  const { root, contract } = await fixture();
+  const plan = approvePlan(await planRun(root, contract.goal, { contract, mode: "single" }));
+  const original = ProviderGateway.prototype.invoke;
+  let failed = false;
+  const spy = vi.spyOn(ProviderGateway.prototype, "invoke").mockImplementation(
+    async function (this: ProviderGateway, ...args) {
+      const request = args[1];
+      if (request.nodeId === "validate" && !failed) {
+        failed = true;
+        throw Object.assign(new Error("Temporary local process resource limit"), { code: "EAGAIN" });
+      }
+      return original.apply(this, args);
+    },
+  );
+  try {
+    const result = await startRun(plan);
+    expect(result.status).toBe("completed");
+    expect(result.latestRecovery).toMatchObject({
+      nodeId: "validate", action: "retry", rerun: ["validate"], reused: ["work", "integrate"],
+    });
+    expect(result.nodes.validate?.generation).toBe(1);
+    expect(result.nodes.integrate?.generation).toBe(0);
+    expect(result.nodes.work?.iteration).toBe(1);
+  } finally {
+    spy.mockRestore();
+  }
+});
+
+it.each(["repair", "dependency"] as const)(
+  "recovers a blocked worker with %s while preserving completed independent output",
+  async (action) => {
+    const { root, config } = await fixture();
+    const leftCheck = action === "repair"
+      ? `node -e "if(require('fs').readFileSync('left.txt','utf8').trim()!=='fixed')process.exit(1)"`
+      : `node -e "require('fs').accessSync('right.txt')"`;
+    const rightCheck = `node -e "require('fs').accessSync('right.txt')"`;
+    const commands = [...new Set([leftCheck, rightCheck])];
+    config.verifierCommands = commands;
+    const contract = validateContract({
+      taskType: "backend_core", goal: "Build two checked artifacts",
+      include: ["left.txt", "right.txt", "partial.txt"],
+      acceptanceCriteria: ["Both outputs pass verification"],
+      verifierCommands: commands,
+      requiredArtifacts: ["left.txt", "right.txt", "partial.txt"],
+    }, root);
+    const graph = singleGraph("proposed", {
+      taskType: contract.taskType, goal: "Write left", readPaths: ["**"],
+      writePaths: ["left.txt", "partial.txt"], acceptanceCriteria: ["Left passes its check"],
+      requiredCapabilities: [], inputArtifacts: [], verifierIds: [leftCheck],
+      budget: { maxIterations: 4 },
+    });
+    const left = graph.nodes[0]!;
+    left.nodeId = "left";
+    graph.edges[0]!.from = "left";
+    graph.nodes.splice(1, 0, {
+      ...left, nodeId: "right", goal: "Provide right output", writePaths: ["right.txt"], verifierIds: [rightCheck],
+    });
+    graph.edges.push({ from: "right", to: "integrate", kind: "artifact" });
+    const plan = approvePlan(await planRun(root, contract.goal, { contract, graph, config }));
+    const original = ProviderGateway.prototype.invoke;
+    const spy = vi.spyOn(ProviderGateway.prototype, "invoke").mockImplementation(
+      async function (this: ProviderGateway, ...args) {
+        const [routes, request] = args;
+        if (request.nodeId === "left" && request.role === "contractPlanner") {
+          return {
+            route: routes[0]!,
+            result: { exitCode: 0, text: JSON.stringify(action === "repair"
+              ? { action, diagnosis: "Only the left content failed.", paths: ["left.txt"], instruction: "Change left.txt to fixed." }
+              : { action, diagnosis: "Left requires the verified right artifact.", dependencies: ["right"] }) },
+          };
+        }
+        if (request.role === "worker" && (request.nodeId === "left" || request.nodeId.startsWith("recover-"))) {
+          if (request.nodeId === "left") {
+            await writeFile(join(request.projectRoot, "left.txt"), "initial\n");
+            await writeFile(join(request.projectRoot, "partial.txt"), "preserved\n");
+          } else {
+            expect(request.writePaths).toEqual(["left.txt"]);
+            expect(await readFile(join(request.projectRoot, "partial.txt"), "utf8")).toBe("preserved\n");
+            await writeFile(join(request.projectRoot, "left.txt"), "fixed\n");
+          }
+          return { route: routes[0]!, result: { exitCode: 0, text: "Wrote left output." } };
+        }
+        return original.apply(this, args);
+      },
+    );
+    let result;
+    try {
+      result = await startRun(plan);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(result.status, result.message).toBe("completed");
+    expect(result.latestRecovery).toMatchObject({ nodeId: "left", action, reused: ["right"] });
+    expect(result.nodes.right?.generation).toBe(0);
+    expect(result.nodes.right?.iteration).toBe(1);
+    expect(await readFile(join(root, "partial.txt"), "utf8")).toBe("preserved\n");
+    if (action === "dependency") {
+      const store = await storeFor(root, plan.runId);
+      expect((await store.graph()).edges).toContainEqual({ from: "right", to: "left", kind: "artifact" });
+      expect(result.nodes.left?.generation).toBe(1);
+    } else {
+      expect(await readFile(join(root, "left.txt"), "utf8")).toBe("fixed\n");
+      expect(result.latestRecovery?.workerId).toMatch(/^recover-/);
+    }
+  },
+);

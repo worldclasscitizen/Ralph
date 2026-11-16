@@ -6,6 +6,7 @@ export function reviseGraph(
   proposal: GraphRevision,
   states: Record<string, NodeState>,
   envelope: GraphEnvelope,
+  rerun: readonly string[] = [],
 ): GraphRevision {
   if (previous.revision >= envelope.budget.maxRevisions)
     throw new RalphError("Revision budget exhausted", "budget_exhausted", 10);
@@ -18,7 +19,7 @@ export function reviseGraph(
     },
     envelope,
   );
-  const changed = new Set<string>();
+  const changed = new Set(rerun);
   for (const n of next.nodes) {
     const old = previous.nodes.find((x) => x.nodeId === n.nodeId);
     const incoming = (g: GraphRevision) =>
