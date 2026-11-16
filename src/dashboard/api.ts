@@ -1,5 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -86,6 +86,7 @@ export async function handleGraphApi(
       json(res, 200, {
         runs: runs.slice(offset, offset + limit),
         total: runs.length,
+        projectName: basename(root),
       });
       return true;
     }

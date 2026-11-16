@@ -75,7 +75,7 @@ describe("local dashboard", () => {
       const page = await fetch(dashboard.url).then((response) =>
         response.text(),
       );
-      expect(page).toContain("Graph Control Center");
+      expect(page).toContain("<title>Ralph Dashboard</title>");
       const snapshot = (await fetch(`${dashboard.url}api/snapshot`).then(
         (response) => response.json(),
       )) as { projectRoot: string; selected: { id: string } };

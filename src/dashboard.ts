@@ -254,20 +254,21 @@ export async function startDashboard(
       }
       const asset = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
       if (
-        !/^(index\.html|app\.js|elk\.bundled\.js|styles\.css|chunks\/[a-zA-Z0-9_-]+\.js)$/.test(
+        !/^(index\.html|app\.js|elk\.bundled\.js|styles\.css|chunks\/[a-zA-Z0-9_-]+\.js|icons\/[a-z-]+\.svg|fonts\/Galmuri11(?:-Bold)?\.woff2)$/.test(
           asset,
         )
       )
         return json(response, 404, { error: "not found" });
       const path = join(ASSETS, asset);
       await stat(path);
-      response.writeHead(200, {
-        "Content-Type": asset.endsWith(".html")
-          ? "text/html; charset=utf-8"
-          : asset.endsWith(".js")
-            ? "text/javascript; charset=utf-8"
-            : "text/css; charset=utf-8",
-      });
+      const contentTypes: Record<string, string> = {
+        html: "text/html; charset=utf-8",
+        js: "text/javascript; charset=utf-8",
+        css: "text/css; charset=utf-8",
+        svg: "image/svg+xml",
+        woff2: "font/woff2",
+      };
+      response.writeHead(200, { "Content-Type": contentTypes[asset.split(".").at(-1)!] });
       createReadStream(path).pipe(response);
     } catch (error) {
       json(response, 500, {
