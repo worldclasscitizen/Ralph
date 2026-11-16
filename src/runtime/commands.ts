@@ -2,12 +2,20 @@ import { mkdir, open, readFile, readdir, link, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { safeId, digest } from "../graph/schema.js";
-import { RalphError } from "../util.js";
+import { RalphError, redact } from "../util.js";
 import type { RunStore } from "../storage/run-store.js";
 export interface RunCommand {
   commandId: string;
   expectedRevision: number;
-  type: "stop" | "cancel" | "approve_final" | "note" | "resume";
+  type:
+    | "stop"
+    | "cancel"
+    | "approve_final"
+    | "note"
+    | "resume"
+    | "steer";
+  nodeId?: string;
+  instruction?: string;
   note?: string;
 }
 export async function submitCommand(
@@ -16,17 +24,40 @@ export async function submitCommand(
 ): Promise<{ created: boolean }> {
   safeId(command.commandId);
   if (
-    !["stop", "cancel", "approve_final", "note", "resume"].includes(
-      command.type,
-    ) ||
+    ![
+      "stop",
+      "cancel",
+      "approve_final",
+      "note",
+      "resume",
+      "steer",
+    ].includes(command.type) ||
     !Number.isInteger(command.expectedRevision) ||
     command.expectedRevision < 1 ||
     (command.note !== undefined && typeof command.note !== "string") ||
+    (command.type === "steer"
+      ? typeof command.nodeId !== "string" ||
+        typeof command.instruction !== "string" ||
+        !command.instruction.trim() ||
+        command.instruction.length > 4000
+      : command.nodeId !== undefined || command.instruction !== undefined) ||
     Object.keys(command).some(
-      (key) => !["commandId", "expectedRevision", "type", "note"].includes(key),
+      (key) =>
+        ![
+          "commandId",
+          "expectedRevision",
+          "type",
+          "note",
+          "nodeId",
+          "instruction",
+        ].includes(key),
     )
   )
     throw new RalphError("Invalid command", "invalid_command", 4);
+  if (command.type === "steer") {
+    safeId(command.nodeId!);
+    command = { ...command, instruction: redact(command.instruction!.trim()) };
+  }
   const dir = join(store.directory, "commands"),
     path = join(dir, `${command.commandId}.json`);
   const existing = async () => {
@@ -48,6 +79,27 @@ export async function submitCommand(
   const state = await store.state();
   if (state.revision !== command.expectedRevision)
     throw new RalphError("Graph revision changed", "revision_conflict", 4);
+  if (command.type === "steer") {
+    if (state.status !== "running")
+      throw new RalphError(
+        "This action requires an active run",
+        "run_conflict",
+        4,
+      );
+    const graph = await store.graph();
+    if (
+      !graph.nodes.some(
+        (node) =>
+          node.kind === "worker" &&
+          node.nodeId === command.nodeId,
+      )
+    )
+      throw new RalphError(
+        "This action requires a worker in the current graph",
+        "run_conflict",
+        4,
+      );
+  }
   await mkdir(dir, { recursive: true });
   const temporary = join(dir, `${command.commandId}.${randomUUID()}.tmp`);
   const file = await open(temporary, "wx", 0o600);
@@ -69,8 +121,11 @@ export async function submitCommand(
   }
 }
 
-export async function pendingCommands(store: RunStore): Promise<RunCommand[]> {
-  const state = await store.state();
+export async function pendingCommands(
+  store: RunStore,
+  state?: Awaited<ReturnType<RunStore["state"]>>,
+): Promise<RunCommand[]> {
+  state ??= await store.state();
   let files: string[];
   try {
     files = await readdir(join(store.directory, "commands"));

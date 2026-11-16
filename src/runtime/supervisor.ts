@@ -1,6 +1,6 @@
 import { recoverOwner } from "./recovery.js";
 import { ConnectionLimits } from "../gateway/limits.js";
-import { readFile, unlink } from "node:fs/promises";
+import { access, readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import {
   assertPlanApproved,
@@ -26,6 +26,7 @@ import { ProviderGateway } from "../gateway/gateway.js";
 import { routesFor } from "../gateway/routing.js";
 import { BudgetCounter } from "./budget.js";
 import { pendingCommands } from "./commands.js";
+import { applyDirection, directionConstraint } from "./direction.js";
 import { recoverFailedNode, reviewerRepairAudit } from "./failure-recovery.js";
 import {
   IntegrationConflict,
@@ -154,6 +155,7 @@ export async function startRun(
       plan.baseHead,
     );
     const deliveryReceipt = join(store.directory, "integration", "delivery.json");
+    let held: ReadonlySet<string> | undefined;
     let finalApproved = events.some(
       (e) => e.graphRevision === plan.graph.revision &&
         e.type === "command.applied" &&
@@ -163,6 +165,7 @@ export async function startRun(
     clockActive = true;
     const processCommands = async () => {
       for (const cmd of await pendingCommands(store)) {
+        if (cmd.type === "steer") continue;
         if (cmd.expectedRevision !== plan.graph.revision) {
           await store.append(
             {
@@ -300,6 +303,7 @@ export async function startRun(
           gateway,
           manager,
           dependencies: await dependencies(node, plan),
+          shouldYield: () => held?.has(node.nodeId) ?? false,
           signal,
           verificationLimits,
         });
@@ -423,6 +427,10 @@ export async function startRun(
           return { nodeId: n.nodeId, outcome: result.outcome, evidenceIds: result.evidenceIds };
         }),
       };
+      const directions = plan.graph.nodes.filter((n) => n.direction).map(directionConstraint);
+      const reviewContract = directions.length
+        ? { ...plan.contract, constraints: [...plan.contract.constraints, ...directions] }
+        : plan.contract;
       const { assessment, evaluation } = await (async () => {
         const { routes, hardPin } = routesFor(plan.config, plan.contract, "critic");
         const review = await gateway.invoke(
@@ -433,7 +441,7 @@ export async function startRun(
             generation: node.generation,
             role: "critic",
             projectRoot: workspace,
-            prompt: await criticPrompt(plan.contract, "post", {
+            prompt: await criticPrompt(reviewContract, "post", {
               head: await gitHead(workspace),
               status: await gitStatus(workspace),
               diff,
@@ -502,6 +510,45 @@ export async function startRun(
         plan.budget.concurrency,
         (node, nodeSignal, graph) => execute(node, nodeSignal, { ...plan, graph }),
         signal,
+        plan.mode === "answer" ? undefined : async (current, active) => {
+          const commands = (await pendingCommands(store, current)).filter(
+            (cmd) => cmd.type === "steer",
+          );
+          if (commands.length) {
+            let deliveryStarted = false;
+            try {
+              await access(deliveryReceipt);
+              deliveryStarted = true;
+            } catch (e) {
+              if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+            }
+            if (deliveryStarted) {
+              for (const cmd of commands)
+                await store.append({
+                  type: "command.applied",
+                  payload: {
+                    commandId: cmd.commandId,
+                    result: { error: "Result delivery has already started." },
+                  },
+                }, plan.graph.revision);
+              return { graph: plan.graph };
+            }
+          }
+          let nextHeld: ReadonlySet<string> | undefined;
+          for (const command of commands) {
+            if (command.type !== "steer") continue;
+            const next = await applyDirection(store, plan, current, active, command);
+            nextHeld = next.held;
+            if (next.graph.revision !== plan.graph.revision) {
+              plan = { ...plan, graph: next.graph };
+              finalApproved = false;
+              break;
+            }
+            if (nextHeld) break;
+          }
+          held = nextHeld;
+          return { graph: plan.graph, held };
+        },
       );
       if (signal.aborted) {
         await store.append(

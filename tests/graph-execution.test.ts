@@ -454,6 +454,81 @@ it("records stale queued commands as conflicts and keeps provider failures block
   expect(result.attempts).toBe(0);
 });
 
+it("applies direction at a worker boundary and reuses independent verified work", async () => {
+  const { root, config } = await fixture();
+  const checks = ["git diff --check"];
+  config.verifierCommands = checks;
+  await saveConfig(root, config);
+  const contract = validateContract({
+    taskType: "backend_core",
+    goal: "Produce two independent text artifacts",
+    include: ["left.txt", "right.txt"],
+    acceptanceCriteria: ["Both artifacts exist"],
+    verifierCommands: checks,
+    requiredArtifacts: ["left.txt", "right.txt"],
+  }, root);
+  const graph = singleGraph("proposed", {
+    taskType: contract.taskType, goal: "Write the left artifact", readPaths: ["**"],
+    writePaths: ["left.txt"], acceptanceCriteria: ["Left artifact exists"],
+    requiredCapabilities: [], inputArtifacts: [], verifierIds: checks,
+    budget: { maxIterations: 6 },
+  });
+  const left = graph.nodes[0]!;
+  left.nodeId = "left";
+  graph.edges[0]!.from = "left";
+  graph.nodes.splice(1, 0, {
+    ...left, nodeId: "right", goal: "Write the right artifact", writePaths: ["right.txt"],
+    acceptanceCriteria: ["Right artifact exists"],
+  });
+  graph.edges.push({ from: "right", to: "integrate", kind: "artifact" });
+  const plan = approvePlan(await planRun(root, contract.goal, { contract, graph }));
+  const store = await storeFor(root, plan.runId);
+  const { submitCommand } = await import("../src/runtime/commands.js");
+  const { promise, resolve } = Promise.withResolvers<void>();
+  const prepare = WorkspaceManager.prototype.prepare;
+  const spy = vi.spyOn(WorkspaceManager.prototype, "prepare")
+    .mockImplementation(async function (...args) {
+      if (args[0] === "right" && args[1] === 0) await promise;
+      return prepare.apply(this, args);
+    });
+  const run = startRun(plan);
+  const command = {
+    commandId: "new-label", expectedRevision: 1, type: "steer" as const,
+    nodeId: "right", instruction: "Use the revised label",
+  };
+  try {
+    await vi.waitFor(async () => {
+      const state = await store.state();
+      expect(state.nodes.left?.status).toBe("completed");
+      expect(state.nodes.right?.status).toBe("running");
+    }, { timeout: 5000 });
+    await submitCommand(store, {
+      ...command, commandId: "increase-risk", instruction: "Change billing permissions",
+    });
+    await submitCommand(store, command);
+    await vi.waitFor(async () => {
+      expect((await store.state()).commands["increase-risk"]).toMatchObject({
+        error: expect.stringMatching(/increase the approved risk/),
+      });
+    }, { timeout: 5000 });
+    expect((await store.state()).revision).toBe(1);
+  } finally {
+    resolve();
+    await run;
+    spy.mockRestore();
+  }
+  const result = await run;
+  expect(result.status, result.message).toBe("completed");
+  expect(result.latestDirection).toMatchObject({
+    commandId: command.commandId, reused: ["left"], rerun: ["right", "integrate", "validate"],
+  });
+  expect(result.nodes.left?.generation).toBe(0);
+  expect(result.nodes.right?.generation).toBe(1);
+  expect((await readFile(join(root, "right.txt"), "utf8")).trim()).toBe("revised");
+  expect(await submitCommand(store, command)).toEqual({ created: false });
+  expect(await resumeGraphRun(root, plan.runId)).toMatchObject({ revision: 2, resultHead: result.resultHead });
+}, 30000);
+
 it.each(["relative", "absolute", "without-audit"])(
   "diagnoses a final review exception and respects the %s adapter worktree boundary",
   async (location) => {

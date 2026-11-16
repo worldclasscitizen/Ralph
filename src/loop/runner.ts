@@ -1,3 +1,4 @@
+import { directionConstraint } from "../runtime/direction.js";
 import { saveLoopCheckpoint, loadLoopCheckpoint } from "./state.js";
 import { ConnectionLimits } from "../gateway/limits.js";
 import { git } from "../workspace/manager.js";
@@ -30,6 +31,7 @@ export function workerContract(parent: TaskContract, node: NodeSpec, root: strin
     requirements: node.acceptanceCriteria,
     acceptanceCriteria: node.acceptanceCriteria,
     verifierCommands: node.verifierIds,
+    ...(node.direction ? { constraints: [...parent.constraints, directionConstraint(node)] } : {}),
     requiredArtifacts: parent.requiredArtifacts.filter((p) => covered(p, node.writePaths)),
   };
 }
@@ -75,6 +77,7 @@ export async function runRalphLoop(context: {
   dependencies: NodeResult[];
   signal: AbortSignal;
   verificationLimits?: ConnectionLimits;
+  shouldYield?: () => boolean;
   inputBase?: string;
   repairEvidence?: unknown;
   repairPaths?: string[];
@@ -362,6 +365,7 @@ export async function runRalphLoop(context: {
     );
     await saveLoopCheckpoint(store, node, checkpoint);
     if (
+      context.shouldYield?.() ||
       lastResult.outcome === "completed" ||
       fingerprint === previousFingerprint ||
       evaluation.verdict === "needs_operator" ||

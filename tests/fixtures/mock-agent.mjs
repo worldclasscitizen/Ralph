@@ -73,7 +73,7 @@ if (request.role === "contractPlanner") {
   });
 } else if (request.role === "worker") {
   if (request.nodeId === "left") await writeFile("left.txt", "initial\n");
-  else if (request.nodeId === "right") await writeFile("right.txt", "ok\n");
+  else if (request.nodeId === "right") await writeFile("right.txt", request.prompt.includes("Use the revised label") ? "revised\n" : "ok\n");
   else if (request.nodeId === "repair") await writeFile("left.txt", "ok\n");
   else await writeFile("ralph-smoke.txt", "ok\n");
   text = "ralph-smoke.txt를 작성했습니다.";

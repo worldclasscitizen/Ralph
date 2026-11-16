@@ -43,7 +43,12 @@ export function replay(runId: string, events: EventEnvelope[]): GraphRunState {
       case "graph.revised": {
         const g = event.payload.graph;
         state.revision = g.revision;
+        const direction = event.payload.direction;
         if (event.payload.recovery) state.latestRecovery = event.payload.recovery;
+        if (direction) {
+          state.latestDirection = direction;
+          state.commands[direction.commandId] = { accepted: true };
+        }
         state.nodes = Object.fromEntries(
           g.nodes.map((n) => [
             n.nodeId,

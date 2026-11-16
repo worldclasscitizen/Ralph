@@ -40,6 +40,7 @@ export const NodeSchema = Type.Object(
     ),
     taskType: Type.Union(TASK_TYPES.map((x) => Type.Literal(x))),
     goal: Type.String({ minLength: 1 }),
+    direction: Type.Optional(Type.String({ minLength: 1, maxLength: 4000 })),
     readPaths: strings,
     writePaths: strings,
     acceptanceCriteria: Type.Array(Type.String({ minLength: 1 }), {
@@ -63,7 +64,7 @@ export const GraphSchema = Type.Object(
     revision: positive,
     parentRevision: Type.Optional(positive),
     reason: Type.Union(
-      ["initial", "expansion", "repair"].map((x) => Type.Literal(x)),
+      ["initial", "expansion", "repair", "steering"].map((x) => Type.Literal(x)),
     ),
     nodes: Type.Array(NodeSchema),
     edges: Type.Array(
@@ -160,7 +161,14 @@ export interface GraphRunState {
   resultHead?: string;
   message?: string;
   commands: Record<string, unknown>;
+  latestDirection?: AppliedDirection;
   latestRecovery?: AppliedRecovery;
+}
+export interface AppliedDirection {
+  commandId: string;
+  nodeId: string;
+  rerun: string[];
+  reused: string[];
 }
 export type RunEvent =
   | {
@@ -171,7 +179,7 @@ export type RunEvent =
         resultHead?: string;
       };
     }
-  | { type: "graph.revised"; payload: { graph: GraphRevision; recovery?: AppliedRecovery } }
+  | { type: "graph.revised"; payload: { graph: GraphRevision; direction?: AppliedDirection; recovery?: AppliedRecovery } }
   | {
       type: "node.status";
       payload: {
@@ -351,6 +359,12 @@ const payloads = {
   "graph.revised": Type.Object({
     graph: GraphSchema,
     recovery: Type.Optional(RecoverySchema),
+    direction: Type.Optional(Type.Object({
+      commandId: id,
+      nodeId: id,
+      rerun: Type.Array(id),
+      reused: Type.Array(id),
+    }, object)),
   }, object),
   "node.status": Type.Object(
     {

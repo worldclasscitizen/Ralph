@@ -81,6 +81,7 @@ function finalRepair(plan: ExecutionPlan, instruction: string): GraphRevision {
   const repair: NodeSpec = {
     ...worker,
     nodeId: "repair",
+    direction: undefined,
     goal: instruction,
     readPaths: plan.envelope.readPaths,
     writePaths: plan.envelope.writePaths,
