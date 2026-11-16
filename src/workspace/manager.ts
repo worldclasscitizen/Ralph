@@ -1,5 +1,5 @@
-import { mkdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, realpath } from "node:fs/promises";
+import { dirname, join, relative } from "node:path";
 import { runCommand, RalphError } from "../util.js";
 import { safeId, digest, type NodeResult } from "../graph/schema.js";
 import type { RunStore } from "../storage/run-store.js";
@@ -150,6 +150,24 @@ export class WorkspaceManager {
         conflictErrors,
       });
     return { root, inputHead, inputDigest };
+  }
+  async discard(): Promise<void> {
+    const directory = join(await realpath(this.store.directory), "workspaces");
+    const listing = await git(this.projectRoot, ["worktree", "list", "--porcelain", "-z"]);
+    for (const record of listing.split("\0\0")) {
+      const [location, ...fields] = record.split("\0");
+      if (!location?.startsWith("worktree ")) continue;
+      const root = location.slice("worktree ".length);
+      if (relative(directory, dirname(root))) continue;
+      if (!fields.includes("detached"))
+        throw new RalphError("Cannot discard a worktree attached to a branch", "discard_conflict", 10);
+      await git(this.projectRoot, ["worktree", "remove", "--force", "--", root]);
+    }
+    const prefix = `refs/ralph/${this.store.runId}/`;
+    const refs = await git(this.projectRoot, ["for-each-ref", "--format=%(refname)", prefix]);
+    if (refs)
+      await git(this.projectRoot, ["update-ref", "--stdin"],
+        refs.split("\n").map((ref) => `delete ${ref}\n`).join(""));
   }
   async checkpoint(
     root: string,

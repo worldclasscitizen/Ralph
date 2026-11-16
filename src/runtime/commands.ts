@@ -13,7 +13,8 @@ export interface RunCommand {
     | "approve_final"
     | "note"
     | "resume"
-    | "steer";
+    | "steer"
+    | "discard";
   nodeId?: string;
   instruction?: string;
   note?: string;
@@ -31,6 +32,7 @@ export async function submitCommand(
       "note",
       "resume",
       "steer",
+      "discard",
     ].includes(command.type) ||
     !Number.isInteger(command.expectedRevision) ||
     command.expectedRevision < 1 ||
@@ -79,7 +81,7 @@ export async function submitCommand(
   const state = await store.state();
   if (state.revision !== command.expectedRevision)
     throw new RalphError("Graph revision changed", "revision_conflict", 4);
-  if (command.type === "steer") {
+  if (command.type === "steer" || command.type === "discard") {
     if (state.status !== "running")
       throw new RalphError(
         "This action requires an active run",
@@ -91,7 +93,7 @@ export async function submitCommand(
       !graph.nodes.some(
         (node) =>
           node.kind === "worker" &&
-          node.nodeId === command.nodeId,
+          (command.type === "discard" || node.nodeId === command.nodeId),
       )
     )
       throw new RalphError(

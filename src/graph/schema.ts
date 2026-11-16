@@ -445,6 +445,7 @@ const payloads = {
           accepted: Type.Optional(Type.Boolean()),
           error: Type.Optional(Type.String()),
           finalApproval: Type.Optional(Type.Boolean()),
+          discard: Type.Optional(Type.Boolean()),
           note: Type.Optional(Type.String()),
         },
         object,

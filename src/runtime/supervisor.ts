@@ -155,6 +155,20 @@ export async function startRun(
       plan.baseHead,
     );
     const deliveryReceipt = join(store.directory, "integration", "delivery.json");
+    let discardRequested = Object.values(state.commands).some(
+      (x) => (x as { discard?: boolean })?.discard,
+    );
+    const discard = async () => {
+      await manager.discard();
+      await store.append({
+        type: "run.status",
+        payload: { status: "cancelled", message: "Run changes discarded." },
+      }, plan.graph.revision);
+    };
+    if (discardRequested) {
+      await discard();
+      return store.state();
+    }
     let held: ReadonlySet<string> | undefined;
     let finalApproved = events.some(
       (e) => e.graphRevision === plan.graph.revision &&
@@ -165,7 +179,7 @@ export async function startRun(
     clockActive = true;
     const processCommands = async () => {
       for (const cmd of await pendingCommands(store)) {
-        if (cmd.type === "steer") continue;
+        if (cmd.type === "steer" || cmd.type === "discard") continue;
         if (cmd.expectedRevision !== plan.graph.revision) {
           await store.append(
             {
@@ -512,7 +526,7 @@ export async function startRun(
         signal,
         plan.mode === "answer" ? undefined : async (current, active) => {
           const commands = (await pendingCommands(store, current)).filter(
-            (cmd) => cmd.type === "steer",
+            (cmd) => cmd.type === "steer" || cmd.type === "discard",
           );
           if (commands.length) {
             let deliveryStarted = false;
@@ -534,6 +548,24 @@ export async function startRun(
               return { graph: plan.graph };
             }
           }
+          const discardCommand = commands.find((cmd) => cmd.type === "discard");
+          if (discardCommand) {
+            const accepted = discardCommand.expectedRevision === plan.graph.revision;
+            await store.append({
+              type: "command.applied",
+              payload: {
+                commandId: discardCommand.commandId,
+                result: accepted
+                  ? { accepted: true, discard: true }
+                  : { error: "The graph changed. Review the latest revision and try again." },
+              },
+            }, plan.graph.revision);
+            if (accepted) {
+              discardRequested = true;
+              controller.abort(new Error("Run cancelled by discard request"));
+              return { graph: plan.graph };
+            }
+          }
           let nextHeld: ReadonlySet<string> | undefined;
           for (const command of commands) {
             if (command.type !== "steer") continue;
@@ -551,6 +583,10 @@ export async function startRun(
         },
       );
       if (signal.aborted) {
+        if (discardRequested) {
+          await discard();
+          break;
+        }
         await store.append(
           {
             type: "run.status",

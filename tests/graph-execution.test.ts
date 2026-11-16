@@ -529,6 +529,44 @@ it("applies direction at a worker boundary and reuses independent verified work"
   expect(await resumeGraphRun(root, plan.runId)).toMatchObject({ revision: 2, resultHead: result.resultHead });
 }, 30000);
 
+it("explicitly discards a running change without touching the original branch or user files", async () => {
+  const { root, contract } = await fixture();
+  const plan = approvePlan(await planRun(root, contract.goal, { contract, mode: "single" }));
+  const store = await storeFor(root, plan.runId);
+  const { submitCommand } = await import("../src/runtime/commands.js");
+  const { promise, resolve } = Promise.withResolvers<void>();
+  const prepare = WorkspaceManager.prototype.prepare;
+  const spy = vi.spyOn(WorkspaceManager.prototype, "prepare")
+    .mockImplementation(async function (...args) {
+      const input = await prepare.apply(this, args);
+      if (args[0] === "work") {
+        await writeFile(join(input.root, "ralph-smoke.txt"), "partial\n");
+        await promise;
+      }
+      return input;
+    });
+  const run = startRun(plan);
+  try {
+    await vi.waitFor(async () => {
+      expect(await git(root, ["worktree", "list", "--porcelain"])).toContain("workspaces");
+    }, { timeout: 5000 });
+    await writeFile(join(root, "user.txt"), "my edit\n");
+    await submitCommand(store, { commandId: "throw-away", expectedRevision: 1, type: "discard" });
+    await vi.waitFor(async () => {
+      expect((await store.state()).commands["throw-away"]).toEqual({ accepted: true, discard: true });
+    }, { timeout: 5000 });
+  } finally {
+    resolve();
+    await run;
+    spy.mockRestore();
+  }
+  expect(await run).toMatchObject({ status: "cancelled", message: "Run changes discarded." });
+  expect(await git(root, ["rev-parse", "HEAD"])).toBe(plan.baseHead);
+  expect(await git(root, ["worktree", "list", "--porcelain"])).not.toContain("workspaces");
+  expect(await readFile(join(root, "user.txt"), "utf8")).toBe("my edit\n");
+  await expect(readFile(join(root, "ralph-smoke.txt"))).rejects.toMatchObject({ code: "ENOENT" });
+}, 30000);
+
 it.each(["relative", "absolute", "without-audit"])(
   "diagnoses a final review exception and respects the %s adapter worktree boundary",
   async (location) => {
