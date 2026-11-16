@@ -2,6 +2,59 @@ import { test, expect } from "@playwright/test";
 test("graph canvas, inspector and provider evidence", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  await page.route("**/api/capacity", (route) =>
+    route.fulfill({
+      json: {
+        "openai:codex-login": {
+          kind: "subscription",
+          status: "exact",
+          windows: [
+            {
+              label: "Codex primary",
+              durationMinutes: 300,
+              remainingPercent: 47,
+            },
+            {
+              label: "Codex secondary",
+              durationMinutes: 10080,
+              remainingPercent: 81,
+            },
+          ],
+        },
+        "google:antigravity-login": {
+          kind: "subscription",
+          status: "unavailable",
+        },
+      },
+    }),
+  );
+  await page.route("**/api/v2/providers", async (route) => {
+    const response = await route.fetch();
+    const providers = await response.json();
+    await route.fulfill({
+      response,
+      json: [
+        ...providers,
+        {
+          id: "openai:api",
+          mode: "api",
+          enabled: false,
+          installed: true,
+          authentication: "unauthenticated",
+          support: "compatible",
+        },
+        {
+          id: "google:antigravity-login",
+          mode: "builtin",
+          enabled: true,
+          installed: true,
+          authentication: "unknown",
+          support: "experimental",
+          routableModels: 0,
+        },
+      ],
+    });
+  });
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Build a verified artifact" }),
@@ -13,11 +66,36 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
   await expect(page.getByText("검증 결과", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "노드 상세 닫기" }).click();
   await page.getByRole("button", { name: "사용량·한도" }).click();
+  await expect(
+    page.getByLabel("Codex 구독 5시간 한도 잔여 비율"),
+  ).toBeVisible();
+  await expect(page.getByText("47% 남음", { exact: true })).toBeVisible();
+  await expect(page.getByText("주간 한도", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "모델별 사용 내역 보기" }).click();
   await expect(
     page.getByRole("heading", { name: "사용 내역", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("table").first()).toContainText("mock-1");
+  await expect(
+    page.getByRole("heading", { name: "남은 한도와 잔액" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Antigravity에서 /usage로 남은 한도를 확인할 수 있어요."),
+  ).toBeVisible();
+  const providerCards = page.getByRole("region", { name: "공급자 연결" });
+  await expect(
+    providerCards.getByRole("article").filter({ hasText: "OpenAI API" }),
+  ).toContainText("API 키 필요");
+  await expect(
+    providerCards.getByRole("article").filter({ hasText: "Antigravity 구독" }),
+  ).toContainText("연결됨");
+  await expect(
+    providerCards.getByText("Ralph에서 실행할 수 있는 모델이 아직 없어요."),
+  ).toBeVisible();
+  const usage = page.getByRole("table", { name: "모델별 사용 내역" });
+  await expect(usage).toContainText("mock-1");
+  await expect(
+    usage.getByRole("columnheader", { name: "예상 비용" }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
   await page.screenshot({ path: "test-results/providers.png", fullPage: true });
   await page.getByRole("button", { name: "작업 화면으로" }).click();

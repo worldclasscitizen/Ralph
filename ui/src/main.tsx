@@ -5,9 +5,9 @@ import "./styles.css";
 import { RunGraph } from "./graph";
 import { Inspector, type InspectorTab } from "./inspector";
 import { Metrics } from "./metrics";
+import { Capacity } from "./capacity";
 import {
   api,
-  dashboardGet,
   formatTime,
   Icon,
   nodeTitle,
@@ -22,20 +22,6 @@ import { useExplanations } from "./explanations";
 type Theme = "light" | "dark";
 type View = "runs" | "settings" | "metrics";
 type Panel = "inbox" | "capacity" | "commands";
-type CapacitySnapshot = {
-  status: "exact" | "unavailable" | "auth_required" | "stale";
-  detail?: string;
-} & (
-  | {
-      kind: "subscription";
-      windows?: {
-        label: string;
-        remainingPercent: number;
-        resetsAt?: string;
-      }[];
-    }
-  | { kind: "api_balance"; balances?: { total: string; currency: string }[] }
-);
 type Report = {
   id: string;
   runId: string;
@@ -102,88 +88,6 @@ function savedReports(): string[] {
   } catch {
     return [];
   }
-}
-
-function Capacity({
-  onClose,
-  onMetrics,
-}: {
-  onClose: () => void;
-  onMetrics: () => void;
-}) {
-  const [capacity, setCapacity] = useState<Record<string, CapacitySnapshot>>();
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let current = true;
-    dashboardGet("/api/capacity")
-      .then((data) => {
-        if (current) setCapacity(data);
-      })
-      .catch((failure) => {
-        if (current) setError(failure.message);
-      });
-    return () => {
-      current = false;
-    };
-  }, []);
-  return (
-    <section className="popover capacity" aria-label="사용량 및 한도">
-      <button
-        className="icon-button popover-close"
-        aria-label="사용량 닫기"
-        onClick={onClose}
-      >
-        <Icon name="close-capacity" />
-      </button>
-      <h2>사용량 및 한도</h2>
-      <p>연결된 서비스가 제공하는 수치를 표시해요.</p>
-      {!capacity && <p>{error || "사용량을 불러오는 중입니다."}</p>}
-      {capacity && !Object.keys(capacity).length && (
-        <p>연결된 서비스가 없습니다.</p>
-      )}
-      {Object.entries(capacity ?? {}).map(([connection, entry]) => (
-        <div className="capacity-row" key={connection}>
-          <strong>{connection}</strong>
-          {entry.kind === "subscription" &&
-            entry.windows?.map((window) => (
-              <div className="capacity-value" key={window.label}>
-                <span>
-                  {window.label}
-                  {window.resetsAt &&
-                    ` · ${formatTime(window.resetsAt)}에 초기화`}
-                </span>
-                <b>{window.remainingPercent}%</b>
-                <meter
-                  min={0}
-                  max={100}
-                  value={window.remainingPercent}
-                  aria-label={`${connection} ${window.label}`}
-                />
-              </div>
-            ))}
-          {entry.kind === "api_balance" &&
-            entry.balances?.map((balance) => (
-              <div className="capacity-value" key={balance.currency}>
-                <span>남은 크레딧</span>
-                <b>
-                  {balance.total} {balance.currency}
-                </b>
-              </div>
-            ))}
-          {entry.status !== "exact" && (
-            <small title={entry.detail}>
-              {entry.status === "stale"
-                ? "마지막으로 확인된 수치"
-                : entry.status === "auth_required"
-                  ? "로그인 필요"
-                  : "확인할 수 없음"}
-            </small>
-          )}
-        </div>
-      ))}
-      <button onClick={onMetrics}>모델별 사용 내역 보기</button>
-    </section>
-  );
 }
 
 function Settings({
@@ -268,8 +172,9 @@ function App() {
   const [node, setNode] = useState("");
   const [detail, setDetail] = useState<Row>();
   const [tab, setTab] = useState<InspectorTab>("work");
-  const [metrics, setMetrics] = useState<Row[]>([]);
-  const [providers, setProviders] = useState<Row[]>([]);
+  const [metrics, setMetrics] = useState<Row[]>();
+  const [providers, setProviders] = useState<Row[]>();
+  const [metricsFailed, setMetricsFailed] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [revision, setRevision] = useState("latest");
@@ -344,12 +249,20 @@ function App() {
   }, []);
   useEffect(() => {
     if (view !== "metrics") return;
+    let current = true;
+    setMetricsFailed(false);
     Promise.all([api("metrics"), api("providers")])
       .then(([metrics, providers]) => {
+        if (!current) return;
         setMetrics(metrics);
         setProviders(providers);
       })
-      .catch((error) => setError(error.message));
+      .catch(() => {
+        if (current) setMetricsFailed(true);
+      });
+    return () => {
+      current = false;
+    };
   }, [view]);
 
   useEffect(() => {
@@ -792,7 +705,11 @@ function App() {
           />
         )}
         {view === "metrics" && (
-          <Metrics providers={providers} metrics={metrics} />
+          <Metrics
+            providers={providers}
+            metrics={metrics}
+            failed={metricsFailed}
+          />
         )}
         <div className="run-body" hidden={view !== "runs"}>
           <div className="graph-column">

@@ -1227,6 +1227,10 @@ dt {
   margin-top: 5px;
   font-size: 10.5px;
 }
+.capacity-note {
+  color: var(--muted);
+  line-height: 1.5;
+}
 .capacity-value {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1242,7 +1246,7 @@ dt {
 }
 .capacity-value meter {
   grid-column: 2;
-  width: 85px;
+  width: 92px;
   height: 7px;
 }
 .inbox {
@@ -1430,10 +1434,23 @@ dt {
   padding: 23px 30px;
   background: var(--canvas);
 }
+.provider-section {
+  margin-top: 22px;
+}
+.provider-section > h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.provider-section > p,
+.metrics > p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .provider-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
 }
 .provider-grid article,
 .metrics {
@@ -1446,10 +1463,59 @@ dt {
   margin-top: 20px;
   overflow: auto;
 }
+.metrics-limits {
+  margin-top: 0;
+}
+.metrics-limits .capacity-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 0 24px;
+}
 .metrics h2,
-.provider-grid h2 {
+.provider-grid h3 {
   font-size: 16px;
   margin: 8px 0;
+}
+.provider-grid article {
+  padding: 14px;
+}
+.provider-grid h3 {
+  overflow-wrap: anywhere;
+}
+.provider-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 5px 8px;
+}
+.provider-status {
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: 11px;
+}
+.provider-status[data-connected="true"] {
+  background: var(--done-bg);
+  color: var(--done);
+}
+.provider-grid article small,
+.provider-verification,
+.distribution-row small,
+.heat-row small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.provider-verification {
+  margin-top: 8px;
+}
+.provider-verification summary {
+  cursor: pointer;
+}
+.provider-verification ul {
+  padding-left: 17px;
+  overflow-wrap: anywhere;
 }
 table {
   width: 100%;
@@ -1472,6 +1538,11 @@ td small {
   gap: 12px;
   align-items: center;
   margin: 12px 0;
+}
+.distribution-row small,
+.heat-row small {
+  display: block;
+  font-weight: 400;
 }
 meter {
   width: 100%;

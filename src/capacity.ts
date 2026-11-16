@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import type { CapacitySnapshot, ProjectConfig } from "./types.js";
+import type { CapacitySnapshot, CapacityWindow, ProjectConfig } from "./types.js";
 import { adapterMap } from "./providers/index.js";
 import { ensureState } from "./state.js";
 import { resolveExecutable, writeJson } from "./util.js";
@@ -16,6 +16,19 @@ interface RateLimitSnapshot {
   limitName?: string | null;
   primary?: RateLimitWindow | null;
   secondary?: RateLimitWindow | null;
+}
+
+function capacityWindow(label: string, window: RateLimitWindow): CapacityWindow {
+  return {
+    label,
+    remainingPercent: Math.max(0, 100 - window.usedPercent),
+    ...(window.windowDurationMins
+      ? { durationMinutes: window.windowDurationMins }
+      : {}),
+    ...(window.resetsAt
+      ? { resetsAt: new Date(window.resetsAt * 1000).toISOString() }
+      : {}),
+  };
 }
 
 async function codexCapacity(): Promise<CapacitySnapshot> {
@@ -68,42 +81,17 @@ async function codexCapacity(): Promise<CapacitySnapshot> {
             : message.result.rateLimits
               ? [message.result.rateLimits]
               : [];
-          const windows = snapshots
-            .flatMap((snapshot) => [
-              snapshot.primary
-                ? {
-                    label: `${snapshot.limitName ?? snapshot.limitId ?? "Codex"} primary`,
-                    remainingPercent: Math.max(
-                      0,
-                      100 - snapshot.primary.usedPercent,
-                    ),
-                    ...(snapshot.primary.resetsAt
-                      ? {
-                          resetsAt: new Date(
-                            snapshot.primary.resetsAt * 1000,
-                          ).toISOString(),
-                        }
-                      : {}),
-                  }
-                : undefined,
-              snapshot.secondary
-                ? {
-                    label: `${snapshot.limitName ?? snapshot.limitId ?? "Codex"} secondary`,
-                    remainingPercent: Math.max(
-                      0,
-                      100 - snapshot.secondary.usedPercent,
-                    ),
-                    ...(snapshot.secondary.resetsAt
-                      ? {
-                          resetsAt: new Date(
-                            snapshot.secondary.resetsAt * 1000,
-                          ).toISOString(),
-                        }
-                      : {}),
-                  }
-                : undefined,
-            ])
-            .filter((item): item is NonNullable<typeof item> => Boolean(item));
+          const windows = snapshots.flatMap((snapshot) => {
+            const name = snapshot.limitName ?? snapshot.limitId ?? "Codex";
+            return [
+              ...(snapshot.primary
+                ? [capacityWindow(`${name} primary`, snapshot.primary)]
+                : []),
+              ...(snapshot.secondary
+                ? [capacityWindow(`${name} secondary`, snapshot.secondary)]
+                : []),
+            ];
+          });
           finish({
             kind: "subscription",
             status: windows.length ? "exact" : "unavailable",
@@ -155,21 +143,28 @@ export async function capacityForProject(
 ): Promise<Record<string, CapacitySnapshot>> {
   const paths = await ensureState(projectRoot);
   const cache = join(paths.dashboard, "capacity.json");
+  const enabled = config.connections.filter((item) => item.enabled);
   if (!refresh) {
     try {
       const info = await stat(cache);
-      if (Date.now() - info.mtimeMs < 5 * 60 * 1000)
-        return JSON.parse(await readFile(cache, "utf8")) as Record<
+      if (Date.now() - info.mtimeMs < 5 * 60 * 1000) {
+        const cached = JSON.parse(await readFile(cache, "utf8")) as Record<
           string,
           CapacitySnapshot
         >;
+        if (
+          Object.keys(cached).length === enabled.length &&
+          enabled.every((connection) => Object.hasOwn(cached, connection.id))
+        )
+          return cached;
+      }
     } catch {
       /* refresh */
     }
   }
   const adapters = adapterMap(config);
   const output: Record<string, CapacitySnapshot> = {};
-  for (const connection of config.connections.filter((item) => item.enabled)) {
+  for (const connection of enabled) {
     if (connection.adapter === "codex-builtin")
       output[connection.id] = await codexCapacity();
     else if (connection.adapter === "antigravity-builtin")

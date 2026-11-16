@@ -106,6 +106,12 @@ export async function handleGraphApi(
     }
     if (url.pathname === "/api/v2/providers") {
       const config = await loadConfig(root);
+      const routes = [
+        ...Object.values(config.routes).flat(),
+        ...Object.values(config.routePolicies ?? {}).flatMap(
+          (policy) => policy?.candidates ?? [],
+        ),
+      ];
       json(
         res,
         200,
@@ -114,6 +120,11 @@ export async function handleGraphApi(
           provider: c.provider,
           mode: c.mode,
           enabled: c.enabled,
+          routableModels: new Set(
+            routes
+              .filter((route) => route.connectionId === c.id)
+              .map((route) => route.modelId),
+          ).size,
           ...await probeProvider(c, createAdapter(c, config)),
         }))),
       );
