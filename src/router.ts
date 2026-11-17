@@ -9,6 +9,7 @@ import type {
   TaskType,
 } from "./types.js";
 import { TASK_TYPES } from "./types.js";
+import { providerAllowsModel } from "./providers/models.js";
 
 const ROLE_TASK: Record<AgentRole, TaskType> = {
   contractPlanner: "planning_architecture",
@@ -80,7 +81,10 @@ function connectionSupportsModel(
   connection: ConnectionConfig,
   model: CatalogModel,
 ): boolean {
-  return connection.adapter === model.adapter;
+  return (
+    connection.adapter === model.adapter &&
+    providerAllowsModel(connection.adapter, model.modelId)
+  );
 }
 
 function routeFor(

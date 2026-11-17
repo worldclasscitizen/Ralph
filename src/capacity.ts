@@ -156,7 +156,7 @@ export async function capacityForProject(
   refresh = false,
 ): Promise<Record<string, CapacitySnapshot>> {
   const paths = await ensureState(projectRoot);
-  const cache = join(paths.dashboard, "capacity-v2.json");
+  const cache = join(paths.dashboard, "capacity-v3.json");
   const enabled = config.connections.filter((item) => item.enabled);
   let cached: ProjectCapacity = {};
   try {

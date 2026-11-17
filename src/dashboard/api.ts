@@ -12,6 +12,7 @@ import { aggregateUsage } from "../gateway/metrics.js";
 import { submitCommand, type RunCommand } from "../runtime/commands.js";
 import { RalphError } from "../util.js";
 import { createAdapter } from "../providers/index.js";
+import { providerAllowsModel } from "../providers/models.js";
 import { probeProvider } from "../gateway/capabilities.js";
 import { loadCatalog } from "../catalog.js";
 import { readExplanationItems, type DashboardExplanations } from "./explanations.js";
@@ -122,9 +123,18 @@ export async function handleGraphApi(
         200,
         await Promise.all(
           config.connections.map(async (connection) => {
+            const adapter = createAdapter(connection, config);
+            const liveModels =
+              connection.adapter === "antigravity-builtin" && connection.enabled
+                ? adapter.listModels().catch(() => [])
+                : [];
             const byModel = new Map(
               routes
-                .filter((route) => route.connectionId === connection.id)
+                .filter(
+                  (route) =>
+                    route.connectionId === connection.id &&
+                    providerAllowsModel(connection.adapter, route.modelId),
+                )
                 .map((route) => [route.modelId, route]),
             );
             const catalogModels = new Map(
@@ -132,7 +142,8 @@ export async function handleGraphApi(
                 .filter(
                   (model) =>
                     model.adapter === connection.adapter &&
-                    Date.parse(model.expiresAt) >= now,
+                    Date.parse(model.expiresAt) >= now &&
+                    providerAllowsModel(connection.adapter, model.modelId),
                 )
                 .map((model) => [model.modelId, model]),
             );
@@ -157,6 +168,15 @@ export async function handleGraphApi(
                   inRoute: connection.enabled,
                   manual: true,
                 })),
+              ...(await liveModels)
+                .filter(({ modelId }) => !catalogModels.has(modelId) && !byModel.has(modelId))
+                .map(({ modelId, displayName }) => ({
+                  modelId,
+                  displayName: displayName ?? modelId,
+                  inRoute: false,
+                  manual: false,
+                  offered: true,
+                })),
             ];
             return {
               id: connection.id,
@@ -167,7 +187,7 @@ export async function handleGraphApi(
               routingCatalogVersion: config.catalogVersion,
               models,
               routableModels: models.filter((model) => model.inRoute).length,
-              ...(await probeProvider(connection, createAdapter(connection, config))),
+              ...(await probeProvider(connection, adapter)),
             };
           }),
         ),

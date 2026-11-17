@@ -8,6 +8,7 @@ import {
 } from "./credentials.js";
 import { probeProvider } from "./gateway/capabilities.js";
 import { createAdapter } from "./providers/index.js";
+import { providerAllowsModel } from "./providers/models.js";
 import { saveConfig } from "./state.js";
 import { RalphError } from "./util.js";
 import type { Prompt, PromptOption } from "./interaction/prompt.js";
@@ -45,7 +46,11 @@ export function catalogModelsFor(
   connection: ConnectionConfig,
 ): string[] {
   return catalog.models
-    .filter((model) => model.adapter === connection.adapter)
+    .filter(
+      (model) =>
+        model.adapter === connection.adapter &&
+        providerAllowsModel(connection.adapter, model.modelId),
+    )
     .map((model) => model.modelId);
 }
 

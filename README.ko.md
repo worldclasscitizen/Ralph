@@ -227,7 +227,7 @@ ralph config refresh
 | codex-builtin / gpt-6-sol | verified | codex-cli 0.155.1 · win32 · v24.11.1 · 2026-09-28 |
 | Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |
 | OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |
-| Antigravity | experimental | Requires a working automation interface |
+| Gemini subscription (Antigravity) | compatible | Gemini models via the CLI; no packaged verification |
 | Other compatible endpoints | compatible | No live verification |
 <!-- provider-verification:end -->
 

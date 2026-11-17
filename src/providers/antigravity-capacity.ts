@@ -34,7 +34,7 @@ export function antigravityWindows(
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   const windows: CapacityWindow[] = [];
   for (const [label, raw] of Object.entries(value)) {
-    if (!raw || typeof raw !== "object") continue;
+    if (!label.startsWith("gemini-") || !raw || typeof raw !== "object") continue;
     const { remaining_fraction, reset_time, reset_in_seconds, disabled } = raw;
     if (
       disabled === true ||

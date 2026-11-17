@@ -13,6 +13,7 @@ import type {
 } from "../types.js";
 import { commandExists, runCommand } from "../util.js";
 import { classifyProviderError, emptyResponseError } from "./errors.js";
+import { providerAllowsModel } from "./models.js";
 
 /** Trust only the caller-selected worktree inside the Windows sandbox process. */
 export function codexWorkspaceConfig(projectRoot: string, platform = process.platform): string[] {
@@ -486,7 +487,7 @@ export class AntigravityBuiltinAdapter extends CliAdapter {
     if (result.exitCode !== 0) return [];
     return result.stdout.split(/\r?\n/).flatMap((line) => {
       const [modelId, displayName] = line.split("\t");
-      return modelId && displayName
+      return modelId && displayName && providerAllowsModel(this.id, modelId)
         ? [
             {
               connectionId: "google:antigravity-login",
@@ -504,12 +505,23 @@ export class AntigravityBuiltinAdapter extends CliAdapter {
     request: AgentRequest,
     signal: AbortSignal,
   ): Promise<AgentResult> {
+    if (!providerAllowsModel(this.id, request.model.modelId))
+      return {
+        text: "",
+        exitCode: 4,
+        error: {
+          kind: "policy_denial",
+          retryable: false,
+          message: "Gemini 구독제 연결에서는 Gemini 모델만 호출할 수 있습니다.",
+        },
+      };
     const input = `${JSON.stringify({ event: "user", message: { content: request.prompt } })}\n`;
     const args = [
       "--input-format",
       "stream-json",
       "--output-format",
       "stream-json",
+      "--disable-slash-commands",
       "--model",
       request.model.modelId,
       "--mode",
