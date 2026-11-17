@@ -1,8 +1,16 @@
 import { spawn } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import type { CapacitySnapshot, CapacityWindow, ProjectConfig } from "./types.js";
+import type {
+  CapacitySnapshot,
+  CapacityWindow,
+  ProjectConfig,
+} from "./types.js";
 import { adapterMap } from "./providers/index.js";
+import {
+  antigravityCapacitySource,
+  readAntigravityCapacity,
+} from "./providers/antigravity-capacity.js";
 import { ensureState } from "./state.js";
 import { resolveExecutable, writeJson } from "./util.js";
 
@@ -18,7 +26,10 @@ interface RateLimitSnapshot {
   secondary?: RateLimitWindow | null;
 }
 
-function capacityWindow(label: string, window: RateLimitWindow): CapacityWindow {
+function capacityWindow(
+  label: string,
+  window: RateLimitWindow,
+): CapacityWindow {
   return {
     label,
     remainingPercent: Math.max(0, 100 - window.usedPercent),
@@ -136,65 +147,92 @@ function unsupportedSubscription(
   };
 }
 
+type ProjectCapacity = Record<string, CapacitySnapshot>;
+const capacityInFlight = new Map<string, Promise<ProjectCapacity>>();
+
 export async function capacityForProject(
   projectRoot: string,
   config: ProjectConfig,
   refresh = false,
 ): Promise<Record<string, CapacitySnapshot>> {
   const paths = await ensureState(projectRoot);
-  const cache = join(paths.dashboard, "capacity.json");
+  const cache = join(paths.dashboard, "capacity-v2.json");
   const enabled = config.connections.filter((item) => item.enabled);
-  if (!refresh) {
-    try {
-      const info = await stat(cache);
-      if (Date.now() - info.mtimeMs < 5 * 60 * 1000) {
-        const cached = JSON.parse(await readFile(cache, "utf8")) as Record<
-          string,
-          CapacitySnapshot
-        >;
-        if (
-          Object.keys(cached).length === enabled.length &&
-          enabled.every((connection) => Object.hasOwn(cached, connection.id))
-        )
-          return cached;
-      }
-    } catch {
-      /* refresh */
-    }
+  let cached: ProjectCapacity = {};
+  try {
+    const info = await stat(cache);
+    cached = JSON.parse(await readFile(cache, "utf8")) as ProjectCapacity;
+    if (
+      !refresh &&
+      Date.now() - info.mtimeMs < 5 * 60 * 1000 &&
+      Object.keys(cached).length === enabled.length &&
+      enabled.every((connection) => Object.hasOwn(cached, connection.id))
+    )
+      return cached;
+  } catch {
+    /* refresh */
   }
+  const requestKey = JSON.stringify([
+    cache,
+    enabled.map((item) => item.id).sort(),
+  ]);
+  const pending = capacityInFlight.get(requestKey);
+  if (pending) return pending;
   const adapters = adapterMap(config);
-  const output: Record<string, CapacitySnapshot> = {};
-  for (const connection of enabled) {
-    if (connection.adapter === "codex-builtin")
-      output[connection.id] = await codexCapacity();
-    else if (connection.adapter === "antigravity-builtin")
-      output[connection.id] = unsupportedSubscription(
-        "Antigravity /usage",
-        "공식 /usage는 대화형 TUI이므로 자동 스크래핑하지 않습니다. Antigravity에서 /usage를 직접 실행해 주세요.",
-      );
-    else if (connection.adapter === "claude-code-builtin")
-      output[connection.id] = unsupportedSubscription(
-        "Claude Code",
-        "정확한 구조화 잔여량 인터페이스가 확인되지 않았습니다.",
-      );
-    else if (connection.adapter === "gemini-cli-builtin")
-      output[connection.id] = unsupportedSubscription(
-        "Gemini CLI",
-        "정확한 구조화 잔여량 인터페이스가 확인되지 않았습니다.",
-      );
-    else {
-      const adapter = adapters.get(connection.id);
-      output[connection.id] = adapter?.capacity
-        ? await adapter.capacity()
-        : {
-            kind: "api_balance",
-            status: "unavailable",
-            fetchedAt: new Date().toISOString(),
-            source: connection.id,
-            detail: "공식 잔액 endpoint가 확인되지 않았습니다.",
-          };
-    }
+  const load = async (): Promise<ProjectCapacity> => {
+    const entries = await Promise.all(
+      enabled.map(async (connection) => {
+        const id = connection.id;
+        let snapshot: CapacitySnapshot;
+        if (connection.adapter === "codex-builtin")
+          snapshot = await codexCapacity();
+        else if (connection.adapter === "antigravity-builtin")
+          snapshot = await readAntigravityCapacity().catch(() =>
+            unsupportedSubscription(
+              antigravityCapacitySource,
+              "Gemini 구독 한도를 불러오지 못했습니다.",
+            ),
+          );
+        else if (connection.adapter === "claude-code-builtin")
+          snapshot = unsupportedSubscription(
+            "Claude Code",
+            "정확한 구조화 잔여량 인터페이스가 확인되지 않았습니다.",
+          );
+        else if (connection.adapter === "gemini-cli-builtin")
+          snapshot = unsupportedSubscription(
+            "Gemini CLI",
+            "정확한 구조화 잔여량 인터페이스가 확인되지 않았습니다.",
+          );
+        else {
+          const adapter = adapters.get(id);
+          snapshot = adapter?.capacity
+            ? await adapter.capacity()
+            : {
+                kind: "api_balance",
+                status: "unavailable",
+                fetchedAt: new Date().toISOString(),
+                source: id,
+                detail: "공식 잔액 endpoint가 확인되지 않았습니다.",
+              };
+        }
+        const previous = cached[id];
+        if (
+          snapshot.status === "unavailable" &&
+          (previous?.status === "exact" || previous?.status === "stale")
+        )
+          snapshot = { ...previous, status: "stale" };
+        return [id, snapshot] as const;
+      }),
+    );
+    const output = Object.fromEntries(entries);
+    await writeJson(cache, output);
+    return output;
+  };
+  const request = load();
+  capacityInFlight.set(requestKey, request);
+  try {
+    return await request;
+  } finally {
+    capacityInFlight.delete(requestKey);
   }
-  await writeJson(cache, output);
-  return output;
 }

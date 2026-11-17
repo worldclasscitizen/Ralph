@@ -97,7 +97,7 @@ function cleanCodexEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
-function cleanGoogleBuiltinEnv(): NodeJS.ProcessEnv {
+export function cleanGoogleBuiltinEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   for (const key of [
     "GEMINI_API_KEY",
