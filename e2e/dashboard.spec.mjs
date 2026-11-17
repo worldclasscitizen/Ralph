@@ -42,6 +42,14 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
           installed: true,
           authentication: "unauthenticated",
           support: "compatible",
+          models: [
+            {
+              modelId: "gpt-6-astra",
+              displayName: "GPT-6 Astra",
+              inRoute: false,
+              manual: false,
+            },
+          ],
         },
         {
           id: "google:antigravity-login",
@@ -51,6 +59,7 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
           authentication: "unknown",
           support: "experimental",
           routableModels: 0,
+          models: [],
         },
       ],
     });
@@ -82,9 +91,16 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
     page.getByText("Antigravity에서 /usage로 남은 한도를 확인할 수 있어요."),
   ).toBeVisible();
   const providerCards = page.getByRole("region", { name: "공급자 연결" });
-  await expect(
-    providerCards.getByRole("article").filter({ hasText: "OpenAI API" }),
-  ).toContainText("API 키 필요");
+  await expect(providerCards.getByText(/^모델 카탈로그 v\d+$/)).toBeVisible();
+  const openai = providerCards.getByRole("article").filter({ hasText: "OpenAI API" });
+  await expect(openai).toContainText("API 키 필요");
+  await openai.getByText("모델 목록 (1개)", { exact: true }).click();
+  await expect(openai.getByText("gpt-6-astra", { exact: true })).toBeVisible();
+  await expect(openai.getByText("카탈로그 등록", { exact: true })).toBeVisible();
+  const mock = providerCards.getByRole("article").filter({ hasText: "mock:process" });
+  await mock.getByText("모델 목록 (1개)", { exact: true }).click();
+  await expect(mock.getByText("수동으로 추가", { exact: true })).toBeVisible();
+  await expect(mock.getByText("실행 경로에 설정됨", { exact: true })).toBeVisible();
   await expect(
     providerCards.getByRole("article").filter({ hasText: "Antigravity 구독" }),
   ).toContainText("연결됨");

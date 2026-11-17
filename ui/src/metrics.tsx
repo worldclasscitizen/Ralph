@@ -29,7 +29,26 @@ const checkDate = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" });
 const taskName = (key: string) => taskNames[key] ?? "기타 작업";
 const count = (value: number) => countFormat.format(value);
 
-function connectionStatus(provider: Row) {
+export type ProviderRow = {
+  id: string;
+  mode: string;
+  enabled: boolean;
+  installed: boolean;
+  authentication: string;
+  support: string;
+  catalogVersion: number;
+  routingCatalogVersion: number;
+  routableModels: number;
+  models: {
+    modelId: string;
+    displayName: string;
+    inRoute: boolean;
+    manual: boolean;
+  }[];
+  verification?: Row[];
+};
+
+function connectionStatus(provider: ProviderRow) {
   if (provider.mode === "api") {
     return provider.enabled && provider.authentication === "authenticated"
       ? "키 등록됨"
@@ -54,7 +73,7 @@ export function Metrics({
   metrics,
   failed,
 }: {
-  providers?: Row[];
+  providers?: ProviderRow[];
   metrics?: Row[];
   failed: boolean;
 }) {
@@ -63,6 +82,7 @@ export function Metrics({
   const verified = metrics?.flatMap((m) =>
     (m.quality ?? []).map((quality: Row) => ({ model: m, quality })),
   );
+  const catalog = providers?.[0];
 
   return (
     <div className="metrics-page">
@@ -75,11 +95,21 @@ export function Metrics({
       </section>
 
       <section className="provider-section" aria-labelledby="providers-heading">
-        <h2 id="providers-heading">공급자 연결</h2>
+        <div className="provider-section-heading">
+          <h2 id="providers-heading">공급자 연결</h2>
+          {catalog && <span>모델 카탈로그 v{catalog.catalogVersion}</span>}
+        </div>
         <p>
-          구독 계정과 API 키는 각각 연결해요. 일부 공급자의 잔여 한도는 공급자
-          화면에서 확인할 수 있어요.
+          각 연결의 모델 목록에서 카탈로그에 등록된 모델과 프로젝트 실행 경로에
+          설정된 모델을 확인할 수 있어요.
         </p>
+        {catalog &&
+          catalog.routingCatalogVersion !== catalog.catalogVersion && (
+            <p>
+              저장된 실행 경로는 카탈로그 v{catalog.routingCatalogVersion}{" "}
+              기준이에요.
+            </p>
+          )}
         {!providers && !failed && (
           <p role="status">연결 상태를 확인하고 있어요.</p>
         )}
@@ -110,6 +140,34 @@ export function Metrics({
                       ? "개인 계정은 Antigravity로 연결해 주세요."
                       : (supportNames[p.support] ?? "지원 상태 확인 중")}
                 </small>
+                <details className="provider-models">
+                  <summary>
+                    모델 목록
+                    {p.models.length > 0 && ` (${count(p.models.length)}개)`}
+                  </summary>
+                  {p.models.length ? (
+                    <ul>
+                      {p.models.map((model) => (
+                        <li key={model.modelId}>
+                          <span>{model.displayName}</span>
+                          {model.displayName !== model.modelId && (
+                            <small>{model.modelId}</small>
+                          )}
+                          <div className="provider-model-labels">
+                            {model.manual && <span>수동으로 추가</span>}
+                            {model.inRoute ? (
+                              <span data-active="true">실행 경로에 설정됨</span>
+                            ) : (
+                              !model.manual && <span>카탈로그 등록</span>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>표시할 모델이 없어요.</p>
+                  )}
+                </details>
                 {!!p.verification?.length && (
                   <details className="provider-verification">
                     <summary>실행 검증 기록</summary>

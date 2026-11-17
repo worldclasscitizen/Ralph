@@ -13,6 +13,7 @@ import { submitCommand, type RunCommand } from "../runtime/commands.js";
 import { RalphError } from "../util.js";
 import { createAdapter } from "../providers/index.js";
 import { probeProvider } from "../gateway/capabilities.js";
+import { loadCatalog } from "../catalog.js";
 import { readExplanationItems, type DashboardExplanations } from "./explanations.js";
 export const controlToken = randomUUID();
 function json(res: ServerResponse, status: number, value: unknown) {
@@ -105,7 +106,11 @@ export async function handleGraphApi(
       return true;
     }
     if (url.pathname === "/api/v2/providers") {
-      const config = await loadConfig(root);
+      const [config, catalog] = await Promise.all([
+        loadConfig(root),
+        loadCatalog(),
+      ]);
+      const now = Date.now();
       const routes = [
         ...Object.values(config.routes).flat(),
         ...Object.values(config.routePolicies ?? {}).flatMap(
@@ -115,18 +120,57 @@ export async function handleGraphApi(
       json(
         res,
         200,
-        await Promise.all(config.connections.map(async (c) => ({
-          id: c.id,
-          provider: c.provider,
-          mode: c.mode,
-          enabled: c.enabled,
-          routableModels: new Set(
-            routes
-              .filter((route) => route.connectionId === c.id)
-              .map((route) => route.modelId),
-          ).size,
-          ...await probeProvider(c, createAdapter(c, config)),
-        }))),
+        await Promise.all(
+          config.connections.map(async (connection) => {
+            const byModel = new Map(
+              routes
+                .filter((route) => route.connectionId === connection.id)
+                .map((route) => [route.modelId, route]),
+            );
+            const catalogModels = new Map(
+              catalog.models
+                .filter(
+                  (model) =>
+                    model.adapter === connection.adapter &&
+                    Date.parse(model.expiresAt) >= now,
+                )
+                .map((model) => [model.modelId, model]),
+            );
+            const models = [
+              ...Array.from(
+                catalogModels.values(),
+                ({ modelId, displayName }) => ({
+                  modelId,
+                  displayName,
+                  inRoute: connection.enabled && byModel.has(modelId),
+                  manual: false,
+                }),
+              ),
+              ...Array.from(byModel.values())
+                .filter(
+                  (route) =>
+                    route.source === "override" && !catalogModels.has(route.modelId),
+                )
+                .map(({ modelId, displayName }) => ({
+                  modelId,
+                  displayName,
+                  inRoute: connection.enabled,
+                  manual: true,
+                })),
+            ];
+            return {
+              id: connection.id,
+              provider: connection.provider,
+              mode: connection.mode,
+              enabled: connection.enabled,
+              catalogVersion: catalog.version,
+              routingCatalogVersion: config.catalogVersion,
+              models,
+              routableModels: models.filter((model) => model.inRoute).length,
+              ...(await probeProvider(connection, createAdapter(connection, config))),
+            };
+          }),
+        ),
       );
       return true;
     }

@@ -4,7 +4,7 @@ import "@xyflow/react/dist/style.css";
 import "./styles.css";
 import { RunGraph } from "./graph";
 import { Inspector, type InspectorTab } from "./inspector";
-import { Metrics } from "./metrics";
+import { Metrics, type ProviderRow } from "./metrics";
 import { Capacity } from "./capacity";
 import {
   api,
@@ -173,7 +173,7 @@ function App() {
   const [detail, setDetail] = useState<Row>();
   const [tab, setTab] = useState<InspectorTab>("work");
   const [metrics, setMetrics] = useState<Row[]>();
-  const [providers, setProviders] = useState<Row[]>();
+  const [providers, setProviders] = useState<ProviderRow[]>();
   const [metricsFailed, setMetricsFailed] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
