@@ -16,6 +16,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import type ELKType from "elkjs/lib/elk.bundled.js";
+import { useLanguage, useText } from "./locale";
 import type { Explain } from "./explanations";
 import {
   Elapsed,
@@ -36,6 +37,7 @@ const minZoom = 0.06;
 const maxZoom = 2;
 
 function Card({ data }: NodeProps) {
+  const language = useLanguage();
   const task = data as Row;
   const tone = statusTone(task.status);
   const title = nodeTitle(task);
@@ -59,10 +61,10 @@ function Card({ data }: NodeProps) {
       <div className="node-label">
         <TaskIcon task={task} />
         <strong>{task.easyTitle || title}</strong>
-        <small>{modelLabel(task)}</small>
+        <small>{modelLabel(task, language)}</small>
       </div>
       <div className="node-state">
-        {statusLabel(task.status)}
+        {statusLabel(task.status, language)}
         <Elapsed
           startedAt={task.startedAt}
           endedAt={task.endedAt}
@@ -151,6 +153,7 @@ function GraphControls({
   inspecting: boolean;
   moved: { current: boolean };
 }) {
+  const t = useText();
   const flow = useReactFlow();
   const width = useStore((state) => state.width);
   const height = useStore((state) => state.height);
@@ -185,19 +188,19 @@ function GraphControls({
   return (
     <>
       <div className="canvas-label">
-        <strong>실행 그래프</strong>
+        <strong>{t("실행 그래프", "Run graph")}</strong>
         {overview ? (
-          <small>전체 보기 · 노드 {count}개</small>
+          <small>{t(`전체 보기 · 노드 ${count}개`, `Overview · ${count} nodes`)}</small>
         ) : (
-          !inspecting && <small>노드를 선택해 작업을 확인하세요.</small>
+          !inspecting && <small>{t("노드를 선택해 작업을 확인하세요.", "Select a node to see its work.")}</small>
         )}
       </div>
       <div className={`graph-tools ${overview ? "with-map" : ""}`}>
-        <div className="zoom-controls" role="group" aria-label="그래프 크기">
+        <div className="zoom-controls" role="group" aria-label={t("그래프 크기", "Graph zoom")}>
           <button
             type="button"
-            title="축소"
-            aria-label="축소"
+            title={t("축소", "Zoom out")}
+            aria-label={t("축소", "Zoom out")}
             disabled={zoom <= minZoom}
             onClick={() => {
               moved.current = true;
@@ -206,13 +209,13 @@ function GraphControls({
           >
             <Icon name="minus" />
           </button>
-          <span className="zoom-value" aria-label="확대 비율">
+          <span className="zoom-value" aria-label={t("확대 비율", "Zoom percentage")}>
             {Math.round(zoom * 100)}%
           </span>
           <button
             type="button"
-            title="확대"
-            aria-label="확대"
+            title={t("확대", "Zoom in")}
+            aria-label={t("확대", "Zoom in")}
             disabled={zoom >= maxZoom}
             onClick={() => {
               moved.current = true;
@@ -223,8 +226,8 @@ function GraphControls({
           </button>
           <button
             type="button"
-            title="전체 맞춤"
-            aria-label="전체 맞춤"
+            title={t("전체 맞춤", "Fit graph")}
+            aria-label={t("전체 맞춤", "Fit graph")}
             onClick={() => {
               moved.current = false;
               onFit();
@@ -241,7 +244,7 @@ function GraphControls({
               moved.current = true;
             }}
           >
-            <span>전체 그래프</span>
+            <span>{t("전체 그래프", "Full graph")}</span>
             <MiniMap
               pannable
               bgColor="transparent"
@@ -252,7 +255,7 @@ function GraphControls({
               nodeColor={(node) =>
                 `var(--${statusTone(node.data.status as string)}-border)`
               }
-              ariaLabel="전체 그래프 지도"
+              ariaLabel={t("전체 그래프 지도", "Graph minimap")}
             />
           </div>
         )}
@@ -276,6 +279,7 @@ export function RunGraph({
   onInspect: (id: string) => void;
   onClose: () => void;
 }) {
+  const t = useText();
   const [layout, setLayout] = useState<{
     graph: Row;
     positions: Record<string, { x: number; y: number }>;
@@ -440,15 +444,15 @@ export function RunGraph({
             }}
           />
           {layoutError === graph && (
-            <p className="empty">실행 그래프를 배치하지 못했습니다.</p>
+            <p className="empty">{t("실행 그래프를 배치하지 못했습니다.", "Could not lay out the run graph.")}</p>
           )}
         </ReactFlow>
       ) : (
         <>
           <div className="canvas-label">
-            <strong>실행 그래프</strong>
+            <strong>{t("실행 그래프", "Run graph")}</strong>
           </div>
-          <div className="empty">현재 작업 중이 아닙니다</div>
+          <div className="empty">{t("현재 작업 중이 아닙니다", "No work in progress")}</div>
         </>
       )}
     </div>

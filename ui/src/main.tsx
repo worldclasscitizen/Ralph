@@ -5,7 +5,9 @@ import "./styles.css";
 import { RunGraph } from "./graph";
 import { Inspector, type InspectorTab } from "./inspector";
 import { Metrics, type ProviderRow } from "./metrics";
-import { Capacity } from "./capacity";
+import { Capacity, GeminiLimit, useCapacity } from "./capacity";
+import { LanguageContext, type Language, useText } from "./locale";
+import { Settings, type Theme } from "./settings";
 import {
   api,
   formatTime,
@@ -19,8 +21,7 @@ import {
 import { projectEvent } from "./projection";
 import { useExplanations } from "./explanations";
 
-type Theme = "light" | "dark";
-type View = "runs" | "settings" | "metrics";
+type View = "runs" | "metrics";
 type Panel = "inbox" | "capacity" | "commands";
 type Report = {
   id: string;
@@ -33,8 +34,8 @@ type Report = {
 };
 
 const themes = [
-  { key: "light", icon: "sun", label: "라이트", description: "밝은 배경" },
-  { key: "dark", icon: "moon", label: "다크", description: "어두운 배경" },
+  { key: "light", icon: "sun", label: "라이트", english: "Light" },
+  { key: "dark", icon: "moon", label: "다크", english: "Dark" },
 ] as const;
 
 function reportsFor(runs: Row[]): Report[] {
@@ -90,78 +91,28 @@ function savedReports(): string[] {
   }
 }
 
-function Settings({
-  theme,
-  setTheme,
-  notify,
-  setNotify,
-  easyKorean,
-  setEasyKorean,
-}: {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  notify: boolean;
-  setNotify: (notify: boolean) => void;
-  easyKorean: boolean;
-  setEasyKorean: (enabled: boolean) => void;
-}) {
+function Dashboard() {
+  const [language, setLanguage] = useState<Language>(() =>
+    localStorage.getItem("ralph.dashboard.language") === "en" ? "en" : "ko",
+  );
+  useEffect(() => {
+    document.documentElement.lang = language;
+    localStorage.setItem("ralph.dashboard.language", language);
+  }, [language]);
   return (
-    <div className="settings-pane">
-      <section className="settings-card">
-        <h2>화면</h2>
-        <p>작업 그래프를 보는 화면 테마를 선택해요.</p>
-        <div className="theme-cards">
-          {themes.map((option) => (
-            <button
-              key={option.key}
-              aria-pressed={theme === option.key}
-              onClick={() => setTheme(option.key)}
-            >
-              <Icon name={option.key === "light" ? "sun-card" : "moon-card"} />
-              <strong>{option.label}</strong>
-              <small>{option.description}</small>
-              {theme === option.key && <span>선택됨</span>}
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="settings-card">
-        <h2>설명</h2>
-        <div className="settings-row">
-          <div>
-            <strong>쉬운 한국어</strong>
-            <p>로그인한 Codex의 경량 모델로 작업과 활동을 쉽게 풀어 써요.</p>
-          </div>
-          <button
-            aria-label="쉬운 한국어 설명"
-            aria-pressed={easyKorean}
-            onClick={() => setEasyKorean(!easyKorean)}
-          >
-            {easyKorean ? "켜짐" : "꺼짐"}
-          </button>
-        </div>
-      </section>
-      <section className="settings-card">
-        <h2>보고</h2>
-        <div className="settings-row">
-          <div>
-            <strong>확인이 필요한 보고 알림</strong>
-            <p>실행이 멈추거나 내 확인이 필요할 때 알려줘요.</p>
-          </div>
-          <button
-            aria-label="확인이 필요한 보고 알림"
-            aria-pressed={notify}
-            onClick={() => setNotify(!notify)}
-          >
-            {notify ? "켜짐" : "꺼짐"}
-          </button>
-        </div>
-      </section>
-    </div>
+    <LanguageContext.Provider value={language}>
+      <App language={language} setLanguage={setLanguage} />
+    </LanguageContext.Provider>
   );
 }
 
-function App() {
+function App({ language, setLanguage }: {
+  language: Language;
+  setLanguage: (language: Language) => void;
+}) {
+  const t = useText();
+  const capacity = useCapacity();
+  const settingsDialog = useRef<HTMLDialogElement>(null);
   const [runs, setRuns] = useState<Row[]>([]);
   const [project, setProject] = useState("");
   const [selected, setSelected] = useState("");
@@ -336,7 +287,7 @@ function App() {
       ? graph
       : undefined;
   const specs: Row[] = currentGraph?.nodes ?? [];
-  const explain = useExplanations(selected, easyKorean && view === "runs", [
+  const explain = useExplanations(selected, easyKorean && language === "ko" && view === "runs", [
     ...specs.map((spec) => ({ kind: "title" as const, text: spec.goal })),
     ...specs.flatMap((spec) => [
       { kind: "description" as const, text: spec.direction },
@@ -411,7 +362,7 @@ function App() {
   function choose(entry: Row) {
     if (entry.legacy) {
       setError(
-        "이전 버전 실행 기록은 ralph history 또는 마이그레이션에서 확인할 수 있습니다.",
+        t("이전 버전 실행 기록은 ralph history 또는 마이그레이션에서 확인할 수 있습니다.", "Use ralph history or migrate this run to view its record."),
       );
       return;
     }
@@ -515,25 +466,25 @@ function App() {
         else closeNode();
       }}
     >
-      <aside className="sidebar" aria-label="세션">
+      <aside className="sidebar" aria-label={t("세션", "Sessions")}>
         <div className="brand">Ralph Dashboard</div>
         <label className="session-search">
           <Icon name="search" />
           <input
             ref={searchInput}
             type="search"
-            aria-label="세션 찾기"
-            placeholder="세션 찾기"
+            aria-label={t("세션 찾기", "Find a session")}
+            placeholder={t("세션 찾기", "Find a session")}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           {!search && <kbd>⌘ K</kbd>}
         </label>
         <div className="sidebar-title">
-          <strong>세션</strong>
+          <strong>{t("세션", "Sessions")}</strong>
           <span>{String(candidates.length).padStart(2, "0")}</span>
         </div>
-        <nav className="run-list" aria-label="실행 세션">
+        <nav className="run-list" aria-label={t("실행 세션", "Run sessions")}>
           {candidates.map((entry) => {
             const count = unread.filter(
               (report) => report.runId === entry.runId,
@@ -551,18 +502,18 @@ function App() {
                 <span
                   className="lamp"
                   data-tone={statusTone(sessionStatus)}
-                  title={statusLabel(sessionStatus)}
+                  title={statusLabel(sessionStatus, language)}
                 />
                 <span className="run-name">
                   <strong>{entry.goal ?? entry.runId}</strong>
                   <small>
-                    {entry.legacy ? "이전 버전" : project || entry.runId}
+                    {entry.legacy ? t("이전 버전", "Legacy") : project || entry.runId}
                   </small>
                 </span>
                 {count > 0 && (
                   <span
                     className="count"
-                    aria-label={`읽지 않은 보고 ${count}개`}
+                    aria-label={t(`읽지 않은 보고 ${count}개`, `${count} unread reports`)}
                   >
                     {count}
                   </span>
@@ -572,26 +523,24 @@ function App() {
             );
           })}
           {search && !candidates.length && (
-            <p className="no-sessions">일치하는 세션이 없습니다.</p>
+            <p className="no-sessions">{t("일치하는 세션이 없습니다.", "No matching sessions.")}</p>
           )}
         </nav>
         <footer className="sidebar-footer">
           <button
             className="settings-button"
-            aria-current={view === "settings" ? "page" : undefined}
-            onClick={() =>
-              changeView(view === "settings" ? "runs" : "settings")
-            }
+            aria-haspopup="dialog"
+            onClick={() => settingsDialog.current?.showModal()}
           >
             <Icon name="settings" />
-            설정
+            {t("설정", "Settings")}
           </button>
-          <div className="theme-switch" role="group" aria-label="화면 테마">
+          <div className="theme-switch" role="group" aria-label={t("화면 테마", "Theme")}>
             {themes.map((option) => (
               <button
                 key={option.key}
-                title={option.label}
-                aria-label={`${option.label} 테마`}
+                title={t(option.label, option.english)}
+                aria-label={t(`${option.label} 테마`, `${option.english} theme`)}
                 aria-pressed={theme === option.key}
                 onClick={() => setTheme(option.key)}
               >
@@ -605,15 +554,13 @@ function App() {
         <header className="session-header">
           <div className="eyebrow">
             {view === "runs"
-              ? `${project ? project + "  /  " : ""}작업 공간`
-              : `Ralph Dashboard  /  ${view === "settings" ? "설정" : "사용량·한도"}`}
+              ? `${project ? project + "  /  " : ""}${t("작업 공간", "Workspace")}`
+              : `Ralph Dashboard  /  ${t("사용량·한도", "Usage & limits")}`}
           </div>
           <h1 title={selectedRun?.goal}>
-            {view === "settings"
-              ? "설정"
-              : view === "metrics"
-                ? "사용 내역"
-                : (selectedRun?.goal ?? "실행 세션")}
+            {view === "metrics"
+              ? t("사용 내역", "Usage")
+              : (selectedRun?.goal ?? t("실행 세션", "Run sessions"))}
           </h1>
           <div className="session-actions">
             {view === "runs" ? (
@@ -625,7 +572,7 @@ function App() {
                   onClick={() => togglePanel("inbox")}
                 >
                   <Icon name="inbox" />
-                  보고
+                  {t("보고", "Reports")}
                   {unread.length > 0 && (
                     <span className="count">{unread.length}</span>
                   )}
@@ -634,9 +581,11 @@ function App() {
                   className="capacity-button"
                   aria-expanded={panel === "capacity"}
                   onClick={() => togglePanel("capacity")}
+                  aria-label={t("사용량·한도", "Usage & limits")}
                 >
                   <Icon name="wallet" />
-                  사용량·한도
+                  {t("사용량·한도", "Usage & limits")}
+                  <GeminiLimit capacity={capacity} />
                 </button>
               </>
             ) : (
@@ -644,7 +593,7 @@ function App() {
                 className="back-button"
                 onClick={() => changeView("runs")}
               >
-                작업 화면으로
+                {t("작업 화면으로", "Back to work")}
               </button>
             )}
           </div>
@@ -654,26 +603,26 @@ function App() {
                 <span className="live-state" data-tone={statusTone(state)}>
                   <span className="lamp" data-tone={statusTone(state)} />
                   {latest && state === "running"
-                    ? "실시간"
-                    : statusLabel(state)}
+                    ? t("실시간", "Live")
+                    : statusLabel(state, language)}
                 </span>
               )}
               {progress.length > 0 && (
                 <>
                   <span className="completed-count">
-                    {progress.length}개 중 {done}개 완료
+                    {t(`${progress.length}개 중 ${done}개 완료`, `${done} of ${progress.length} complete`)}
                   </span>
                   <div
                     className="progress-lamps"
                     data-dense={progress.length > 12}
-                    aria-label="작업 상태 표시등"
+                    aria-label={t("작업 상태 표시등", "Task status indicators")}
                   >
                     {progress.map((tone, index) => (
                       <span
                         key={nodeRows[index].nodeId}
                         className="lamp"
                         data-tone={tone}
-                        title={`${explain("title", nodeRows[index].goal) || nodeTitle(nodeRows[index])} · ${statusLabel(currentRun?.nodes?.[nodeRows[index].nodeId]?.status)}`}
+                        title={`${explain("title", nodeRows[index].goal) || nodeTitle(nodeRows[index])} · ${statusLabel(currentRun?.nodes?.[nodeRows[index].nodeId]?.status, language)}`}
                       />
                     ))}
                   </div>
@@ -687,28 +636,19 @@ function App() {
             <span>{error}</span>
             <button
               className="icon-button"
-              aria-label="오류 닫기"
+              aria-label={t("오류 닫기", "Dismiss error")}
               onClick={() => setError("")}
             >
               <Icon name="close" />
             </button>
           </div>
         )}
-        {view === "settings" && (
-          <Settings
-            theme={theme}
-            setTheme={setTheme}
-            notify={notify}
-            setNotify={setNotify}
-            easyKorean={easyKorean}
-            setEasyKorean={setEasyKorean}
-          />
-        )}
         {view === "metrics" && (
           <Metrics
             providers={providers}
             metrics={metrics}
             failed={metricsFailed}
+            capacity={capacity}
           />
         )}
         <div className="run-body" hidden={view !== "runs"}>
@@ -727,7 +667,7 @@ function App() {
                 {explain("report", currentRun.message) || currentRun.message}
                 {latest && currentRun.message.includes("T3") && (
                   <button onClick={() => command("approve_final")}>
-                    최종 결과 확인
+                    {t("최종 결과 확인", "Review final result")}
                   </button>
                 )}
               </div>
@@ -735,8 +675,8 @@ function App() {
             {latest && discardId && !discardResult && (
               <div role="status" className="notice">
                 {state === "running"
-                  ? "작업 취소와 변경 되돌리기를 요청했습니다."
-                  : "요청을 처리하기 전에 실행이 끝났거나 일시 정지됐습니다."}
+                  ? t("작업 취소와 변경 되돌리기를 요청했습니다.", "Requested cancellation and rollback.")
+                  : t("요청을 처리하기 전에 실행이 끝났거나 일시 정지됐습니다.", "The run finished or paused before the request was processed.")}
               </div>
             )}
             {latest && discardResult?.error && (
@@ -747,8 +687,8 @@ function App() {
             {latest && pendingDirection && !directionResult && (
               <div role="status" className="notice">
                 {state === "running"
-                  ? "방향 변경을 요청했습니다. 관련 작업이 안전하게 멈출 수 있는 지점까지 기다리는 중입니다."
-                  : "방향을 바꾸기 전에 실행이 끝났거나 일시 정지됐습니다."}
+                  ? t("방향 변경을 요청했습니다. 관련 작업이 안전하게 멈출 수 있는 지점까지 기다리는 중입니다.", "Direction change requested. Waiting for the affected work to reach a safe stopping point.")
+                  : t("방향을 바꾸기 전에 실행이 끝났거나 일시 정지됐습니다.", "The run finished or paused before the direction could change.")}
               </div>
             )}
             {latest && directionResult?.error && (
@@ -759,19 +699,21 @@ function App() {
             {latest && currentRun?.latestRecovery && (
               <div className="notice">
                 <span>
-                  {currentRun.latestRecovery.nodeId} 복구 ·{" "}
+                  {t(`${currentRun.latestRecovery.nodeId} 복구`, `Recovered ${currentRun.latestRecovery.nodeId}`)} ·{" "}
                   {explain("report", currentRun.latestRecovery.diagnosis) || currentRun.latestRecovery.diagnosis}
                   {currentRun.latestRecovery.reused.length > 0 &&
-                    ` · 완료 노드 ${currentRun.latestRecovery.reused.length}개 재사용`}
+                    t(` · 완료 노드 ${currentRun.latestRecovery.reused.length}개 재사용`, ` · Reused ${currentRun.latestRecovery.reused.length} completed nodes`)}
                 </span>
               </div>
             )}
             {latest && currentRun?.latestDirection && (
               <div role="status" className="notice">
-                {currentRun.latestDirection.nodeId}의 방향을 바꿨어요. 변경된
-                작업 {currentRun.latestDirection.rerun.join(", ")}.
+                {t(
+                  `${currentRun.latestDirection.nodeId}의 방향을 바꿨어요. 변경된 작업 ${currentRun.latestDirection.rerun.join(", ")}.`,
+                  `Updated the direction for ${currentRun.latestDirection.nodeId}. Affected tasks: ${currentRun.latestDirection.rerun.join(", ")}.`,
+                )}
                 {currentRun.latestDirection.reused.length > 0 &&
-                  ` 다시 사용한 작업 ${currentRun.latestDirection.reused.join(", ")}.`}
+                  t(` 다시 사용한 작업 ${currentRun.latestDirection.reused.join(", ")}.`, ` Reused tasks: ${currentRun.latestDirection.reused.join(", ")}.`)}
               </div>
             )}
             <footer className="run-footer">
@@ -780,15 +722,15 @@ function App() {
                 <span>
                   <strong>
                     {lastNode
-                      ? `${explain("title", lastNode.spec.goal) || nodeTitle(lastNode.spec)} · ${statusLabel(lastNode.info.status)}`
+                      ? `${explain("title", lastNode.spec.goal) || nodeTitle(lastNode.spec)} · ${statusLabel(lastNode.info.status, language)}`
                       : state
-                        ? statusLabel(state)
-                        : "아직 실행 기록이 없습니다"}
+                        ? statusLabel(state, language)
+                        : t("아직 실행 기록이 없습니다", "No runs yet")}
                   </strong>
                   {lastTime && (
                     <small>
-                      {formatTime(lastTime)}
-                      {currentRun?.resultHead && " · 결과 저장됨"}
+                      {formatTime(lastTime, language)}
+                      {currentRun?.resultHead && t(" · 결과 저장됨", " · Result saved")}
                     </small>
                   )}
                 </span>
@@ -796,9 +738,9 @@ function App() {
               {selected && (
                 <button
                   className="run-menu"
-                  title="실행 메뉴"
+                  title={t("실행 메뉴", "Run menu")}
                   aria-expanded={panel === "commands"}
-                  aria-label="실행 메뉴"
+                  aria-label={t("실행 메뉴", "Run menu")}
                   onClick={() => togglePanel("commands")}
                 >
                   <Icon name="branch" />
@@ -810,7 +752,7 @@ function App() {
           {inspected && (
             <Inspector
               explain={explain}
-              easyKorean={easyKorean && view === "runs"}
+              easyKorean={easyKorean && language === "ko" && view === "runs"}
               key={`${selected}/${node}/${revision}`}
               spec={inspected}
               detail={detail ?? currentRun?.nodes?.[node]}
@@ -845,29 +787,30 @@ function App() {
         )}
         {panel === "capacity" && (
           <Capacity
+            capacity={capacity}
             onClose={() => setPanel(undefined)}
             onMetrics={() => changeView("metrics")}
           />
         )}
         {panel === "inbox" && (
-          <section className="popover inbox" aria-label="보고 센터">
+          <section className="popover inbox" aria-label={t("보고 센터", "Reports")}>
             <button
               className="icon-button popover-close"
-              aria-label="보고 센터 닫기"
+              aria-label={t("보고 센터 닫기", "Close reports")}
               onClick={() => setPanel(undefined)}
             >
               <Icon name="close" />
             </button>
             <h2>
-              보고 센터{" "}
+              {t("보고 센터", "Reports")}{" "}
               {unread.length > 0 && (
                 <span className="count">{unread.length}</span>
               )}
             </h2>
             <p>
               {unread.length
-                ? `읽지 않은 보고 ${unread.length}개`
-                : "읽지 않은 보고가 없습니다."}
+                ? t(`읽지 않은 보고 ${unread.length}개`, `${unread.length} unread reports`)
+                : t("읽지 않은 보고가 없습니다.", "No unread reports.")}
             </p>
             <div className="report-list">
               {allReports.slice(0, 30).map((report) => (
@@ -888,7 +831,7 @@ function App() {
                     </strong>
                     <small title={report.text}>{explain("report", report.text) || report.text}</small>
                   </span>
-                  <time>{formatTime(report.timestamp)}</time>
+                  <time>{formatTime(report.timestamp, language)}</time>
                 </button>
               ))}
             </div>
@@ -905,32 +848,32 @@ function App() {
                   )
                 }
               >
-                모두 읽음
+                {t("모두 읽음", "Mark all as read")}
               </button>
             )}
           </section>
         )}
         {panel === "commands" && (
-          <section className="popover commands" aria-label="실행 메뉴">
-            <h2>실행 메뉴</h2>
+          <section className="popover commands" aria-label={t("실행 메뉴", "Run menu")}>
+            <h2>{t("실행 메뉴", "Run menu")}</h2>
             <label>
-              이전 그래프 보기
+              {t("이전 그래프 보기", "View earlier graphs")}
               <select
-                aria-label="그래프 이력"
+                aria-label={t("그래프 이력", "Graph history")}
                 value={revision}
                 onChange={(event) => {
                   setRevision(event.target.value);
                   closeNode();
                 }}
               >
-                <option value="latest">최신 그래프</option>
+                <option value="latest">{t("최신 그래프", "Latest graph")}</option>
                 {Array.from(
                   {
                     length: currentRun?.revision ?? selectedRun?.revision ?? 1,
                   },
                   (_, index) => (
                     <option key={index + 1} value={String(index + 1)}>
-                      변경 이력 {index + 1}
+                      {t(`변경 이력 ${index + 1}`, `Revision ${index + 1}`)}
                     </option>
                   ),
                 )}
@@ -940,7 +883,7 @@ function App() {
               onClick={() => command("stop")}
               disabled={!latest || state !== "running"}
             >
-              안전하게 중지
+              {t("안전하게 중지", "Stop safely")}
             </button>
             <button
               onClick={() => command("resume")}
@@ -949,7 +892,7 @@ function App() {
                 !["paused", "awaiting_input", "failed"].includes(state)
               }
             >
-              다시 실행
+              {t("다시 실행", "Run again")}
             </button>
             <button
               onClick={async () => {
@@ -968,11 +911,13 @@ function App() {
                 !nodeRows.some((entry) => entry.kind === "worker")
               }
             >
-              취소하고 변경 되돌리기
+              {t("취소하고 변경 되돌리기", "Cancel and roll back")}
             </button>
             <small>
-              모델 호출 {currentRun?.attempts ?? 0}회 · 실행{" "}
-              {Math.round((currentRun?.activeMs ?? 0) / 1000)}초
+              {t(
+                `모델 호출 ${currentRun?.attempts ?? 0}회 · 실행 ${Math.round((currentRun?.activeMs ?? 0) / 1000)}초`,
+                `${currentRun?.attempts ?? 0} model calls · ${Math.round((currentRun?.activeMs ?? 0) / 1000)}s active`,
+              )}
             </small>
           </section>
         )}
@@ -981,12 +926,12 @@ function App() {
             <button onClick={() => openReport(toast)}>
               <Icon name="inbox" />
               <span>
-                확인이 필요한 보고<strong>{toast.goal}</strong>
+                {t("확인이 필요한 보고", "Report needs attention")}<strong>{toast.goal}</strong>
               </span>
             </button>
             <button
               className="icon-button"
-              aria-label="알림 닫기"
+              aria-label={t("알림 닫기", "Dismiss notification")}
               onClick={() => setToast(undefined)}
             >
               <Icon name="close" />
@@ -994,7 +939,18 @@ function App() {
           </div>
         )}
       </main>
+      <Settings
+        dialog={settingsDialog}
+        language={language}
+        setLanguage={setLanguage}
+        theme={theme}
+        setTheme={setTheme}
+        easyKorean={easyKorean}
+        setEasyKorean={setEasyKorean}
+        notify={notify}
+        setNotify={setNotify}
+      />
     </div>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(<Dashboard />);

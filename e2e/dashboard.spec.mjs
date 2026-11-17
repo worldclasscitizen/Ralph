@@ -23,6 +23,13 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
         },
         "google:antigravity-login": {
           kind: "subscription",
+          status: "exact",
+          windows: [
+            { label: "gemini-5h", durationMinutes: 300, remainingPercent: 74 },
+          ],
+        },
+        "zai:general": {
+          kind: "api_balance",
           status: "unavailable",
         },
       },
@@ -61,6 +68,15 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
           routableModels: 0,
           models: [],
         },
+        {
+          id: "google:gemini-cli-login",
+          mode: "builtin",
+          enabled: false,
+          installed: true,
+          authentication: "unknown",
+          support: "compatible",
+          models: [],
+        },
       ],
     });
   });
@@ -74,9 +90,10 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
   await page.getByRole("button", { name: /^Inspect [0-9a-f]{12}$/ }).click();
   await expect(page.getByText("검증 결과", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "노드 상세 닫기" }).click();
+  await expect(page.getByText("Gemini 74%", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "사용량·한도" }).click();
   await expect(
-    page.getByLabel("Codex 구독 5시간 한도 잔여 비율"),
+    page.getByLabel("Codex 구독제 5시간 한도 잔여 비율"),
   ).toBeVisible();
   await expect(page.getByText("47% 남음", { exact: true })).toBeVisible();
   await expect(page.getByText("주간 한도", { exact: true })).toBeVisible();
@@ -88,10 +105,13 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
     page.getByRole("heading", { name: "남은 한도와 잔액" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Antigravity에서 /usage로 남은 한도를 확인할 수 있어요."),
+    page.getByLabel("Gemini 구독제 Gemini · 5시간 한도 잔여 비율"),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Z.ai 결제 페이지 열기" }))
+    .toHaveAttribute("href", "https://z.ai/manage-apikey/billing");
   const providerCards = page.getByRole("region", { name: "공급자 연결" });
   await expect(providerCards.getByText(/^모델 카탈로그 v\d+$/)).toBeVisible();
+  await providerCards.getByText("그 외 공급자", { exact: true }).click();
   const openai = providerCards.getByRole("article").filter({ hasText: "OpenAI API" });
   await expect(openai).toContainText("API 키 필요");
   await openai.getByText("모델 목록 (1개)", { exact: true }).click();
@@ -102,11 +122,12 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
   await expect(mock.getByText("수동으로 추가", { exact: true })).toBeVisible();
   await expect(mock.getByText("실행 경로에 설정됨", { exact: true })).toBeVisible();
   await expect(
-    providerCards.getByRole("article").filter({ hasText: "Antigravity 구독" }),
+    providerCards.getByRole("article").filter({ hasText: "Gemini 구독제" }),
   ).toContainText("연결됨");
   await expect(
     providerCards.getByText("Ralph에서 실행할 수 있는 모델이 아직 없어요."),
   ).toBeVisible();
+  await expect(providerCards.getByRole("heading", { name: /Gemini CLI/ })).toHaveCount(0);
   const usage = page.getByRole("table", { name: "모델별 사용 내역" });
   await expect(usage).toContainText("mock-1");
   await expect(
@@ -526,4 +547,40 @@ test("simple Korean follows node changes while model IDs and activity originals 
     .toHaveText("순위에 쓸 자료를 모아요");
   expect(batches.slice(previous)).toContainEqual({ kind: "title", text: work.goal });
   expect(batches.slice(previous)).not.toContainEqual({ kind: "criterion", text: "Artifact exists" });
+});
+
+test("settings stays over the run and switches language, theme and toggle state", async ({ page }) => {
+  await page.goto("/");
+  const run = page.getByRole("heading", { name: "Build a verified artifact" });
+  await expect(run).toBeVisible();
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  const settings = page.getByRole("dialog", { name: "설정" });
+  await expect(settings).toBeVisible();
+  await expect(settings.getByText("Codex의 경량 모델을 활용해 작업 내용을 이해하기 쉬운 말로 번역합니다.")).toBeVisible();
+
+  const reports = settings.getByRole("button", { name: "확인이 필요한 보고 알림" });
+  await reports.getByText("ON", { exact: true }).click();
+  await expect(reports.getByText("OFF", { exact: true })).toHaveAttribute("data-active", "true");
+  await reports.getByText("OFF", { exact: true }).click();
+  await expect(reports.getByText("ON", { exact: true })).toHaveAttribute("data-active", "true");
+  const theme = settings.getByRole("button", { name: "화면 테마" });
+  await theme.getByText("다크", { exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await settings.getByRole("button", { name: "Language" }).getByText("English").click();
+  const english = page.getByRole("dialog", { name: "Settings" });
+  await expect(english.getByRole("button", { name: "Plain Korean", exact: true })).toBeDisabled();
+  await expect(english.getByRole("button", { name: "Plain Korean", exact: true }).getByText("OFF"))
+    .toHaveAttribute("data-active", "true");
+  await page.keyboard.press("Escape");
+  await expect(english).toBeHidden();
+  await expect(run).toBeVisible();
+  await expect(page.getByRole("button", { name: "Usage & limits" })).toBeVisible();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await english.getByRole("button", { name: "Language" }).getByText("한국어").click();
+  await expect(settings.getByRole("button", { name: "쉬운 한국어 설명" })).toBeEnabled();
 });

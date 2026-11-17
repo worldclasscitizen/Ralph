@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { type Language, useText } from "./locale";
 
 export type Row = Record<string, any>;
 export type Tone = "done" | "active" | "error" | "wait";
@@ -52,25 +53,27 @@ export function Icon({ name }: { name: IconName }) {
   );
 }
 
-const statusLabels: Record<string, string> = {
-  completed: "완료",
-  running: "실행 중",
-  verifying: "검증 중",
-  queued: "호출 대기",
-  failed: "실패",
-  blocked: "진행 불가",
-  retry_wait: "재시도 대기",
-  cancelled: "취소됨",
-  interrupted: "중단됨",
-  pending: "시작 전",
-  awaiting_input: "확인 필요",
-  paused: "일시 정지",
-  stopping: "중지 중",
-  planning: "계획 중",
-  ready: "준비됨",
+const statusLabels: Record<string, [string, string]> = {
+  completed: ["완료", "Complete"],
+  running: ["실행 중", "Running"],
+  verifying: ["검증 중", "Verifying"],
+  queued: ["호출 대기", "Queued"],
+  failed: ["실패", "Failed"],
+  blocked: ["진행 불가", "Blocked"],
+  retry_wait: ["재시도 대기", "Waiting to retry"],
+  cancelled: ["취소됨", "Cancelled"],
+  interrupted: ["중단됨", "Interrupted"],
+  pending: ["시작 전", "Pending"],
+  awaiting_input: ["확인 필요", "Needs input"],
+  paused: ["일시 정지", "Paused"],
+  stopping: ["중지 중", "Stopping"],
+  planning: ["계획 중", "Planning"],
+  ready: ["준비됨", "Ready"],
 };
-export const statusLabel = (status?: string) =>
-  status ? (statusLabels[status] ?? status) : "시작 전";
+export function statusLabel(status?: string, language: Language = "ko") {
+  const key = status || "pending";
+  return statusLabels[key]?.[language === "en" ? 1 : 0] ?? key;
+}
 
 export function statusTone(status?: string): Tone {
   if (status === "completed") return "done";
@@ -129,15 +132,15 @@ export function TaskIcon({ task }: { task: Row }) {
   return <Icon name={name} />;
 }
 export const nodeTitle = (task: Row) => task.goal || task.nodeId;
-export function modelLabel(task: Row) {
+export function modelLabel(task: Row, language: Language = "ko") {
   if (task.modelId) return task.modelId;
-  if (task.kind === "integrate") return "로컬 Git";
-  if (task.kind === "validate") return "로컬 검증";
+  if (task.kind === "integrate") return language === "en" ? "Local Git" : "로컬 Git";
+  if (task.kind === "validate") return language === "en" ? "Local verification" : "로컬 검증";
   return "";
 }
 
-export const formatTime = (date: string) =>
-  new Date(date).toLocaleTimeString("ko-KR", {
+export const formatTime = (date: string, language: Language = "ko") =>
+  new Date(date).toLocaleTimeString(language, {
     hourCycle: "h23",
     hour: "2-digit",
     minute: "2-digit",
@@ -153,6 +156,7 @@ export function Elapsed({
   endedAt?: string;
   active: boolean;
 }) {
+  const t = useText();
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (!startedAt || !active || endedAt) return;
@@ -171,8 +175,8 @@ export function Elapsed({
   return (
     <>
       {" "}
-      · {elapsed >= 60 && `${Math.floor(elapsed / 60)}분 `}
-      {elapsed % 60}초
+      · {elapsed >= 60 && `${Math.floor(elapsed / 60)}${t("분", "m")} `}
+      {elapsed % 60}{t("초", "s")}
     </>
   );
 }

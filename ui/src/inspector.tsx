@@ -12,17 +12,18 @@ import {
   statusTone,
   type Row,
 } from "./presentation";
+import { type Language, type Translate, useLanguage, useText } from "./locale";
 import { VirtualLog } from "./virtual-log";
 import { useExplanations, type Explain } from "./explanations";
 
 export type InspectorTab = "work" | "report" | "activity";
-const tabs = { work: "작업", report: "보고", activity: "활동" } as const;
-const activityNames: Record<string, string> = {
-  "node.status": "작업 상태 변경",
-  "route.selected": "모델 선택",
-  "invocation.started": "모델 호출 시작",
-  "invocation.finished": "모델 호출 종료",
-  "evidence.saved": "검증 기록 저장",
+const tabs = { work: ["작업", "Work"], report: ["보고", "Reports"], activity: ["활동", "Activity"] } as const;
+const activityNames: Record<string, [string, string]> = {
+  "node.status": ["작업 상태 변경","Task status changed"],
+  "route.selected": ["모델 선택","Model selected"],
+  "invocation.started": ["모델 호출 시작","Model call started"],
+  "invocation.finished": ["모델 호출 종료","Model call ended"],
+  "evidence.saved": ["검증 기록 저장","Evidence saved"],
 };
 
 function activityNote(event: Row): string | undefined {
@@ -31,14 +32,18 @@ function activityNote(event: Row): string | undefined {
     payload.reason || payload.message;
 }
 
-function activityDescription(event: Row) {
+function activityDescription(event: Row, t: Translate, language: Language) {
   const payload = event.payload;
-  if (event.type === "node.status") return `작업 상태가 ‘${statusLabel(payload.status)}’로 바뀌었어요.`;
-  if (event.type === "invocation.started") return `${payload.modelId || "배정된 모델"}에 작업을 요청했어요.`;
-  if (event.type === "invocation.finished") return `${payload.modelId || "배정된 모델"} 호출이 끝났어요.`;
-  if (event.type === "route.selected") return `${payload.modelId || "이 모델"}을 이 작업에 배정했어요.`;
-  if (event.type === "evidence.saved") return "검증에서 확인한 내용을 저장했어요.";
-  return "실행 중 발생한 활동을 기록했어요.";
+  const model = payload.modelId || t("배정된 모델", "the assigned model");
+  if (event.type === "node.status") {
+    const status = statusLabel(payload.status, language);
+    return t(`작업 상태가 ‘${status}’로 바뀌었어요.`, `Task status changed to ${status}.`);
+  }
+  if (event.type === "invocation.started") return t(`${model}에 작업을 요청했어요.`, `Requested work from ${model}.`);
+  if (event.type === "invocation.finished") return t(`${model} 호출이 끝났어요.`, `The call to ${model} finished.`);
+  if (event.type === "route.selected") return t(`${model}을 이 작업에 배정했어요.`, `Assigned ${model} to this task.`);
+  if (event.type === "evidence.saved") return t("검증에서 확인한 내용을 저장했어요.", "Saved verification evidence.");
+  return t("실행 중 발생한 활동을 기록했어요.", "Recorded activity from this run.");
 }
 
 function DirectionForm({
@@ -48,6 +53,7 @@ function DirectionForm({
   send: (instruction: string) => Promise<boolean>;
   disabled: boolean;
 }) {
+  const t = useText();
   const [instruction, setInstruction] = useState("");
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -55,18 +61,18 @@ function DirectionForm({
   }
   return (
     <form className="direction-form" onSubmit={submit}>
-      <label htmlFor="worker-direction">방향 변경</label>
+      <label htmlFor="worker-direction">{t("방향 변경", "Change direction")}</label>
       <textarea
         id="worker-direction"
         value={instruction}
         onChange={(e) => setInstruction(e.target.value)}
-        placeholder="예를 들어 토글 대신 드롭다운을 사용해 주세요."
+        placeholder={t("예를 들어 토글 대신 드롭다운을 사용해 주세요.", "For example, use a dropdown instead of a toggle.")}
         maxLength={4000}
         required
         disabled={disabled}
       />
-      <small>승인된 범위와 완료 기준 안에서 방향을 추가할 수 있어요.</small>
-      <button disabled={disabled || !instruction.trim()}>변경 적용</button>
+      <small>{t("승인된 범위와 완료 기준 안에서 방향을 추가할 수 있어요.", "Add directions within the approved scope and completion criteria.")}</small>
+      <button disabled={disabled || !instruction.trim()}>{t("변경 적용", "Apply change")}</button>
     </form>
   );
 }
@@ -94,6 +100,9 @@ export function Inspector({
   send?: (instruction: string) => Promise<boolean>;
   sending: boolean;
 }) {
+  const t = useText();
+  const language = useLanguage();
+  const position = language === "en" ? 1 : 0;
   const [latestArtifact, setLatestArtifact] = useState<{
     id: string;
     data: Row;
@@ -159,8 +168,8 @@ export function Inspector({
         <div className="agent-report" key={latestReport}>
           <strong data-tone={tone}>
             <span className="lamp" data-tone={tone} />
-            {modelLabel({ ...spec, ...detail }) || "실행 결과"} ·{" "}
-            {statusLabel(status)}
+            {modelLabel({ ...spec, ...detail }, language) || t("실행 결과", "Run result")} ·{" "}
+            {statusLabel(status, language)}
           </strong>
           <p title={latestReport}>{easyReport(latestReport)}</p>
         </div>
@@ -169,23 +178,23 @@ export function Inspector({
   }
 
   return (
-    <aside className="inspector" aria-label="노드 상세">
+    <aside className="inspector" aria-label={t("노드 상세", "Node details")}>
       <div className="inspector-scroll">
         <button
           className="icon-button inspector-close"
-          aria-label="노드 상세 닫기"
+          aria-label={t("노드 상세 닫기", "Close node details")}
           onClick={onClose}
         >
           <Icon name="close" />
         </button>
         <div className="inspector-heading">
-          <div className="eyebrow">노드 상세&nbsp; / &nbsp;{spec.nodeId}</div>
+          <div className="eyebrow">{t("노드 상세", "Node details")}&nbsp; / &nbsp;{spec.nodeId}</div>
           <h2 title={title}>{easyTitle}</h2>
           {description && <p title={description}>{easyDescription}</p>}
           <div className="inspector-state" data-tone={tone}>
             <StatusBadge status={status} />
             <strong>
-              {status ? statusLabel(status) : "불러오는 중"}
+              {status ? statusLabel(status, language) : t("불러오는 중", "Loading")}
               <Elapsed
                 startedAt={detail?.startedAt}
                 endedAt={detail?.endedAt}
@@ -193,18 +202,18 @@ export function Inspector({
               />
             </strong>
             <small>
-              {modelLabel({ ...spec, ...detail }) || "모델 배정 전"}
+              {modelLabel({ ...spec, ...detail }, language) || t("모델 배정 전", "No model assigned")}
             </small>
           </div>
         </div>
-        <nav className="inspector-tabs" aria-label="노드 상세 보기">
+        <nav className="inspector-tabs" aria-label={t("노드 상세 보기", "Node detail views")}>
           {(Object.keys(tabs) as InspectorTab[]).map((id) => (
             <button
               key={id}
               aria-pressed={tab === id}
               onClick={() => setTab(id)}
             >
-              {tabs[id]}
+              {tabs[id][position]}
               {id === "activity" && events.length > 0 && (
                 <small>{events.length}</small>
               )}
@@ -220,10 +229,10 @@ export function Inspector({
           <>
             <section className="inspector-section">
               <div className="section-heading">
-                <h3>하위 작업</h3>
+                <h3>{t("하위 작업", "Subtasks")}</h3>
                 {criteria.length > 0 && (
                   <small>
-                    {criteria.length}개 중 {criteriaDone}개 완료
+                    {t(`${criteria.length}개 중 ${criteriaDone}개 완료`, `${criteriaDone} of ${criteria.length} complete`)}
                   </small>
                 )}
               </div>
@@ -233,7 +242,7 @@ export function Inspector({
                     status={status === "completed" ? status : undefined}
                   />
                   <span title={criterion}>{explain("criterion", criterion) || criterion}</span>
-                  <small>{status === "completed" ? "완료" : "완료 기준"}</small>
+                  <small>{status === "completed" ? t("완료", "Complete") : t("완료 기준", "Completion criteria")}</small>
                 </div>
               ))}
               {checks.map((check, index) => (
@@ -242,27 +251,27 @@ export function Inspector({
                     status={check.exitCode === 0 ? "completed" : "failed"}
                   />
                   <span title={check.command}>{explainDetail("check", check.command) || check.command}</span>
-                  <small>{check.exitCode === 0 ? "통과" : "실패"}</small>
+                  <small>{check.exitCode === 0 ? t("통과", "Passed") : t("실패", "Failed")}</small>
                 </div>
               ))}
               {!criteria.length && !checks.length && (
-                <p>기록된 하위 작업이 없습니다.</p>
+                <p>{t("기록된 하위 작업이 없습니다.", "No subtasks recorded.")}</p>
               )}
             </section>
             <section className="inspector-section">
-              <h3>이 노드의 보고</h3>
-              {latestUpdate() || <p>아직 저장된 보고가 없습니다.</p>}
+              <h3>{t("이 노드의 보고", "Node reports")}</h3>
+              {latestUpdate() || <p>{t("아직 저장된 보고가 없습니다.", "No reports saved yet.")}</p>}
             </section>
             <button className="detail-link" onClick={() => setTab("activity")}>
               <Icon name="activity" />
-              활동 기록{events.length > 0 && ` ${events.length}`}
+              {t("활동 기록", "Activity log")}{events.length > 0 && ` ${events.length}`}
             </button>
           </>
         )}
         {tab === "report" && (
           <section className="inspector-section">
-            <h3>에이전트 보고</h3>
-            {latestUpdate() || <p>아직 저장된 보고가 없습니다.</p>}
+            <h3>{t("에이전트 보고", "Agent reports")}</h3>
+            {latestUpdate() || <p>{t("아직 저장된 보고가 없습니다.", "No reports saved yet.")}</p>}
             {detail?.result?.summary &&
               detail.result.summary !== latestReport && (
                 <p title={detail.result.summary}>{easyReport(detail.result.summary)}</p>
@@ -274,7 +283,7 @@ export function Inspector({
         )}
         {tab === "activity" && (
           <div className="inspector-section activity-list">
-            <h3>활동 기록</h3>
+            <h3>{t("활동 기록", "Activity log")}</h3>
             {recent.map((event) => {
               const note = activityNote(event);
               const explanation = explainDetail("activity", note);
@@ -282,36 +291,36 @@ export function Inspector({
                 <details key={event.eventId ?? event.seq}>
                   <summary>
                     <Icon name={event.type === "evidence.saved" ? "file" : "tool"} />
-                    <span>{explanation || activityNames[event.type] || "활동 기록"}</span>
-                    <time>{formatTime(event.timestamp)}</time>
+                    <span>{explanation || activityNames[event.type]?.[position] || t("활동 기록", "Activity log")}</span>
+                    <time>{formatTime(event.timestamp, language)}</time>
                   </summary>
                   <p className="activity-description">
-                    {explanation ? activityDescription(event) : note || activityDescription(event)}
+                    {explanation ? activityDescription(event, t, language) : note || activityDescription(event, t, language)}
                   </p>
                   <details>
-                    <summary>원문 기록</summary>
+                    <summary>{t("원문 기록", "Original record")}</summary>
                     <VirtualLog
                       text={JSON.stringify(event.payload, null, 2)}
-                      label="활동 상세 기록"
+                      label={t("활동 상세 기록", "Activity details")}
                     />
                   </details>
                 </details>
               );
             })}
-            {!events.length && <p>아직 저장된 활동이 없습니다.</p>}
+            {!events.length && <p>{t("아직 저장된 활동이 없습니다.", "No activity saved yet.")}</p>}
             <dl>
-              <dt>모델 선택 근거</dt>
+              <dt>{t("모델 선택 근거", "Model selection rationale")}</dt>
               <dd title={detail?.rationale}>{explainDetail("activity", detail?.rationale) || detail?.rationale || "—"}</dd>
-              <dt>실행 횟수</dt>
+              <dt>{t("실행 횟수", "Attempts")}</dt>
               <dd>{detail?.iteration ?? "—"}</dd>
-              <dt>시작 시각</dt>
-              <dd>{detail?.startedAt ? formatTime(detail.startedAt) : "—"}</dd>
+              <dt>{t("시작 시각", "Start time")}</dt>
+              <dd>{detail?.startedAt ? formatTime(detail.startedAt, language) : "—"}</dd>
             </dl>
           </div>
         )}
         {artifacts.length > 0 && (
           <section className="inspector-section evidence">
-            <h3>검증 기록</h3>
+            <h3>{t("검증 기록", "Verification records")}</h3>
             {artifacts.map((id) => (
               <button
                 key={id}
@@ -347,7 +356,7 @@ export function Inspector({
           ) : (
             <button onClick={() => setDirection(true)}>
               <Icon name="branch-direction" />
-              방향 변경
+              {t("방향 변경", "Change direction")}
             </button>
           )}
         </footer>
@@ -365,6 +374,7 @@ function Evidence({
   id: string;
   saved?: Row;
 }) {
+  const t = useText();
   const [artifact, setArtifact] = useState<Row>();
   const [problem, setProblem] = useState("");
   useEffect(() => {
@@ -382,20 +392,20 @@ function Evidence({
     };
   }, [runId, id, saved]);
   const evidence = saved ?? artifact;
-  if (!evidence) return <p>{problem || "검증 기록을 불러오는 중입니다."}</p>;
+  if (!evidence) return <p>{problem || t("검증 기록을 불러오는 중입니다.", "Loading verification records…")}</p>;
   return (
     <>
       <details open>
-        <summary>검증 결과</summary>
+        <summary>{t("검증 결과", "Verification result")}</summary>
         <pre>
           {JSON.stringify(evidence.evaluation ?? evidence.verifier, null, 2)}
         </pre>
       </details>
       <details>
-        <summary>파일 변경 내용</summary>
+        <summary>{t("파일 변경 내용", "File changes")}</summary>
         <VirtualLog
-          text={evidence.diff ?? "기록된 변경 내용이 없습니다."}
-          label="파일 변경 기록"
+          text={evidence.diff ?? t("기록된 변경 내용이 없습니다.", "No changes recorded.")}
+          label={t("파일 변경 기록", "File change log")}
         />
       </details>
     </>
