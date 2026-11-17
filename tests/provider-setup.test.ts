@@ -147,6 +147,28 @@ describe("provider setup", () => {
     expect(routed.every((entry) => entry.modelId === "deepseek-flash")).toBe(true);
   });
 
+  it("reports extra discovered models without claiming the catalog is outdated", async () => {
+    const { root, config } = await project();
+    const messages: string[] = [];
+    const prompt = { ...scriptedPrompt({}, false), info: (message: string) => messages.push(message) };
+    vi.stubGlobal("fetch", async () =>
+      Response.json({ data: [{ id: "deepseek-flash" }, { id: "deepseek-extra" }] }),
+    );
+    try {
+      await runProviderSetup(root, config, prompt, {
+        providers: ["deepseek"],
+        method: "api",
+        apiKeys: { "*": "sk-test-deepseek" },
+        models: { "*": ["deepseek-flash"] },
+        liveDiscovery: true,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(messages.join("\n")).toContain("deepseek-extra");
+    expect(messages.join("\n")).not.toContain("카탈로그 갱신이 필요");
+  });
+
   it("refuses to guess in a non-interactive run", async () => {
     const { root, config } = await project();
     await expect(
