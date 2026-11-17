@@ -1441,18 +1441,6 @@ dt {
   font-size: 11px;
   text-underline-offset: 3px;
 }
-.gemini-limit {
-  white-space: nowrap;
-  padding: 3px 5px;
-  border-radius: 5px;
-  color: var(--done);
-  background: var(--done-bg);
-  font-size: 10px;
-}
-.gemini-limit[data-stale="true"] {
-  color: var(--faint);
-  background: var(--wait-bg);
-}
 
 .metrics-page {
   overflow: auto;

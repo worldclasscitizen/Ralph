@@ -91,12 +91,14 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
   await page.getByRole("button", { name: /^Inspect [0-9a-f]{12}$/ }).click();
   await expect(page.getByText("검증 결과", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "노드 상세 닫기" }).click();
-  await expect(page.getByText("Gemini 74%", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "사용량·한도" }).click();
+  const usageButton = page.getByRole("button", { name: "사용량·한도" });
+  await usageButton.click();
   await expect(
     page.getByLabel("Codex 구독제 5시간 한도 잔여 비율"),
   ).toBeVisible();
   await expect(page.getByText("47% 남음", { exact: true })).toBeVisible();
+  await expect(page.getByText("74% 남음", { exact: true })).toBeVisible();
+  await expect(usageButton).toHaveText("사용량·한도");
   const quotaMeter = page.getByLabel("Codex 구독제 5시간 한도 잔여 비율");
   const quotaText = page.getByText("47% 남음", { exact: true });
   const meter = await quotaMeter.boundingBox();

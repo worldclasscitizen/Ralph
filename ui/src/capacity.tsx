@@ -173,26 +173,6 @@ export function useCapacity(): CapacityState {
   return state;
 }
 
-export function GeminiLimit({ capacity }: { capacity: CapacityState }) {
-  const t = useText();
-  const entry = capacity.entries?.[geminiId];
-  if (!entry || entry.kind !== "subscription") return null;
-  const window =
-    entry.windows?.find(({ label }) => label === "gemini-5h") ??
-    entry.windows?.find(({ label }) => label === "gemini-weekly");
-  if (!window) return null;
-  const outdated = capacity.failed || entry.status === "stale";
-  return (
-    <span
-      className="gemini-limit"
-      data-stale={Boolean(outdated)}
-      title={`${windowName(window, geminiId, t)} · ${outdated ? t("마지막 확인 수치", "Last result") : t("남은 비율", "Remaining")}`}
-    >
-      Gemini {window.remainingPercent}%{outdated && " *"}
-    </span>
-  );
-}
-
 export function CapacityDetails({ capacity }: { capacity: CapacityState }) {
   const t = useText();
   const language = useLanguage();

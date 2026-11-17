@@ -5,7 +5,7 @@ import "./styles.css";
 import { RunGraph } from "./graph";
 import { Inspector, type InspectorTab } from "./inspector";
 import { Metrics, type ProviderRow } from "./metrics";
-import { Capacity, GeminiLimit, useCapacity } from "./capacity";
+import { Capacity, useCapacity } from "./capacity";
 import { LanguageContext, type Language, useText } from "./locale";
 import { Settings, type Theme } from "./settings";
 import {
@@ -581,11 +581,9 @@ function App({ language, setLanguage }: {
                   className="capacity-button"
                   aria-expanded={panel === "capacity"}
                   onClick={() => togglePanel("capacity")}
-                  aria-label={t("사용량·한도", "Usage & limits")}
                 >
                   <Icon name="wallet" />
                   {t("사용량·한도", "Usage & limits")}
-                  <GeminiLimit capacity={capacity} />
                 </button>
               </>
             ) : (
