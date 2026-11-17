@@ -5,7 +5,7 @@ import {
   type ExplanationItem,
   type ExplanationKind,
 } from "../../src/dashboard/explanation-input";
-import { api } from "./presentation";
+import { api, apiPath } from "./presentation";
 
 export type Explain = (kind: ExplanationKind, text?: string) => string | undefined;
 type Candidate = { kind: ExplanationKind; text?: string };
@@ -17,7 +17,7 @@ function key(kind: ExplanationKind, text: string) {
   return JSON.stringify([kind, text]);
 }
 
-export function useExplanations(runId: string, enabled: boolean, candidates: Candidate[]): Explain {
+export function useExplanations(runId: string, project: string, enabled: boolean, candidates: Candidate[]): Explain {
   const answers = useRef(new Map<string, string | null>());
   const inFlight = useRef(new Set<string>());
   const [refresh, setRefresh] = useState(0);
@@ -48,7 +48,7 @@ export function useExplanations(runId: string, enabled: boolean, candidates: Can
           const keys = batch.map(({ kind, text }) => key(kind, text));
           keys.forEach((id) => inFlight.current.add(id));
           try {
-            const response = await fetch(`/api/v2/runs/${encodeURIComponent(runId)}/explanations`, {
+            const response = await fetch(apiPath(`runs/${encodeURIComponent(runId)}/explanations`, project), {
               method: "POST",
               headers: { "Content-Type": "application/json", "x-ralph-token": controlToken },
               body: JSON.stringify({ items: batch }),
@@ -82,7 +82,7 @@ export function useExplanations(runId: string, enabled: boolean, candidates: Can
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [enabled, runId, signature]);
+  }, [enabled, project, runId, signature]);
 
   return useCallback(
     (kind, text) => enabled ? answers.current.get(key(kind, inputText(text))) ?? undefined : undefined,

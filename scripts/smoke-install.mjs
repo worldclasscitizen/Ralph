@@ -66,7 +66,11 @@ if (version.stdout.trim() !== expectedVersion)
   throw new Error("설치된 binary 버전이 올바르지 않습니다.");
 await exec(process.execPath, [cli, "init", "--project", project, "--json"], {
   cwd: temp,
-  env: { ...process.env, RALPH_CATALOG_URL: "http://127.0.0.1:1/catalog.json" },
+  env: {
+    ...process.env,
+    RALPH_CONFIG_HOME: join(temp, "ralph-config"),
+    RALPH_CATALOG_URL: "http://127.0.0.1:1/catalog.json",
+  },
 });
 await stat(join(project, ".git", "ralph", "config.json"));
 for (const forbidden of [".ralph", ".antigravity", "PROMPT.md"]) {

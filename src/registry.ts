@@ -1,20 +1,31 @@
-import { mkdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { globalConfigDir } from "./config.js";
-import { readJson, writeJson } from "./util.js";
+import { readJson, sha256, writeJson } from "./util.js";
 
-interface Registry { schemaVersion: 1; projects: Array<{ root: string; registeredAt: string }> }
-
-function registryPath(): string { return join(globalConfigDir(), "projects.json"); }
+interface ProjectRegistration { root: string; registeredAt: string }
 
 export async function registerProject(root: string): Promise<void> {
-  await mkdir(globalConfigDir(), { recursive: true });
-  let registry: Registry = { schemaVersion: 1, projects: [] };
-  try { registry = await readJson<Registry>(registryPath()); } catch { /* first registration */ }
-  registry.projects = [{ root, registeredAt: new Date().toISOString() }, ...registry.projects.filter((item) => item.root !== root)];
-  await writeJson(registryPath(), registry);
+  const path = join(globalConfigDir(), "projects", `${sha256(root)}.json`);
+  // Projects register independently, including when two CLI processes start together.
+  await writeJson(path, { root, registeredAt: new Date().toISOString() });
 }
 
 export async function registeredProjects(): Promise<string[]> {
-  try { return (await readJson<Registry>(registryPath())).projects.map((item) => item.root); } catch { return []; }
+  const home = globalConfigDir();
+  const directory = join(home, "projects");
+  const [legacy, files] = await Promise.all([
+    readJson<{ projects: ProjectRegistration[] }>(join(home, "projects.json")).catch(() => undefined),
+    readdir(directory).catch(() => []),
+  ]);
+  const entries = await Promise.all(
+    files.filter((name) => /^[a-f0-9]{64}\.json$/.test(name)).map((name) =>
+      readJson<ProjectRegistration>(join(directory, name)).catch(() => undefined),
+    ),
+  );
+  return [...new Set(
+    [...entries, ...(Array.isArray(legacy?.projects) ? legacy.projects : [])].flatMap((entry) =>
+      typeof entry?.root === "string" ? [entry.root] : [],
+    ),
+  )];
 }

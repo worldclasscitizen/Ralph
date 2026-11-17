@@ -52,6 +52,8 @@ export async function listGraphRuns(projectRoot: string) {
         goal: plan.contract.goal,
         mode: plan.mode,
         legacy: false,
+        projectRoot,
+        projectName: basename(projectRoot),
       });
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
@@ -59,22 +61,35 @@ export async function listGraphRuns(projectRoot: string) {
         const old = JSON.parse(
           await readFile(join(paths.runs, name, "state.json"), "utf8"),
         );
-        rows.push({ ...old, runId: old.id, goal: old.taskType, legacy: true });
+        rows.push({
+          ...old,
+          runId: old.id,
+          goal: old.taskType,
+          legacy: true,
+          projectRoot,
+          projectName: basename(projectRoot),
+        });
       } catch {
         /* Drafts may not yet have a legacy state. */
       }
     }
   }
-  return rows.sort((a, b) =>
-    String(b.startedAt).localeCompare(String(a.startedAt)),
+  return rows.sort(newestRunFirst);
+}
+
+function newestRunFirst(a: { startedAt?: string; updatedAt?: string }, b: typeof a) {
+  return (b.startedAt ?? b.updatedAt ?? "").localeCompare(
+    a.startedAt ?? a.updatedAt ?? "",
   );
 }
+
 export async function handleGraphApi(
   req: IncomingMessage,
   res: ServerResponse,
   url: URL,
   root: string,
   explanations: DashboardExplanations,
+  allRunProjects?: string[],
 ): Promise<boolean> {
   if (!url.pathname.startsWith("/api/v2/")) return false;
   try {
@@ -91,21 +106,37 @@ export async function handleGraphApi(
       json(res, 403, { error: "Control token required" });
       return true;
     }
-    const paths = await statePaths(root);
     if (url.pathname === "/api/v2/runs") {
-      const runs = await listGraphRuns(root);
+      const projects = allRunProjects ?? [root];
+      const projectRuns = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            return await listGraphRuns(project);
+          } catch (error) {
+            // A registered repository may have been moved or deleted.
+            const code = (error as NodeJS.ErrnoException).code;
+            if (project !== root && (code === "git_path_failed" || code === "ENOENT")) return [];
+            throw error;
+          }
+        }),
+      );
+      const runs = projectRuns.flat().sort(newestRunFirst);
       const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
       const limit = Math.min(
         100,
         Math.max(1, Number(url.searchParams.get("limit")) || 30),
       );
       json(res, 200, {
-        runs: runs.slice(offset, offset + limit),
+        runs: url.searchParams.get("view") === "sidebar"
+          ? runs
+          : runs.slice(offset, offset + limit),
         total: runs.length,
         projectName: basename(root),
+        projectRoot: root,
       });
       return true;
     }
+    const paths = await statePaths(root);
     if (url.pathname === "/api/v2/providers") {
       const [config, catalog] = await Promise.all([
         loadConfig(root),

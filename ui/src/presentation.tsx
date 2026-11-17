@@ -186,4 +186,11 @@ export async function dashboardGet(path: string) {
   if (!response.ok) throw new Error((await response.json()).error);
   return response.json();
 }
-export const api = (path: string) => dashboardGet(`/api/v2/${path}`);
+export function apiPath(path: string, project?: string) {
+  const url = `/api/v2/${path}`;
+  return project
+    ? `${url}${path.includes("?") ? "&" : "?"}project=${encodeURIComponent(project)}`
+    : url;
+}
+export const api = (path: string, project?: string) =>
+  dashboardGet(apiPath(path, project));

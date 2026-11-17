@@ -81,6 +81,7 @@ export function Inspector({
   spec,
   detail,
   runId,
+  project,
   explain,
   easyKorean,
   tab,
@@ -92,6 +93,7 @@ export function Inspector({
   spec: Row;
   detail?: Row;
   runId: string;
+  project: string;
   explain: Explain;
   easyKorean: boolean;
   tab: InspectorTab;
@@ -123,7 +125,7 @@ export function Inspector({
   useEffect(() => {
     if (!latestId) return;
     let current = true;
-    api(`runs/${runId}/artifacts/${latestId}`)
+    api(`runs/${runId}/artifacts/${latestId}`, project)
       .then((result) => {
         if (current) {
           setLatestArtifact({ id: latestId, data: result });
@@ -136,7 +138,7 @@ export function Inspector({
     return () => {
       current = false;
     };
-  }, [runId, latestId]);
+  }, [runId, project, latestId]);
   const artifact =
     latestArtifact?.id === latestId ? latestArtifact?.data : undefined;
   const status = detail?.status;
@@ -146,7 +148,7 @@ export function Inspector({
   const latestReport: string | undefined =
     artifact?.summary || detail?.result?.summary || detail?.error;
   const recent = events.slice(-60).reverse();
-  const explainDetail = useExplanations(runId, easyKorean, [
+  const explainDetail = useExplanations(runId, project, easyKorean, [
     { kind: "report", text: artifact?.summary },
     ...checks.map((check) => ({ kind: "check" as const, text: check.command })),
     { kind: "activity", text: detail?.rationale },
@@ -342,6 +344,7 @@ export function Inspector({
               <Evidence
                 key={openedEvidence}
                 runId={runId}
+                project={project}
                 id={openedEvidence}
                 saved={openedEvidence === latestId ? artifact : undefined}
               />
@@ -367,10 +370,12 @@ export function Inspector({
 
 function Evidence({
   runId,
+  project,
   id,
   saved,
 }: {
   runId: string;
+  project: string;
   id: string;
   saved?: Row;
 }) {
@@ -380,7 +385,7 @@ function Evidence({
   useEffect(() => {
     if (saved) return;
     let current = true;
-    api(`runs/${runId}/artifacts/${id}`)
+    api(`runs/${runId}/artifacts/${id}`, project)
       .then((result) => {
         if (current) setArtifact(result);
       })
@@ -390,7 +395,7 @@ function Evidence({
     return () => {
       current = false;
     };
-  }, [runId, id, saved]);
+  }, [runId, project, id, saved]);
   const evidence = saved ?? artifact;
   if (!evidence) return <p>{problem || t("검증 기록을 불러오는 중입니다.", "Loading verification records…")}</p>;
   return (

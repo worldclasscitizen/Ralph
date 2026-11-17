@@ -242,6 +242,40 @@ test("32 nodes, eight revisions and event resynchronization preserve selection",
       .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
   ).toBeGreaterThanOrEqual(14);
 });
+
+test("new sessions stay separate while an earlier completed graph is reopened", async ({ page }) => {
+  const history = await (await page.request.get("/api/v2/runs")).json();
+  const [finished] = history.runs;
+  const graph = await (await page.request.get(`/api/v2/runs/${finished.runId}/graph`)).json();
+  const current = { ...finished, runId: "new-session", goal: "New work", status: "running", nodes: {} };
+  const paused = { ...current, runId: "waiting-session", goal: "Needs review", status: "awaiting_input" };
+  let includeNew = false;
+  await page.route("**/api/v2/runs?view=sidebar", (route) => route.fulfill({
+    json: { ...history, runs: includeNew ? [current, paused, finished] : [finished] },
+  }));
+  await page.route("**/api/v2/runs/new-session", (route) => route.fulfill({ json: current }));
+  await page.route("**/api/v2/runs/new-session/graph", (route) =>
+    route.fulfill({ json: { ...graph, runId: current.runId } }),
+  );
+  await page.route("**/api/v2/runs/new-session/events?*", (route) =>
+    route.fulfill({ contentType: "text/event-stream", body: "" }),
+  );
+  await page.goto("/");
+  const ended = page.getByRole("region", { name: "종료됨" });
+  const older = ended.getByRole("button", { name: /Build a verified artifact/ });
+  await expect(older).toHaveAttribute("aria-current", "true");
+  includeNew = true;
+  await expect(page.getByRole("region", { name: "실행 중" })).toContainText("New work");
+  await expect(page.getByRole("region", { name: "대기 중" })).toContainText("확인 필요");
+  await expect(older).toHaveAttribute("aria-current", "true");
+
+  await page.reload();
+  await expect(page.getByRole("region", { name: "실행 중" }).getByRole("button")).toHaveAttribute("aria-current", "true");
+  await older.click();
+  await expect(page.locator(".react-flow__node [data-tone=done]")).toHaveCount(4);
+  await page.getByRole("button", { name: "Inspect work", exact: true }).click();
+  await expect(page.locator(".inspector")).toBeVisible();
+});
 test("small screens retain readable controls and a dismissible inspector", async ({
   page,
 }) => {

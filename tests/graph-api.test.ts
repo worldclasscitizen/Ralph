@@ -1,9 +1,9 @@
-import { it, expect } from "vitest";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { it, expect, vi } from "vitest";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { git } from "../src/workspace/manager.js";
-import { saveConfig } from "../src/state.js";
+import { saveConfig, statePaths } from "../src/state.js";
 import { planRun } from "../src/nodes/planner.js";
 import { validateContract } from "../src/contracts.js";
 import { startDashboard } from "../src/dashboard.js";
@@ -11,11 +11,12 @@ import { submitCommand, pendingCommands } from "../src/runtime/commands.js";
 import { storeFor } from "../src/runtime/supervisor.js";
 import { migrateGraphState } from "../src/migration/graph.js";
 import { DEFAULT_BUDGET } from "../src/graph/schema.js";
+import { registerProject } from "../src/registry.js";
 import type { ProjectConfig } from "../src/types.js";
-it("provides graph snapshots, cursor streams and protected commands", async () => {
-  const root = await mkdtemp(join(tmpdir(), "ralph-api-"));
+
+async function initializeProject(root: string) {
   await git(root, ["init"]);
-  const config = {
+  await saveConfig(root, {
     schemaVersion: 1,
     projectRoot: root,
     preset: "balanced",
@@ -25,8 +26,12 @@ it("provides graph snapshots, cursor streams and protected commands", async () =
     overrides: {},
     verifierCommands: [],
     catalogVersion: 1,
-  } as unknown as ProjectConfig;
-  await saveConfig(root, config);
+  } as unknown as ProjectConfig);
+}
+
+it("provides graph snapshots, cursor streams and protected commands", async () => {
+  const root = await mkdtemp(join(tmpdir(), "ralph-api-"));
+  await initializeProject(root);
   const contract = validateContract(
     {
       taskType: "planning_architecture",
@@ -110,3 +115,53 @@ it("provides graph snapshots, cursor streams and protected commands", async () =
     await new Promise<void>((r) => dashboard.server.close(() => r()));
   }
 }, 15000);
+
+it("keeps older runs in the dashboard across newly registered projects", async () => {
+  const temp = await mkdtemp(join(tmpdir(), "ralph-session-history-"));
+  const root = join(temp, "primary"), other = join(temp, "secondary");
+  for (const project of [root, other]) {
+    await mkdir(project);
+    await initializeProject(project);
+  }
+  vi.stubEnv("RALPH_CONFIG_HOME", join(temp, "config"));
+  const dashboard = await startDashboard(root, { port: 0, all: true });
+  try {
+    const contract = validateContract(
+      { taskType: "planning_architecture", goal: "Older graph", acceptanceCriteria: ["Explain"] },
+      other,
+    );
+    const plan = await planRun(other, contract.goal, { contract, mode: "answer" });
+    await Promise.all([
+      registerProject(other),
+      registerProject(join(temp, "removed")),
+    ]);
+    const { runs } = await statePaths(root);
+    const current = new Date(Date.now() + 60_000).toISOString();
+    await Promise.all(Array.from({ length: 30 }, async (_, index) => {
+      const id = `legacy-${index}`;
+      await mkdir(join(runs, id), { recursive: true });
+      await writeFile(join(runs, id, "state.json"), JSON.stringify({
+        id, taskType: "legacy run", status: "pass", startedAt: current,
+      }));
+    }));
+
+    const api = (path: string) => fetch(`${dashboard.url}api/v2/${path}`);
+    const page = await api("runs").then((r) => r.json()) as any;
+    expect(page).toMatchObject({ total: 31 });
+    expect(page.runs).toHaveLength(30);
+    expect(page.runs.some((run: any) => run.runId === plan.runId)).toBe(false);
+    const sidebar = await api("runs?view=sidebar").then((r) => r.json()) as any;
+    expect(sidebar.runs.at(-1)).toMatchObject({
+      runId: plan.runId, goal: contract.goal, projectRoot: other, projectName: "secondary",
+    });
+    const scope = new URLSearchParams({ project: other });
+    const details = await api(`runs/${plan.runId}/graph?${scope}`).then((r) => r.json());
+    expect(details).toMatchObject({ runId: plan.runId });
+    expect((await api(`runs/${plan.runId}/graph`)).status).toBe(404);
+    expect((await api(`runs?project=${encodeURIComponent(temp)}`)).status).toBe(403);
+  } finally {
+    dashboard.server.closeAllConnections();
+    await new Promise<void>((resolve) => dashboard.server.close(() => resolve()));
+    vi.unstubAllEnvs();
+  }
+});

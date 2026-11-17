@@ -6,6 +6,8 @@ Run `ralph dashboard --open` inside a configured project. The HTTP server binds 
 
 Find and switch sessions in the sidebar. Completed sessions keep their last graph. Scroll over the graph to zoom at the pointer, drag the background to pan, and use the zoom controls to fit the whole graph. The sidebar footer switches between light and dark themes. Open **이전 그래프 보기** in the run menu to inspect graph history.
 
+The sidebar separates running, waiting, and finished sessions. Use `ralph dashboard --all --open` to see sessions across registered local Git projects. Sessions remain in their originating repository's Git state directory.
+
 Select a node to see its work, reports, and recorded activity. The **보고** button collects node results and notices that need attention. **사용량·한도** shows reported balances or limits and opens detailed model usage. The dashboard includes Galmuri11 as a local web font.
 
 In **설정 → 쉬운 한국어**, the dashboard uses an available, enabled Codex Luna model to simplify node titles, work descriptions, checks, and activity. It sends short display text in batches and reuses unchanged explanations during the dashboard session. Model IDs, graph instructions, and activity evidence retain their original values. If the model is unavailable, the dashboard displays the original text.

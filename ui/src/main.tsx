@@ -10,6 +10,7 @@ import { LanguageContext, type Language, useText } from "./locale";
 import { Settings, type Theme } from "./settings";
 import {
   api,
+  apiPath,
   formatTime,
   Icon,
   nodeTitle,
@@ -23,9 +24,11 @@ import { useExplanations } from "./explanations";
 
 type View = "runs" | "metrics";
 type Panel = "inbox" | "capacity" | "commands";
+type SessionRow = Row & { runId: string; projectRoot?: string; status: string };
 type Report = {
   id: string;
   runId: string;
+  projectRoot?: string;
   nodeId?: string;
   goal: string;
   text: string;
@@ -33,12 +36,37 @@ type Report = {
   urgent: boolean;
 };
 
+function sessionKey(run: { runId: string; projectRoot?: string }) {
+  return JSON.stringify([run.projectRoot ?? "", run.runId]);
+}
+
+const sessionGroups = [
+  { label: "실행 중", english: "Running", statuses: ["planning", "running", "stopping"] },
+  { label: "대기 중", english: "Waiting", statuses: [] },
+  { label: "종료됨", english: "Finished", statuses: ["completed", "failed", "cancelled"] },
+];
+
+function sessionStatus(entry: Row) {
+  if (entry.legacy) {
+    if (entry.status === "pass") return "completed";
+    if (entry.status === "interrupted_partial") return "interrupted";
+    if (entry.status === "needs_operator") return "awaiting_input";
+    if (entry.status === "retry") return "retry_wait";
+  }
+  return entry.status;
+}
+
+function sessionGroup(status: string) {
+  const group = sessionGroups.findIndex(({ statuses }) => statuses.includes(status));
+  return group < 0 ? 1 : group;
+}
+
 const themes = [
   { key: "light", icon: "sun", label: "라이트", english: "Light" },
   { key: "dark", icon: "moon", label: "다크", english: "Dark" },
 ] as const;
 
-function reportsFor(runs: Row[]): Report[] {
+function reportsFor(runs: SessionRow[]): Report[] {
   return runs
     .flatMap((run) => {
       const reports: Report[] = Object.entries<Row>(run.nodes ?? {}).flatMap(
@@ -50,6 +78,7 @@ function reportsFor(runs: Row[]): Report[] {
             {
               id: `${run.runId}/${id}/${node.generation}/${timestamp}`,
               runId: run.runId,
+              projectRoot: run.projectRoot,
               nodeId: id,
               goal: run.goal || run.runId,
               text,
@@ -67,6 +96,7 @@ function reportsFor(runs: Row[]): Report[] {
         reports.push({
           id: `${run.runId}/status/${run.status}/${String(run.message).slice(0, 200)}`,
           runId: run.runId,
+          projectRoot: run.projectRoot,
           goal: run.goal || run.runId,
           text: run.message,
           timestamp: run.updatedAt,
@@ -113,9 +143,16 @@ function App({ language, setLanguage }: {
   const t = useText();
   const capacity = useCapacity();
   const settingsDialog = useRef<HTMLDialogElement>(null);
-  const [runs, setRuns] = useState<Row[]>([]);
+  const [runs, setRuns] = useState<SessionRow[]>([]);
   const [project, setProject] = useState("");
-  const [selected, setSelected] = useState("");
+  const [dashboardRoot, setDashboardRoot] = useState("");
+  const [selection, setSelection] = useState("");
+  const selectedRun = runs.find((entry) => sessionKey(entry) === selection);
+  const selected = selectedRun?.runId ?? "";
+  const selectedProject = selectedRun?.projectRoot !== dashboardRoot
+    ? selectedRun?.projectRoot ?? ""
+    : "";
+  const projectName = selectedRun?.projectName ?? project;
   const [view, setView] = useState<View>("runs");
   const [panel, setPanel] = useState<Panel>();
   const [run, setRun] = useState<Row>();
@@ -141,25 +178,34 @@ function App({ language, setLanguage }: {
   );
   const [toast, setToast] = useState<Report>();
   const [directionRequest, setDirectionRequest] = useState<{
-    runId: string;
+    session: string;
     commandId: string;
   }>();
   const [sendingDirection, setSendingDirection] = useState(false);
   const [discardRequest, setDiscardRequest] = useState<{
-    runId: string;
+    session: string;
     commandId: string;
   }>();
   const [sendingDiscard, setSendingDiscard] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
   const knownReports = useRef<Set<string>>(null);
+  const listRequest = useRef(0);
+  const listApplied = useRef(0);
   const loadRuns = useCallback(
-    () =>
-      api("runs")
-        .then(({ runs, projectName }) => {
+    () => {
+      const request = ++listRequest.current;
+      return api("runs?view=sidebar")
+        .then(({ runs, projectName, projectRoot }) => {
+          if (request < listApplied.current) return;
+          listApplied.current = request;
           setRuns(runs);
           setProject(projectName ?? "");
+          setDashboardRoot(projectRoot ?? "");
         })
-        .catch((error) => setError(error.message)),
+        .catch((error) => {
+          if (request > listApplied.current) setError(error.message);
+        });
+    },
     [],
   );
 
@@ -169,8 +215,11 @@ function App({ language, setLanguage }: {
     return () => clearInterval(timer);
   }, [loadRuns]);
   useEffect(() => {
-    const first = runs.find((run) => !run.legacy);
-    if (!selected && first) setSelected(first.runId);
+    if (selected) return;
+    const first =
+      runs.find((run) => !run.legacy && sessionGroup(sessionStatus(run)) === 0) ??
+      runs.find((run) => !run.legacy);
+    setSelection(first ? sessionKey(first) : "");
   }, [runs, selected]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -225,17 +274,17 @@ function App({ language, setLanguage }: {
     const query = revision === "latest" ? "" : `?revision=${revision}`;
     const refresh = async () => {
       const [snapshot, topology] = await Promise.all([
-        api(`runs/${selected}${query}`),
-        api(`runs/${selected}/graph${query}`),
+        api(`runs/${selected}${query}`, selectedProject),
+        api(`runs/${selected}/graph${query}`, selectedProject),
       ]);
       if (cancelled || snapshot.seq < cursor) return;
       cursor = snapshot.seq;
-      setRun(snapshot);
+      setRun({ ...snapshot, sessionKey: selection });
       setGraph((current) =>
-        current?.runId === topology.runId &&
+        current?.sessionKey === selection &&
         current?.revision === topology.revision
           ? current
-          : topology,
+          : { ...topology, sessionKey: selection },
       );
     };
     const recover = () => {
@@ -251,7 +300,7 @@ function App({ language, setLanguage }: {
       .then(() => {
         if (cancelled || revision !== "latest") return;
         stream = new EventSource(
-          `/api/v2/runs/${selected}/events?after=${cursor}`,
+          apiPath(`runs/${selected}/events?after=${cursor}`, selectedProject),
         );
         stream.addEventListener("ralph", (message) => {
           const event = JSON.parse((message as MessageEvent).data);
@@ -262,11 +311,12 @@ function App({ language, setLanguage }: {
           }
           cursor = event.seq;
           setRun((current) =>
-            current?.runId === selected
+            current?.sessionKey === selection
               ? projectEvent(current, event)
               : current,
           );
-          if (event.type === "graph.revised") setGraph(event.payload.graph);
+          if (event.type === "graph.revised")
+            setGraph({ ...event.payload.graph, sessionKey: selection });
         });
         stream.onerror = recover;
       })
@@ -278,16 +328,16 @@ function App({ language, setLanguage }: {
       stream?.close();
       if (refreshTimer) clearTimeout(refreshTimer);
     };
-  }, [selected, revision]);
+  }, [selected, selectedProject, selection, revision]);
 
-  const currentRun = run?.runId === selected ? run : undefined;
+  const currentRun = run?.sessionKey === selection ? run : undefined;
   const currentGraph =
-    graph?.runId === selected &&
+    graph?.sessionKey === selection &&
     (revision === "latest" || graph?.revision === Number(revision))
       ? graph
       : undefined;
   const specs: Row[] = currentGraph?.nodes ?? [];
-  const explain = useExplanations(selected, easyKorean && language === "ko" && view === "runs", [
+  const explain = useExplanations(selected, selectedProject, easyKorean && language === "ko" && view === "runs", [
     ...specs.map((spec) => ({ kind: "title" as const, text: spec.goal })),
     ...specs.flatMap((spec) => [
       { kind: "description" as const, text: spec.direction },
@@ -300,7 +350,6 @@ function App({ language, setLanguage }: {
     { kind: "report", text: currentRun?.latestRecovery?.diagnosis },
     { kind: "report", text: currentRun?.message },
   ]);
-  const selectedRun = runs.find((item) => item.runId === selected);
   const inspected = currentGraph?.nodes.find(
     (entry: Row) => entry.nodeId === node,
   );
@@ -308,7 +357,7 @@ function App({ language, setLanguage }: {
     if (!node || !selected) return;
     let current = true;
     const query = revision === "latest" ? "" : `?revision=${revision}`;
-    api(`runs/${selected}/nodes/${node}${query}`)
+    api(`runs/${selected}/nodes/${node}${query}`, selectedProject)
       .then((data) => {
         if (current) setDetail(data);
       })
@@ -318,11 +367,12 @@ function App({ language, setLanguage }: {
     return () => {
       current = false;
     };
-  }, [node, selected, revision, currentRun?.seq]);
+  }, [node, selected, selectedProject, revision, currentRun?.seq]);
 
   const allReports = useMemo(() => {
     const sessions = runs.map((entry) =>
-      entry.runId === currentRun?.runId && revision === "latest" && currentRun
+      sessionKey(entry) === currentRun?.sessionKey &&
+        revision === "latest" && currentRun && currentRun.seq >= entry.seq
         ? { ...entry, ...currentRun }
         : entry,
     );
@@ -330,6 +380,11 @@ function App({ language, setLanguage }: {
   }, [runs, currentRun, revision]);
   const read = useMemo(() => new Set(readReports), [readReports]);
   const unread = allReports.filter((report) => !read.has(report.id));
+  const unreadBySession = new Map<string, number>();
+  for (const report of unread) {
+    const key = sessionKey(report);
+    unreadBySession.set(key, (unreadBySession.get(key) ?? 0) + 1);
+  }
   useEffect(() => {
     if (!runs.length) return;
     if (knownReports.current && notify) {
@@ -359,14 +414,14 @@ function App({ language, setLanguage }: {
     setPanel(undefined);
     setView(next);
   }
-  function choose(entry: Row) {
+  function choose(entry: SessionRow) {
     if (entry.legacy) {
       setError(
         t("이전 버전 실행 기록은 ralph history 또는 마이그레이션에서 확인할 수 있습니다.", "Use ralph history or migrate this run to view its record."),
       );
       return;
     }
-    setSelected(entry.runId);
+    setSelection(sessionKey(entry));
     setRevision("latest");
     closeNode();
     changeView("runs");
@@ -377,24 +432,24 @@ function App({ language, setLanguage }: {
     );
     setToast(undefined);
     if (
-      selected !== report.runId ||
+      selection !== sessionKey(report) ||
       node !== report.nodeId ||
       revision !== "latest"
     )
       setDetail(undefined);
-    setSelected(report.runId);
+    setSelection(sessionKey(report));
     setRevision("latest");
     setNode(report.nodeId ?? "");
     setTab("report");
     changeView("runs");
   }
   const discardId =
-    discardRequest?.runId === selected ? discardRequest?.commandId : undefined;
+    discardRequest?.session === selection ? discardRequest.commandId : undefined;
   const discardResult = discardId
     ? currentRun?.commands?.[discardId]
     : undefined;
   const pendingDirection =
-    directionRequest?.runId === selected ? directionRequest : undefined;
+    directionRequest?.session === selection ? directionRequest : undefined;
   const directionResult =
     pendingDirection && currentRun?.commands?.[pendingDirection.commandId];
   async function command(
@@ -403,7 +458,7 @@ function App({ language, setLanguage }: {
   ) {
     try {
       const { controlToken } = await api("session");
-      const response = await fetch(`/api/v2/runs/${selected}/commands`, {
+      const response = await fetch(apiPath(`runs/${selected}/commands`, selectedProject), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -420,11 +475,11 @@ function App({ language, setLanguage }: {
       const submitted = await response.json();
       if (fields)
         setDirectionRequest({
-          runId: selected,
+          session: selection,
           commandId: submitted.commandId,
         });
       if (type === "discard")
-        setDiscardRequest({ runId: selected, commandId: submitted.commandId });
+        setDiscardRequest({ session: selection, commandId: submitted.commandId });
       void loadRuns();
       return true;
     } catch (error) {
@@ -447,10 +502,17 @@ function App({ language, setLanguage }: {
     .sort((a, b) => b.info.endedAt.localeCompare(a.info.endedAt))[0];
   const lastTime = lastNode?.info.endedAt ?? currentRun?.updatedAt;
   const candidates = runs.filter((entry) =>
-    `${entry.goal ?? ""} ${entry.runId} ${project}`
+    `${entry.goal ?? ""} ${entry.runId} ${entry.projectName ?? project}`
       .toLowerCase()
       .includes(search.trim().toLowerCase()),
   );
+  const sessionRows = candidates.map((entry) => {
+    const key = sessionKey(entry);
+    const status = key === selection && latest && currentRun && currentRun.seq >= entry.seq
+      ? currentRun.status
+      : sessionStatus(entry);
+    return { entry, key, status };
+  });
   const showDirection =
     latest &&
     currentRun?.status === "running" &&
@@ -485,41 +547,44 @@ function App({ language, setLanguage }: {
           <span>{String(candidates.length).padStart(2, "0")}</span>
         </div>
         <nav className="run-list" aria-label={t("실행 세션", "Run sessions")}>
-          {candidates.map((entry) => {
-            const count = unread.filter(
-              (report) => report.runId === entry.runId,
-            ).length;
-            const active = selected === entry.runId && view === "runs";
-            const sessionStatus =
-              selected === entry.runId ? (state ?? entry.status) : entry.status;
+          {sessionGroups.map((group, index) => {
+            const rows = sessionRows.filter(({ status }) => sessionGroup(status) === index);
+            if (!rows.length) return null;
             return (
-              <button
-                key={entry.runId}
-                className="run-item"
-                aria-current={active ? "true" : undefined}
-                onClick={() => choose(entry)}
-              >
-                <span
-                  className="lamp"
-                  data-tone={statusTone(sessionStatus)}
-                  title={statusLabel(sessionStatus, language)}
-                />
-                <span className="run-name">
-                  <strong>{entry.goal ?? entry.runId}</strong>
-                  <small>
-                    {entry.legacy ? t("이전 버전", "Legacy") : project || entry.runId}
-                  </small>
-                </span>
-                {count > 0 && (
-                  <span
-                    className="count"
-                    aria-label={t(`읽지 않은 보고 ${count}개`, `${count} unread reports`)}
-                  >
-                    {count}
-                  </span>
-                )}
-                {active && <Icon name="chevron" />}
-              </button>
+              <section key={group.english} className="run-group" aria-label={t(group.label, group.english)}>
+                <h2>{t(group.label, group.english)}</h2>
+                {rows.map(({ entry, key, status }) => {
+                  const count = unreadBySession.get(key) ?? 0;
+                  const active = selection === key && view === "runs";
+                  return (
+                    <button
+                      key={key}
+                      className="run-item"
+                      aria-current={active ? "true" : undefined}
+                      onClick={() => choose(entry)}
+                    >
+                      <span className="lamp" data-tone={statusTone(status)} />
+                      <span className="run-name">
+                        <strong>{entry.goal ?? entry.runId}</strong>
+                        <small>
+                          {entry.legacy ? t("이전 버전", "Legacy") : entry.projectName ?? project}
+                          {" · "}
+                          {statusLabel(status, language)}
+                        </small>
+                      </span>
+                      {count > 0 && (
+                        <span
+                          className="count"
+                          aria-label={t(`읽지 않은 보고 ${count}개`, `${count} unread reports`)}
+                        >
+                          {count}
+                        </span>
+                      )}
+                      {active && <Icon name="chevron" />}
+                    </button>
+                  );
+                })}
+              </section>
             );
           })}
           {search && !candidates.length && (
@@ -554,7 +619,7 @@ function App({ language, setLanguage }: {
         <header className="session-header">
           <div className="eyebrow">
             {view === "runs"
-              ? `${project ? project + "  /  " : ""}${t("작업 공간", "Workspace")}`
+              ? `${projectName ? projectName + "  /  " : ""}${t("작업 공간", "Workspace")}`
               : `Ralph Dashboard  /  ${t("사용량·한도", "Usage & limits")}`}
           </div>
           <h1 title={selectedRun?.goal}>
@@ -652,7 +717,7 @@ function App({ language, setLanguage }: {
         <div className="run-body" hidden={view !== "runs"}>
           <div className="graph-column">
             <RunGraph
-              key={`${selected}/${revision}`}
+              key={`${selection}/${revision}`}
               graph={currentGraph}
               run={currentRun}
               explain={explain}
@@ -751,10 +816,11 @@ function App({ language, setLanguage }: {
             <Inspector
               explain={explain}
               easyKorean={easyKorean && language === "ko" && view === "runs"}
-              key={`${selected}/${node}/${revision}`}
+              key={`${selection}/${node}/${revision}`}
               spec={inspected}
               detail={detail ?? currentRun?.nodes?.[node]}
               runId={selected}
+              project={selectedProject}
               tab={tab}
               setTab={setTab}
               onClose={closeNode}

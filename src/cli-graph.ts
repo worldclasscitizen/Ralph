@@ -22,6 +22,7 @@ import {
 } from "./interaction/clarification.js";
 import { legacyPlanInput, migrateGraphState } from "./migration/graph.js";
 import { RalphError } from "./util.js";
+import { registerProject } from "./registry.js";
 const output = (value: unknown) =>
   process.stdout.write(`${JSON.stringify(value)}\n`);
 const flag = (args: string[], name: string) => {
@@ -185,6 +186,7 @@ export async function graphCli(
     }
     if (plan.projectRoot !== root)
       throw new RalphError("Plan project mismatch", "approval_required", 10);
+    await registerProject(root);
     if (command === "plan") {
       output(plan);
       return true;
