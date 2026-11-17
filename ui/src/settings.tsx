@@ -81,9 +81,9 @@ export function Settings({
           </button>
         </div>
         <div className="settings-row">
-          <strong>Language</strong>
+          <strong>{t("언어", "Language")}</strong>
           <Segment
-            label="Language"
+            label={t("언어", "Language")}
             left="한국어"
             right="English"
             first={language === "ko"}

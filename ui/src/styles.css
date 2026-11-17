@@ -511,9 +511,6 @@ main {
 .capacity-button {
   min-width: 118px;
 }
-.back-button {
-  min-width: 155px;
-}
 .session-progress {
   position: absolute;
   inset: 116px 30px auto 34px;
@@ -1231,8 +1228,9 @@ dt {
 .capacity-value {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 8px;
-  margin-top: 5px;
+  align-items: start;
+  gap: 8px;
+  margin-top: 8px;
   font-size: 11px;
 }
 .capacity-value span {
@@ -1241,10 +1239,27 @@ dt {
 .capacity-value b {
   color: var(--done);
 }
-.capacity-value meter {
-  grid-column: 2;
+.capacity-meter-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.capacity-meter-value meter {
   width: 92px;
   height: 7px;
+}
+.provider-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.provider-logo {
+  flex: none;
+  object-fit: contain;
+}
+:root[data-theme="dark"] .provider-logo[data-logo="zai"] {
+  filter: invert(1);
 }
 .inbox {
   top: 65px;

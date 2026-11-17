@@ -1,6 +1,7 @@
 import {
   CapacityDetails,
   connectionName,
+  ProviderName,
   type CapacityState,
 } from "./capacity";
 import type { Row } from "./presentation";
@@ -52,6 +53,7 @@ export type ProviderRow = {
     displayName: string;
     inRoute: boolean;
     manual: boolean;
+    offered?: boolean;
   }[];
   verification?: Row[];
 };
@@ -137,7 +139,9 @@ export function Metrics({
             {status}
           </span>
         </div>
-        <h3>{connectionName(p.id, language)}</h3>
+        <h3>
+          <ProviderName id={p.id} />
+        </h3>
         <small>
           {connected && p.routableModels === 0
             ? t(
@@ -174,7 +178,14 @@ export function Metrics({
                       </span>
                     ) : (
                       !model.manual && (
-                        <span>{t("카탈로그 등록", "In catalog")}</span>
+                        <span>
+                          {model.offered
+                            ? t(
+                                "구독에서 제공",
+                                "Available with this subscription",
+                              )
+                            : t("카탈로그 등록", "In catalog")}
+                        </span>
                       )
                     )}
                   </div>

@@ -13,6 +13,7 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
               label: "Codex primary",
               durationMinutes: 300,
               remainingPercent: 47,
+              resetsAt: "2026-11-17T03:00:00Z",
             },
             {
               label: "Codex secondary",
@@ -96,6 +97,11 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
     page.getByLabel("Codex 구독제 5시간 한도 잔여 비율"),
   ).toBeVisible();
   await expect(page.getByText("47% 남음", { exact: true })).toBeVisible();
+  const quotaMeter = page.getByLabel("Codex 구독제 5시간 한도 잔여 비율");
+  const quotaText = page.getByText("47% 남음", { exact: true });
+  const meter = await quotaMeter.boundingBox();
+  const percent = await quotaText.boundingBox();
+  expect(meter.y - percent.y - percent.height).toBeCloseTo(2, 0);
   await expect(page.getByText("주간 한도", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "모델별 사용 내역 보기" }).click();
   await expect(
@@ -109,6 +115,8 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Z.ai 결제 페이지 열기" }))
     .toHaveAttribute("href", "https://z.ai/manage-apikey/billing");
+  await expect(page.locator('.metrics-limits [data-logo="gemini"]'))
+    .toHaveJSProperty("complete", true);
   const providerCards = page.getByRole("region", { name: "공급자 연결" });
   await expect(providerCards.getByText(/^모델 카탈로그 v\d+$/)).toBeVisible();
   await providerCards.getByText("그 외 공급자", { exact: true }).click();
@@ -567,7 +575,7 @@ test("settings stays over the run and switches language, theme and toggle state"
   await theme.getByText("다크", { exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-  await settings.getByRole("button", { name: "Language" }).getByText("English").click();
+  await settings.getByRole("button", { name: "언어" }).getByText("English").click();
   const english = page.getByRole("dialog", { name: "Settings" });
   await expect(english.getByRole("button", { name: "Plain Korean", exact: true })).toBeDisabled();
   await expect(english.getByRole("button", { name: "Plain Korean", exact: true }).getByText("OFF"))

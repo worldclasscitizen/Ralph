@@ -37,6 +37,34 @@ const names: Record<string, [string, string]> = {
 export const connectionName = (id: string, language: Language = "ko") =>
   names[id]?.[language === "en" ? 1 : 0] ?? id;
 
+const providerLogos: Record<string, string> = {
+  "openai:codex-login": "codex",
+  "anthropic:claude-login": "claude",
+  [geminiId]: "gemini",
+  "deepseek:api": "deepseek",
+  "zai:general": "zai",
+};
+
+export function ProviderName({ id }: { id: string }) {
+  const language = useLanguage();
+  const logo = providerLogos[id];
+  return (
+    <span className="provider-name">
+      {logo && (
+        <img
+          className="provider-logo"
+          data-logo={logo}
+          src={`/icons/provider-${logo}.svg`}
+          width="16"
+          height="16"
+          alt=""
+        />
+      )}
+      {connectionName(id, language)}
+    </span>
+  );
+}
+
 function windowName(window: CapacityWindow, id: string, t: Translate) {
   const match = /^(.*) (primary|secondary)$/.exec(window.label);
   const bucket = window.label.replace(/-(5h|weekly)$/, "");
@@ -45,9 +73,7 @@ function windowName(window: CapacityWindow, id: string, t: Translate) {
       ? "Gemini"
       : bucket === "gemini-argon-wtu"
         ? "Gemini 4 Argon"
-        : bucket === "3p"
-          ? t("Claude·GPT", "Claude & GPT")
-          : t("기타 모델", "Other models");
+        : t("기타 Gemini 모델", "Other Gemini models");
   const group = id === geminiId ? geminiGroup : match?.[1];
   const prefix = group && group.toLowerCase() !== "codex" ? `${group} · ` : "";
   const minutes = window.durationMinutes;
@@ -198,7 +224,9 @@ export function CapacityDetails({ capacity }: { capacity: CapacityState }) {
         const note = capacityNote(connection, entry, t);
         return (
           <div className="capacity-row" key={connection}>
-            <strong>{name}</strong>
+            <strong>
+              <ProviderName id={connection} />
+            </strong>
             {entry.kind === "subscription" &&
               entry.windows?.map((window) => {
                 const label = windowName(window, connection, t);
@@ -217,15 +245,17 @@ export function CapacityDetails({ capacity }: { capacity: CapacityState }) {
                         </small>
                       )}
                     </span>
-                    <b>
-                      {window.remainingPercent}% {t("남음", "left")}
-                    </b>
-                    <meter
-                      min={0}
-                      max={100}
-                      value={window.remainingPercent}
-                      aria-label={`${name} ${label} ${t("잔여 비율", "remaining")}`}
-                    />
+                    <div className="capacity-meter-value">
+                      <b>
+                        {window.remainingPercent}% {t("남음", "left")}
+                      </b>
+                      <meter
+                        min={0}
+                        max={100}
+                        value={window.remainingPercent}
+                        aria-label={`${name} ${label} ${t("잔여 비율", "remaining")}`}
+                      />
+                    </div>
                   </div>
                 );
               })}
