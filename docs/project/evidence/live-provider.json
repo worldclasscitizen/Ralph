@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "kind": "provider",
   "subject": {
-    "version": "0.3.3",
-    "sourceCommit": "755faeb2feedd1ee69e016f943a2e8124ec39da6",
-    "sourceTree": "2fd0c7b7083933ad3f8b84314563783fbd1c82c3",
-    "runtimeDigest": "c678014fdd00e1539fefad993a497a3dbf17e5ce69c7f63e21e6146a3168ea0c",
-    "dependencyDigest": "7dfbada0c46b4cf3ffe05f17e2f866aac223fd1b85828d23e4e558fc98035c2e",
-    "testDigest": "8b9bcea9b93943bad78838dead6bdb3d8ebfd5a50ed5d174b08638a93486344c"
+    "version": "0.4.0",
+    "sourceCommit": "90aaa1a7b78edc6ca4b183a98095406df0e47525",
+    "sourceTree": "a0f628e3ef1cc8b26e5e085591f04b84e67e8afe",
+    "runtimeDigest": "e121d9939c9dbc0bcd02c88d73e95f0621c462817e2e51c2519f15e976357983",
+    "dependencyDigest": "0924dc222ba008773fe67c5ca3a86e41015159e332c702e7fec03a0809553a70",
+    "testDigest": "ba924f0aae9d9f2610de2eb12f09116d502898edcc441a37a9291f04dabd3d34"
   },
-  "checkedAt": "2026-09-28T12:15:15.767Z",
+  "checkedAt": "2026-11-18T21:46:07.836Z",
   "runner": {
-    "platform": "win32",
-    "node": "v24.11.1"
+    "platform": "darwin",
+    "node": "v26.7.0"
   },
   "status": "pass",
   "checks": [
@@ -35,50 +35,50 @@
   ],
   "details": {
     "adapter": "codex-builtin",
-    "model": "gpt-6-sol",
-    "cliVersion": "codex-cli 0.155.1",
+    "model": "gpt-6.2-sol",
+    "cliVersion": "codex-cli 0.170.0",
     "observations": [
       {
         "name": "structured_output",
         "status": "pass",
-        "durationMs": 11374,
+        "durationMs": 4585,
         "usage": {
-          "inputTokens": 15599,
+          "inputTokens": 23523,
           "outputTokens": 16,
-          "cachedTokens": 0,
+          "cachedTokens": 14720,
           "reasoningTokens": 0,
-          "totalTokens": 15615
+          "totalTokens": 23539
         }
       },
       {
         "name": "file_change_and_deterministic_verification",
         "status": "pass",
-        "durationMs": 13632,
+        "durationMs": 9463,
         "usage": {
-          "inputTokens": 33203,
-          "outputTokens": 238,
-          "cachedTokens": 23552,
+          "inputTokens": 48017,
+          "outputTokens": 95,
+          "cachedTokens": 38400,
           "reasoningTokens": 0,
-          "totalTokens": 33441
+          "totalTokens": 48112
         },
         "artifact": "conformance.txt"
       },
       {
         "name": "fresh_request_isolation",
         "status": "pass",
-        "durationMs": 4890,
+        "durationMs": 4475,
         "usage": {
-          "inputTokens": 15600,
+          "inputTokens": 23524,
           "outputTokens": 12,
-          "cachedTokens": 14976,
+          "cachedTokens": 14720,
           "reasoningTokens": 0,
-          "totalTokens": 15612
+          "totalTokens": 23536
         }
       },
       {
         "name": "cancel_and_await_close",
         "status": "pass",
-        "durationMs": 611,
+        "durationMs": 270,
         "confirmed": "adapter returned after subprocess close"
       }
     ],
