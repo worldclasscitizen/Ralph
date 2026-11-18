@@ -126,7 +126,7 @@ async function codexCapacity(): Promise<CapacitySnapshot> {
       });
     });
     child.stdin.write(
-      `${JSON.stringify({ id: 1, method: "initialize", params: { clientInfo: { name: "ralph", title: "Ralph CLI", version: "0.3.3" }, capabilities: null } })}\n`,
+      `${JSON.stringify({ id: 1, method: "initialize", params: { clientInfo: { name: "ralph", title: "Ralph CLI", version: "0.4.0" }, capabilities: null } })}\n`,
     );
     child.stdin.write(
       `${JSON.stringify({ id: 2, method: "account/rateLimits/read", params: null })}\n`,

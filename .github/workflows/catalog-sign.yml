@@ -1,0 +1,45 @@
+name: Sign model catalog
+on:
+  workflow_dispatch:
+    inputs:
+      catalog_sha:
+        description: Full commit SHA containing assets/catalog-v2.json
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  sign:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: catalog-signing
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: npm run build:runtime
+      - name: Read the candidate catalog without checking out its code
+        env:
+          CATALOG_SHA: ${{ inputs.catalog_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$CATALOG_SHA" =~ ^[0-9a-f]{40}$ ]]
+          mkdir -p .release/signed-catalog
+          gh api -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/assets/catalog-v2.json?ref=$CATALOG_SHA" \
+            > .release/signed-catalog/catalog-v2.json
+      - name: Sign and verify the catalog
+        env:
+          CATALOG_PRIVATE_KEY: ${{ secrets.RALPH_CATALOG_ED25519_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$CATALOG_PRIVATE_KEY" | node scripts/sign-catalog.mjs --stdin \
+            .release/signed-catalog/catalog-v2.json .release/signed-catalog/catalog-v2.sig
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: signed-catalog
+          path: .release/signed-catalog/
+          if-no-files-found: error

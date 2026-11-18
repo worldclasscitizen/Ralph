@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 2,
+  "kind": "end_to_end",
+  "subject": {
+    "version": "0.3.3",
+    "sourceCommit": "348b82cee467587a9ec8735c3a579037766f143f",
+    "sourceTree": "f526240017a1ac30b2bd2794fe520c21bc298de6",
+    "runtimeDigest": "c678014fdd00e1539fefad993a497a3dbf17e5ce69c7f63e21e6146a3168ea0c",
+    "dependencyDigest": "7dfbada0c46b4cf3ffe05f17e2f866aac223fd1b85828d23e4e558fc98035c2e",
+    "testDigest": "8b9bcea9b93943bad78838dead6bdb3d8ebfd5a50ed5d174b08638a93486344c"
+  },
+  "checkedAt": "2026-09-28T12:19:56.432Z",
+  "runner": {
+    "platform": "win32",
+    "node": "v24.11.1"
+  },
+  "status": "pass",
+  "checks": [
+    {
+      "name": "generated_contract_and_dag",
+      "passed": true
+    },
+    {
+      "name": "exact_plan_approval",
+      "passed": true
+    },
+    {
+      "name": "isolated_scoped_workers",
+      "passed": true
+    },
+    {
+      "name": "behavior_and_independent_review",
+      "passed": true
+    },
+    {
+      "name": "integration_and_final_validation",
+      "passed": true
+    },
+    {
+      "name": "branch_delivery_completed",
+      "passed": true
+    },
+    {
+      "name": "external_oracle_and_frozen_tests",
+      "passed": true
+    },
+    {
+      "name": "persistent_live_allowance",
+      "passed": true
+    }
+  ],
+  "details": {
+    "mode": "live",
+    "subject": {
+      "version": "0.3.3",
+      "sourceCommit": "348b82cee467587a9ec8735c3a579037766f143f",
+      "sourceTree": "f526240017a1ac30b2bd2794fe520c21bc298de6",
+      "runtimeDigest": "c678014fdd00e1539fefad993a497a3dbf17e5ce69c7f63e21e6146a3168ea0c",
+      "dependencyDigest": "7dfbada0c46b4cf3ffe05f17e2f866aac223fd1b85828d23e4e558fc98035c2e",
+      "testDigest": "8b9bcea9b93943bad78838dead6bdb3d8ebfd5a50ed5d174b08638a93486344c"
+    },
+    "model": "gpt-6-sol",
+    "cliVersion": "codex-cli 0.155.1",
+    "passed": true,
+    "status": "completed",
+    "runId": "run-8d38103a-ba36-41e9-9ee8-233a0c0031a9",
+    "resultHead": "8cae6c2f9586aed22279c7acbb6002f71bc7257e",
+    "workerCount": 2,
+    "nodes": [
+      {
+        "nodeId": "left_worker",
+        "kind": "worker",
+        "iteration": 1,
+        "inputHead": "31ef4b9c477276b898dd150d888f64c68d17ac02",
+        "outputHead": "11e7b37f6f90d1478ce3c33429511c3e71d67f2f",
+        "evidenceIds": [
+          "7a68da798401e55071ce4c810f603d3eb50cbd225cdb8a204f28c139b49675e5"
+        ]
+      },
+      {
+        "nodeId": "right_worker",
+        "kind": "worker",
+        "iteration": 1,
+        "inputHead": "c97d0898b191ba5f8b5147d15b34bdc043019c9f",
+        "outputHead": "84e9eec24e94b013445a6ff3eb378b9b4a1acad1",
+        "evidenceIds": [
+          "8050e8436c34f9577026a0744bca3e4f4784d37f46619dc9f826695865996cfc"
+        ]
+      },
+      {
+        "nodeId": "integrate",
+        "kind": "integrate",
+        "iteration": 0,
+        "inputHead": "39da522bab8949e44d027c838d3c0dbc677f3690",
+        "outputHead": "883132cbf9cede5334ac34bb557f7cd4df04a5dc",
+        "evidenceIds": []
+      },
+      {
+        "nodeId": "final_validate",
+        "kind": "validate",
+        "iteration": 0,
+        "inputHead": "39da522bab8949e44d027c838d3c0dbc677f3690",
+        "outputHead": "883132cbf9cede5334ac34bb557f7cd4df04a5dc",
+        "evidenceIds": [
+          "d776ad0cf709ba6a3056929b62faaf528bdda7f671cbfcaff2e107aeb522e2ca"
+        ]
+      }
+    ],
+    "invocationRoles": [
+      {
+        "nodeId": "contract-planner",
+        "role": "contractPlanner"
+      },
+      {
+        "nodeId": "contract-critic",
+        "role": "critic"
+      },
+      {
+        "nodeId": "graph-planner",
+        "role": "contractPlanner"
+      },
+      {
+        "nodeId": "left_worker",
+        "role": "worker"
+      },
+      {
+        "nodeId": "right_worker",
+        "role": "worker"
+      },
+      {
+        "nodeId": "left_worker",
+        "role": "critic"
+      },
+      {
+        "nodeId": "right_worker",
+        "role": "critic"
+      },
+      {
+        "nodeId": "final_validate",
+        "role": "critic"
+      }
+    ],
+    "eventCount": 229,
+    "calls": 8,
+    "durationMs": 272549,
+    "injectedContract": false,
+    "injectedGraph": false,
+    "allowance": {
+      "schemaVersion": 2,
+      "releaseId": "ralph-0.3.3",
+      "maxCalls": null,
+      "maxActiveMs": 1800000,
+      "apiSpendUsd": 0,
+      "calls": 12,
+      "activeMs": 292782,
+      "pending": null,
+      "attempts": [
+        {
+          "attemptId": "6def0bf3-db3a-4941-a464-23b031a9ca1b",
+          "purpose": "conformance/probe",
+          "durationMs": 11346,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 15599,
+            "outputTokens": 16,
+            "cachedTokens": 0,
+            "reasoningTokens": 0,
+            "totalTokens": 15615
+          }
+        },
+        {
+          "attemptId": "574d583e-bf60-41fe-aacd-dd708d656244",
+          "purpose": "conformance/worker",
+          "durationMs": 13515,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 33203,
+            "outputTokens": 238,
+            "cachedTokens": 23552,
+            "reasoningTokens": 0,
+            "totalTokens": 33441
+          }
+        },
+        {
+          "attemptId": "617897b0-895a-4cf3-bd9c-2dd7081021b3",
+          "purpose": "conformance/isolated",
+          "durationMs": 4883,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 15600,
+            "outputTokens": 12,
+            "cachedTokens": 14976,
+            "reasoningTokens": 0,
+            "totalTokens": 15612
+          }
+        },
+        {
+          "attemptId": "f0d227eb-2544-4ae2-b453-3e8b1f22cacd",
+          "purpose": "conformance/cancel",
+          "durationMs": 603,
+          "outcome": "failed",
+          "usage": null
+        },
+        {
+          "attemptId": "0622fe99-18fb-4e20-9cd5-e225786baa59",
+          "purpose": "functional/contract-planner/contractPlanner",
+          "durationMs": 23547,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 33744,
+            "outputTokens": 783,
+            "cachedTokens": 16384,
+            "reasoningTokens": 82,
+            "totalTokens": 34527
+          }
+        },
+        {
+          "attemptId": "ef44932a-2cbb-4abb-922c-c1074e213f98",
+          "purpose": "functional/contract-critic/critic",
+          "durationMs": 15863,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 33813,
+            "outputTokens": 368,
+            "cachedTokens": 28800,
+            "reasoningTokens": 0,
+            "totalTokens": 34181
+          }
+        },
+        {
+          "attemptId": "b38d0cdb-e655-4e78-b0dc-835f687449a2",
+          "purpose": "functional/graph-planner/contractPlanner",
+          "durationMs": 38024,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 17032,
+            "outputTokens": 903,
+            "cachedTokens": 14976,
+            "reasoningTokens": 15,
+            "totalTokens": 17935
+          }
+        },
+        {
+          "attemptId": "a4ae4960-37d5-4280-a1df-85455df0c4af",
+          "purpose": "functional/left_worker/worker",
+          "durationMs": 42881,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 102836,
+            "outputTokens": 892,
+            "cachedTokens": 80640,
+            "reasoningTokens": 7,
+            "totalTokens": 103728
+          }
+        },
+        {
+          "attemptId": "1284e5b7-d931-4d33-9939-5b415bd7a227",
+          "purpose": "functional/right_worker/worker",
+          "durationMs": 31143,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 71466,
+            "outputTokens": 725,
+            "cachedTokens": 34688,
+            "reasoningTokens": 81,
+            "totalTokens": 72191
+          }
+        },
+        {
+          "attemptId": "7df5d7b2-745a-45a5-a49d-bbe19f33a4ac",
+          "purpose": "functional/left_worker/critic",
+          "durationMs": 30189,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 38373,
+            "outputTokens": 1234,
+            "cachedTokens": 33664,
+            "reasoningTokens": 75,
+            "totalTokens": 39607
+          }
+        },
+        {
+          "attemptId": "ca026102-a0c0-46d7-a2e5-530aad7b05e4",
+          "purpose": "functional/right_worker/critic",
+          "durationMs": 39211,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 58591,
+            "outputTokens": 1336,
+            "cachedTokens": 38144,
+            "reasoningTokens": 162,
+            "totalTokens": 59927
+          }
+        },
+        {
+          "attemptId": "8b394a20-9ac7-49c5-9301-cafa741d546a",
+          "purpose": "functional/final_validate/critic",
+          "durationMs": 41577,
+          "outcome": "returned",
+          "usage": {
+            "inputTokens": 60186,
+            "outputTokens": 1526,
+            "cachedTokens": 39040,
+            "reasoningTokens": 199,
+            "totalTokens": 61712
+          }
+        }
+      ]
+    },
+    "scope": "Windows, recorded Node/model, fresh Codex CLI sessions through the metered generic-process bridge. Natural-language contract and DAG; independent worktrees; scoped behavior checks, independent assessments and external oracle. Single connection concurrency remains one."
+  }
+}
