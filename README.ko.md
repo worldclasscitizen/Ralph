@@ -224,7 +224,7 @@ ralph config refresh
 <!-- provider-verification:start -->
 | Connection / model | Support | Verified environment |
 |---|---|---|
-| codex-builtin / gpt-6-sol | verified | codex-cli 0.155.1 · win32 · v24.11.1 · 2026-09-28 |
+| codex-builtin / gpt-6.2-sol | verified | codex-cli 0.170.0 · darwin · v26.7.0 · 2026-11-18 |
 | Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |
 | OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |
 | Gemini subscription (Antigravity) | compatible | Gemini models via the CLI; no packaged verification |

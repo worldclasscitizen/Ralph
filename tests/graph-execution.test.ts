@@ -649,7 +649,8 @@ if (request.nodeId === "validate") {
           nodeId: "repair", role: "critic", connectionId: "mock:process",
         }),
       })]));
-      expect(await readFile(join(root, path), "utf8")).toBe(working);
+      expect((await readFile(join(root, path), "utf8")).replaceAll("\r\n", "\n"))
+        .toBe(working.replaceAll("\r\n", "\n"));
     }
   },
 );
@@ -732,7 +733,8 @@ it.each(["repair", "dependency"] as const)(
             await writeFile(join(request.projectRoot, "partial.txt"), "preserved\n");
           } else {
             expect(request.writePaths).toEqual(["left.txt"]);
-            expect(await readFile(join(request.projectRoot, "partial.txt"), "utf8")).toBe("preserved\n");
+            expect((await readFile(join(request.projectRoot, "partial.txt"), "utf8")).replaceAll("\r\n", "\n"))
+              .toBe("preserved\n");
             await writeFile(join(request.projectRoot, "left.txt"), "fixed\n");
           }
           return { route: routes[0]!, result: { exitCode: 0, text: "Wrote left output." } };
@@ -750,13 +752,15 @@ it.each(["repair", "dependency"] as const)(
     expect(result.latestRecovery).toMatchObject({ nodeId: "left", action, reused: ["right"] });
     expect(result.nodes.right?.generation).toBe(0);
     expect(result.nodes.right?.iteration).toBe(1);
-    expect(await readFile(join(root, "partial.txt"), "utf8")).toBe("preserved\n");
+    expect((await readFile(join(root, "partial.txt"), "utf8")).replaceAll("\r\n", "\n"))
+      .toBe("preserved\n");
     if (action === "dependency") {
       const store = await storeFor(root, plan.runId);
       expect((await store.graph()).edges).toContainEqual({ from: "right", to: "left", kind: "artifact" });
       expect(result.nodes.left?.generation).toBe(1);
     } else {
-      expect(await readFile(join(root, "left.txt"), "utf8")).toBe("fixed\n");
+      expect((await readFile(join(root, "left.txt"), "utf8")).replaceAll("\r\n", "\n"))
+        .toBe("fixed\n");
       expect(result.latestRecovery?.workerId).toMatch(/^recover-/);
     }
   },
