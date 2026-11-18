@@ -292,6 +292,7 @@ export class OpenAICompatibleAdapter implements ProviderAdapter {
       const response = await fetch(
         `${this.connection.baseUrl?.replace(/\/$/, "")}/user/balance`,
         {
+          signal: AbortSignal.timeout(6_000),
           headers: {
             Authorization: `Bearer ${key}`,
             Accept: "application/json",

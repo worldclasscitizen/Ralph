@@ -23,6 +23,7 @@ import {
   setBenchmarkBaseline,
 } from "./benchmark.js";
 import { capacityForProject } from "./capacity.js";
+import { providerAllowsModel } from "./providers/models.js";
 import {
   createProjectConfig,
   detectConnections,
@@ -93,7 +94,7 @@ import {
 } from "./util.js";
 import { readCoverageSummary } from "./verifier.js";
 
-const VERSION = "0.3.3";
+const VERSION = "0.4.0";
 const argv = process.argv.slice(2);
 
 function takeFlag(args: string[], name: string): boolean {
@@ -761,16 +762,20 @@ async function resolveCandidate(
     );
   const connectionId = connectionAndModel!.slice(0, separator);
   const modelId = connectionAndModel!.slice(separator + 1);
+  const connection = config.connections.find((item) => item.id === connectionId);
+  if (connection && !providerAllowsModel(connection.adapter, modelId))
+    throw new RalphError(
+      "Gemini 구독제 연결에서는 Gemini 모델만 선택할 수 있습니다.",
+      "model_unavailable",
+      5,
+    );
   let route = Object.values(config.routes)
     .flat()
     .find(
       (item) => item.connectionId === connectionId && item.modelId === modelId,
     );
   if (!route) {
-    const connection = config.connections.find(
-      (item) => item.id === connectionId && item.enabled,
-    );
-    if (connection) {
+    if (connection?.enabled) {
       route = buildRoutes(
         await loadCatalog(),
         [{ ...connection, models: [modelId] }],

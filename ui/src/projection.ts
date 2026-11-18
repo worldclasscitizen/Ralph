@@ -16,9 +16,15 @@ export function projectEvent(
   switch (event.type) {
     case "run.status":
       Object.assign(next, p);
+      next.message = p.message;
       break;
     case "graph.revised":
       next.revision = p.graph.revision;
+      if (p.recovery) next.latestRecovery = p.recovery;
+      if (p.direction) {
+        next.latestDirection = p.direction;
+        next.commands = { ...next.commands, [p.direction.commandId]: { accepted: true } };
+      }
       next.nodes = Object.fromEntries(
         p.graph.nodes.map((n: any) => [
           n.nodeId,
@@ -39,6 +45,9 @@ export function projectEvent(
       next.nodes[p.nodeId] = {
         ...old,
         ...p,
+        ...(p.status === "pending"
+          ? { error: undefined, failure: undefined, result: undefined, startedAt: undefined, endedAt: undefined }
+          : {}),
         ...(p.status === "running" && !old.startedAt
           ? { startedAt: event.timestamp }
           : {}),

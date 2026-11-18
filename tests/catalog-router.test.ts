@@ -83,15 +83,15 @@ describe("signed catalog and deterministic router", () => {
         await expect(updateCatalog()).rejects.toThrow();
       }
       mode = "valid";
-      expect((await updateCatalog()).version).toBe(6);
+      expect((await updateCatalog()).version).toBe(catalog.version);
       expect((await loadCatalog()).schemaVersion).toBe(2);
       const status = await catalogStatus({ checkRemote: true });
-      expect(status.cacheVersion).toBe(6);
+      expect(status.cacheVersion).toBe(catalog.version);
       expect(status.changes).toEqual({ added: [], removed: [], modified: [] });
-      expect(await catalogDiff()).toMatchObject({ from: 6, to: 6 });
+      expect(await catalogDiff()).toMatchObject({ from: catalog.version, to: catalog.version });
       expect(await previewCatalogUpdate()).toBeUndefined();
       mode = "unchanged";
-      expect((await updateCatalog()).version).toBe(6);
+      expect((await updateCatalog()).version).toBe(catalog.version);
       expect((await catalogStatus({ checkRemote: true })).remoteChecked).toBe(
         true,
       );
@@ -106,12 +106,13 @@ describe("signed catalog and deterministic router", () => {
     }
   });
   it("verifies and loads the signed bootstrap catalog", async () => {
-    const catalog = await loadCatalog();
+    const bundled = JSON.parse(await readFile("assets/catalog-v2.json", "utf8"));
     const status = await catalogStatus({ offline: true });
-    expect(catalog.version).toBe(6);
+    expect(status.bundledVersion).toBe(bundled.version);
+    expect(status.signatureValid).toBe(true);
+    const catalog = await loadCatalog();
     expect(catalog.schemaVersion).toBe(2);
     expect(catalog.models.length).toBeGreaterThan(0);
-    expect(status.signatureValid).toBe(true);
   });
 
   it("keeps unrated routes deterministic without invented speed preferences", async () => {

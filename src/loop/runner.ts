@@ -1,3 +1,4 @@
+import { directionConstraint } from "../runtime/direction.js";
 import { saveLoopCheckpoint, loadLoopCheckpoint } from "./state.js";
 import { ConnectionLimits } from "../gateway/limits.js";
 import { git } from "../workspace/manager.js";
@@ -30,6 +31,7 @@ export function workerContract(parent: TaskContract, node: NodeSpec, root: strin
     requirements: node.acceptanceCriteria,
     acceptanceCriteria: node.acceptanceCriteria,
     verifierCommands: node.verifierIds,
+    ...(node.direction ? { constraints: [...parent.constraints, directionConstraint(node)] } : {}),
     requiredArtifacts: parent.requiredArtifacts.filter((p) => covered(p, node.writePaths)),
   };
 }
@@ -75,8 +77,11 @@ export async function runRalphLoop(context: {
   dependencies: NodeResult[];
   signal: AbortSignal;
   verificationLimits?: ConnectionLimits;
+  shouldYield?: () => boolean;
   inputBase?: string;
   repairEvidence?: unknown;
+  repairPaths?: string[];
+  reviewRoute?: ReturnType<typeof routesFor>;
 }): Promise<NodeResult> {
   const { plan, node, store, gateway, manager, signal } = context;
   const input = await manager.prepare(
@@ -86,6 +91,9 @@ export async function runRalphLoop(context: {
     { baseHead: context.inputBase },
   );
   const contract = workerContract(plan.contract, node, input.root);
+  const editable = context.repairPaths
+    ? { ...node, writePaths: context.repairPaths }
+    : node;
   const scope = {
     stage: "worker" as const,
     nodeId: node.nodeId,
@@ -154,7 +162,7 @@ export async function runRalphLoop(context: {
         projectRoot: input.root,
         prompt: workerPrompt(
           contract,
-          `Task-specific acceptance: ${JSON.stringify(node.acceptanceCriteria)}\nPrevious verified observations:\n${memory}`,
+          `Task-specific acceptance: ${JSON.stringify(node.acceptanceCriteria)}${context.repairPaths ? `\nAllowed repair files: ${JSON.stringify(context.repairPaths)}` : ""}\nPrevious verified observations:\n${memory}`,
           await gitHead(input.root),
         ),
         compactPrompt: workerPrompt(
@@ -162,7 +170,7 @@ export async function runRalphLoop(context: {
           `Preserve every contract requirement. Detailed earlier logs are omitted after context overflow. Inspect the current workspace before acting. Input digest: ${input.inputDigest}. Prior evidence IDs: ${(lastResult?.evidenceIds ?? context.dependencies.flatMap((d) => d.evidenceIds)).join(", ")}.`,
           await gitHead(input.root),
         ),
-        writePaths: node.writePaths,
+        writePaths: editable.writePaths,
         excludePaths: contract.exclude,
         readPaths: node.readPaths,
       },
@@ -170,7 +178,7 @@ export async function runRalphLoop(context: {
       undefined,
       routing.hardPin,
     );
-    await checkScope(input.root, input.inputHead, node, plan.contract.exclude);
+    await checkScope(input.root, input.inputHead, editable, plan.contract.exclude);
     await store.append(
       {
         type: "node.status",
@@ -199,7 +207,7 @@ export async function runRalphLoop(context: {
         },
       ),
     );
-    await checkScope(input.root, input.inputHead, node, plan.contract.exclude);
+    await checkScope(input.root, input.inputHead, editable, plan.contract.exclude);
     await git(input.root, ["add", "-A", "--", "."]);
     const diff = await git(input.root, [
       "diff",
@@ -208,7 +216,7 @@ export async function runRalphLoop(context: {
       "--",
     ]);
     const verifiedTree = await git(input.root, ["write-tree"]);
-    const critic = routesFor(plan.config, contract, "critic");
+    const critic = context.reviewRoute ?? routesFor(plan.config, contract, "critic");
     const execution = {
       exitCode: outcome.result.exitCode,
       connectionId: outcome.route.connectionId,
@@ -357,6 +365,7 @@ export async function runRalphLoop(context: {
     );
     await saveLoopCheckpoint(store, node, checkpoint);
     if (
+      context.shouldYield?.() ||
       lastResult.outcome === "completed" ||
       fingerprint === previousFingerprint ||
       evaluation.verdict === "needs_operator" ||

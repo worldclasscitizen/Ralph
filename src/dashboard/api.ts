@@ -1,5 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -12,7 +12,10 @@ import { aggregateUsage } from "../gateway/metrics.js";
 import { submitCommand, type RunCommand } from "../runtime/commands.js";
 import { RalphError } from "../util.js";
 import { createAdapter } from "../providers/index.js";
+import { providerAllowsModel } from "../providers/models.js";
 import { probeProvider } from "../gateway/capabilities.js";
+import { loadCatalog } from "../catalog.js";
+import { readExplanationItems, type DashboardExplanations } from "./explanations.js";
 export const controlToken = randomUUID();
 function json(res: ServerResponse, status: number, value: unknown) {
   res.writeHead(status, {
@@ -21,6 +24,18 @@ function json(res: ServerResponse, status: number, value: unknown) {
   });
   res.end(JSON.stringify(value));
 }
+async function readBody(req: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > 64_000)
+      throw new RalphError("Request too large", "invalid_request", 4);
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+
 export async function listGraphRuns(projectRoot: string) {
   const paths = await statePaths(projectRoot);
   const names = await readdir(paths.runs).catch(() => []);
@@ -37,6 +52,8 @@ export async function listGraphRuns(projectRoot: string) {
         goal: plan.contract.goal,
         mode: plan.mode,
         legacy: false,
+        projectRoot,
+        projectName: basename(projectRoot),
       });
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
@@ -44,21 +61,35 @@ export async function listGraphRuns(projectRoot: string) {
         const old = JSON.parse(
           await readFile(join(paths.runs, name, "state.json"), "utf8"),
         );
-        rows.push({ ...old, runId: old.id, goal: old.taskType, legacy: true });
+        rows.push({
+          ...old,
+          runId: old.id,
+          goal: old.taskType,
+          legacy: true,
+          projectRoot,
+          projectName: basename(projectRoot),
+        });
       } catch {
         /* Drafts may not yet have a legacy state. */
       }
     }
   }
-  return rows.sort((a, b) =>
-    String(b.startedAt).localeCompare(String(a.startedAt)),
+  return rows.sort(newestRunFirst);
+}
+
+function newestRunFirst(a: { startedAt?: string; updatedAt?: string }, b: typeof a) {
+  return (b.startedAt ?? b.updatedAt ?? "").localeCompare(
+    a.startedAt ?? a.updatedAt ?? "",
   );
 }
+
 export async function handleGraphApi(
   req: IncomingMessage,
   res: ServerResponse,
   url: URL,
   root: string,
+  explanations: DashboardExplanations,
+  allRunProjects?: string[],
 ): Promise<boolean> {
   if (!url.pathname.startsWith("/api/v2/")) return false;
   try {
@@ -75,32 +106,122 @@ export async function handleGraphApi(
       json(res, 403, { error: "Control token required" });
       return true;
     }
-    const paths = await statePaths(root);
     if (url.pathname === "/api/v2/runs") {
-      const runs = await listGraphRuns(root);
+      const projects = allRunProjects ?? [root];
+      const projectRuns = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            return await listGraphRuns(project);
+          } catch (error) {
+            // A registered repository may have been moved or deleted.
+            const code = (error as NodeJS.ErrnoException).code;
+            if (project !== root && (code === "git_path_failed" || code === "ENOENT")) return [];
+            throw error;
+          }
+        }),
+      );
+      const runs = projectRuns.flat().sort(newestRunFirst);
       const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
       const limit = Math.min(
         100,
         Math.max(1, Number(url.searchParams.get("limit")) || 30),
       );
       json(res, 200, {
-        runs: runs.slice(offset, offset + limit),
+        runs: url.searchParams.get("view") === "sidebar"
+          ? runs
+          : runs.slice(offset, offset + limit),
         total: runs.length,
+        projectName: basename(root),
+        projectRoot: root,
       });
       return true;
     }
+    const paths = await statePaths(root);
     if (url.pathname === "/api/v2/providers") {
-      const config = await loadConfig(root);
+      const [config, catalog] = await Promise.all([
+        loadConfig(root),
+        loadCatalog(),
+      ]);
+      const now = Date.now();
+      const routes = [
+        ...Object.values(config.routes).flat(),
+        ...Object.values(config.routePolicies ?? {}).flatMap(
+          (policy) => policy?.candidates ?? [],
+        ),
+      ];
       json(
         res,
         200,
-        await Promise.all(config.connections.map(async (c) => ({
-          id: c.id,
-          provider: c.provider,
-          mode: c.mode,
-          enabled: c.enabled,
-          ...await probeProvider(c, createAdapter(c, config)),
-        }))),
+        await Promise.all(
+          config.connections.map(async (connection) => {
+            const adapter = createAdapter(connection, config);
+            const liveModels =
+              connection.adapter === "antigravity-builtin" && connection.enabled
+                ? adapter.listModels().catch(() => [])
+                : [];
+            const byModel = new Map(
+              routes
+                .filter(
+                  (route) =>
+                    route.connectionId === connection.id &&
+                    providerAllowsModel(connection.adapter, route.modelId),
+                )
+                .map((route) => [route.modelId, route]),
+            );
+            const catalogModels = new Map(
+              catalog.models
+                .filter(
+                  (model) =>
+                    model.adapter === connection.adapter &&
+                    Date.parse(model.expiresAt) >= now &&
+                    providerAllowsModel(connection.adapter, model.modelId),
+                )
+                .map((model) => [model.modelId, model]),
+            );
+            const models = [
+              ...Array.from(
+                catalogModels.values(),
+                ({ modelId, displayName }) => ({
+                  modelId,
+                  displayName,
+                  inRoute: connection.enabled && byModel.has(modelId),
+                  manual: false,
+                }),
+              ),
+              ...Array.from(byModel.values())
+                .filter(
+                  (route) =>
+                    route.source === "override" && !catalogModels.has(route.modelId),
+                )
+                .map(({ modelId, displayName }) => ({
+                  modelId,
+                  displayName,
+                  inRoute: connection.enabled,
+                  manual: true,
+                })),
+              ...(await liveModels)
+                .filter(({ modelId }) => !catalogModels.has(modelId) && !byModel.has(modelId))
+                .map(({ modelId, displayName }) => ({
+                  modelId,
+                  displayName: displayName ?? modelId,
+                  inRoute: false,
+                  manual: false,
+                  offered: true,
+                })),
+            ];
+            return {
+              id: connection.id,
+              provider: connection.provider,
+              mode: connection.mode,
+              enabled: connection.enabled,
+              catalogVersion: catalog.version,
+              routingCatalogVersion: config.catalogVersion,
+              models,
+              routableModels: models.filter((model) => model.inRoute).length,
+              ...(await probeProvider(connection, adapter)),
+            };
+          }),
+        ),
       );
       return true;
     }
@@ -244,18 +365,13 @@ export async function handleGraphApi(
       });
       return true;
     }
+    if (parts[5] === "explanations" && parts.length === 6 && req.method === "POST") {
+      const items = readExplanationItems(await readBody(req));
+      json(res, 200, await explanations.request(root, items));
+      return true;
+    }
     if (parts[5] === "commands" && req.method === "POST") {
-      const chunks: Buffer[] = [];
-      let size = 0;
-      for await (const chunk of req) {
-        size += chunk.length;
-        if (size > 64_000)
-          throw new RalphError("Request too large", "invalid_request", 4);
-        chunks.push(chunk);
-      }
-      const command = JSON.parse(Buffer.concat(chunks).toString("utf8")) as
-        | RunCommand
-        | { commandId: string; expectedRevision: number; type: "resume" };
+      const command = await readBody(req) as RunCommand;
       const submitted = await submitCommand(store, command);
       if (command.type === "resume" && submitted.created) {
         const child = spawn(

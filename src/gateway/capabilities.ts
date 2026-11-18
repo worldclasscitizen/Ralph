@@ -29,9 +29,9 @@ export async function probeProvider(
     authentication: auth.status,
     support: !detected.installed
       ? "unavailable"
-      : connection.adapter === "antigravity-builtin"
-        ? "experimental"
-        : verification.some((v) => v.support === "verified") ? "verified" : "compatible",
+      : verification.some((v) => v.support === "verified")
+        ? "verified"
+        : "compatible",
     checkedAt: new Date().toISOString(),
     version: detected.version,
     features: [

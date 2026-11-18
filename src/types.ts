@@ -135,6 +135,7 @@ export interface SessionHandle {
 
 export interface CapacityWindow {
   label: string;
+  durationMinutes?: number;
   remainingPercent: number;
   resetsAt?: string;
 }

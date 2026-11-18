@@ -47,9 +47,11 @@ export default defineConfig({
     },
   ],
   base: "/",
+  publicDir: "../assets/dashboard",
   build: {
     outDir: "../assets/dashboard",
     emptyOutDir: false,
+    copyPublicDir: false,
     rollupOptions: {
       output: {
         entryFileNames: "app.js",

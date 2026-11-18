@@ -27,7 +27,7 @@ if (command === "record-ci") {
   if (process.env.GITHUB_REF !== "refs/heads/main" || !process.env.ACTIONS_ID_TOKEN_REQUEST_URL || process.env.GITHUB_EVENT_NAME !== "workflow_dispatch") throw new Error("Publishing requires the main-branch OIDC release workflow");
   if (!archive) throw new Error("--archive required");
   const target = await subject(), manifest = await json(join(dir, "manifest.json"));
-  if (target.version !== "0.3.3" || target.sourceCommit !== process.env.RELEASE_SHA) throw new Error("Release version/commit mismatch");
+  if (target.version !== process.env.RELEASE_VERSION || target.sourceCommit !== process.env.RELEASE_SHA) throw new Error("Release version/commit mismatch");
   await verifyManifest(manifest, resolve(archive), dir, target);
   const name = "@worldclasscitizen/ralph";
   const state = await registryState(name, target.version, manifest.artifact.integrity);

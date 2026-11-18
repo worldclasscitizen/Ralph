@@ -31,3 +31,13 @@ it("actually executes quoted verifier programs and preserves failing exit codes"
   );
   expect(result.exitCode).toBe(7);
 });
+
+it("removes the recovery warning once the live run resumes or completes", () => {
+  const blocked = { ...replay("ui", []), status: "awaiting_input", message: "Previous check failed" };
+  const next = projectEvent(blocked, {
+    seq: 1, type: "run.status", timestamp: new Date().toISOString(),
+    payload: { status: "completed" },
+  });
+  expect(next.status).toBe("completed");
+  expect(next.message).toBeUndefined();
+});

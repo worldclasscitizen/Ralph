@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import fc from "fast-check";
 import { mkdtemp, readFile, appendFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -260,6 +260,26 @@ describe("durable graph state", () => {
     expect(state.nodes.work?.status).toBe("blocked");
     expect(state.nodes.validate?.status).toBe("blocked");
     await store.release();
+  });
+  it("fails the run before dispatch when the running state cannot be recorded", async () => {
+    const root = await mkdtemp(join(tmpdir(), "ralph-schedule-"));
+    const store = new RunStore(root, "test-run");
+    const topology = graph();
+    await store.acquire();
+    try {
+      await store.append({ type: "graph.revised", payload: { graph: topology } }, 1);
+      const failure = new Error("Node journal write failed");
+      vi.spyOn(store, "append").mockRejectedValueOnce(failure);
+      const execute = vi.fn();
+
+      await expect(schedule(topology, store, 1, execute, new AbortController().signal))
+        .rejects.toBe(failure);
+      expect(execute).not.toHaveBeenCalled();
+      expect((await store.state()).nodes.work?.status).toBe("pending");
+      expect((await store.state()).nodes.integrate?.status).toBe("pending");
+    } finally {
+      await store.release();
+    }
   });
 });
 

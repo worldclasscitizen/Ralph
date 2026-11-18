@@ -56,7 +56,7 @@ const observation = { mode, subject: target, model, cliVersion, passed: !failure
 await atomicJson(campaign, observation);
 if (live) {
   const { fixture: privatePath, error: privateError, ...details } = observation;
-  const value = await report("end_to_end", FUNCTIONAL_CHECKS.map(name => ({ name, passed: !failure })), { ...details, injectedContract: false, injectedGraph: false, allowance, ...(failure ? { failure: "Inspect the retained functional campaign; completion was not established" } : {}), scope: "Windows, recorded Node/model, fresh Codex CLI sessions through the metered generic-process bridge. Natural-language contract and DAG; independent worktrees; scoped behavior checks, independent assessments and external oracle. Single connection concurrency remains one." });
+  const value = await report("end_to_end", FUNCTIONAL_CHECKS.map(name => ({ name, passed: !failure })), { ...details, injectedContract: false, injectedGraph: false, allowance, ...(failure ? { failure: "Inspect the retained functional campaign; completion was not established" } : {}), scope: "Recorded platform, Node and model, fresh Codex CLI sessions through the metered generic-process bridge. Natural-language contract and DAG, independent worktrees, scoped behavior checks, independent assessments and external oracle. Single connection concurrency remains one." });
   value.subject = target;
   await atomicJson(resolve("docs/project/evidence/live-functional.json"), value);
 }

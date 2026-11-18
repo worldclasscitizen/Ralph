@@ -1,6 +1,6 @@
 import { resolveExecutable } from "../util.js";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -13,6 +13,7 @@ import type {
 } from "../types.js";
 import { commandExists, runCommand } from "../util.js";
 import { classifyProviderError, emptyResponseError } from "./errors.js";
+import { providerAllowsModel } from "./models.js";
 
 /** Trust only the caller-selected worktree inside the Windows sandbox process. */
 export function codexWorkspaceConfig(projectRoot: string, platform = process.platform): string[] {
@@ -97,7 +98,7 @@ function cleanCodexEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
-function cleanGoogleBuiltinEnv(): NodeJS.ProcessEnv {
+export function cleanGoogleBuiltinEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   for (const key of [
     "GEMINI_API_KEY",
@@ -194,12 +195,45 @@ export class CodexBuiltinAdapter extends CliAdapter {
       });
       child.on("error", () => finish([]));
       child.stdin.write(
-        `${JSON.stringify({ id: 1, method: "initialize", params: { clientInfo: { name: "ralph", title: "Ralph CLI", version: "0.3.3" }, capabilities: null } })}\n`,
+        `${JSON.stringify({ id: 1, method: "initialize", params: { clientInfo: { name: "ralph", title: "Ralph CLI", version: "0.4.0" }, capabilities: null } })}\n`,
       );
       child.stdin.write(
         `${JSON.stringify({ id: 2, method: "model/list", params: { limit: 100 } })}\n`,
       );
     });
+  }
+
+  async invokeText(
+    modelId: string,
+    prompt: string,
+    schema: object,
+    signal: AbortSignal,
+  ): Promise<AgentResult> {
+    const directory = await mkdtemp(join(tmpdir(), "ralph-dashboard-text-"));
+    try {
+      const output = join(directory, "response.txt");
+      const schemaPath = join(directory, "schema.json");
+      await writeFile(schemaPath, JSON.stringify(schema), "utf8");
+      const result = await runCommand("codex", [
+        "exec", "--ignore-user-config", "--ignore-rules", "--skip-git-repo-check",
+        "--ephemeral", "--sandbox", "read-only", "--cd", directory,
+        "--disable", "shell_tool", "--disable", "apps", "--disable", "plugins",
+        "--disable", "multi_agent_v2", "-c", 'web_search="disabled"',
+        "-c", 'approval_policy="never"', "-c", 'model_provider="openai"',
+        "-c", 'model_reasoning_effort="low"', "--model", modelId,
+        "--output-schema", schemaPath, "--output-last-message", output, "-",
+      ], {
+        cwd: directory,
+        env: cleanCodexEnv(),
+        input: prompt,
+        signal,
+        timeoutMs: 45_000,
+      });
+      const text = await readFile(output, "utf8").catch(() => "");
+      return this.resultFrom(text, result.exitCode, result.stderr);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 
   async invoke(
@@ -453,7 +487,7 @@ export class AntigravityBuiltinAdapter extends CliAdapter {
     if (result.exitCode !== 0) return [];
     return result.stdout.split(/\r?\n/).flatMap((line) => {
       const [modelId, displayName] = line.split("\t");
-      return modelId && displayName
+      return modelId && displayName && providerAllowsModel(this.id, modelId)
         ? [
             {
               connectionId: "google:antigravity-login",
@@ -471,12 +505,23 @@ export class AntigravityBuiltinAdapter extends CliAdapter {
     request: AgentRequest,
     signal: AbortSignal,
   ): Promise<AgentResult> {
+    if (!providerAllowsModel(this.id, request.model.modelId))
+      return {
+        text: "",
+        exitCode: 4,
+        error: {
+          kind: "policy_denial",
+          retryable: false,
+          message: "Gemini 구독제 연결에서는 Gemini 모델만 호출할 수 있습니다.",
+        },
+      };
     const input = `${JSON.stringify({ event: "user", message: { content: request.prompt } })}\n`;
     const args = [
       "--input-format",
       "stream-json",
       "--output-format",
       "stream-json",
+      "--disable-slash-commands",
       "--model",
       request.model.modelId,
       "--mode",

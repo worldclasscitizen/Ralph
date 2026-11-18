@@ -1,4 +1,4 @@
-# Releasing Ralph 0.3.3
+# Releasing Ralph
 
 Repository owners may run the release workflow after its evidence gate passes. Consumer commands never publish, push or deploy.
 
@@ -26,9 +26,11 @@ The required live test supplies a natural-language request without an injected c
 
 ## Catalog signing
 
-The Ed25519 private key stays outside the repository; only its public key and fingerprint are committed. The encrypted npm-release environment secret is RALPH_CATALOG_PRIVATE_KEY. The current release uses the committed, verified signature and does not expose the secret to PR jobs.
+The Ed25519 private key is in the GitHub Actions environment secret `RALPH_CATALOG_ED25519_PRIVATE_KEY`. Only the protected `main` branch can use the `catalog-signing` environment. The repository contains the public key and its fingerprint.
 
-Sign catalog-v2.json and catalog-v2.sig with scripts/sign-catalog.mjs and an absolute RALPH_CATALOG_PRIVATE_KEY path. The script supports Windows and rejects keys inside the checkout. For deliberate bootstrap, scripts/bootstrap-catalog-v2.mjs --init-key reuses an existing private key. Never replace an established trust anchor silently.
+For a catalog update, commit the new `assets/catalog-v2.json` on a branch and run **Sign model catalog** from `main` with the full SHA of that commit. The workflow reads the JSON from the chosen commit, validates it, and returns the JSON and verified signature as the `signed-catalog` artifact. Commit that signature with the catalog before running release CI. A separately encrypted backup can restore the individual key if the environment secret is lost. Verify the recovered public-key fingerprint against `src/catalog-key.ts`.
+
+Ralph 0.4.0 establishes a new v2 catalog trust key. Clients with the 0.3.x trust key must install the 0.4.0 package to accept catalogs signed by the new key.
 
 Schema v2 uses keyId and checkedAt, a separate cache/channel, and null/unrated values where measured quality is absent. Original catalog.json and catalog.sig remain byte-preserved release assets for older clients. Their original expiry is not extended without their original key. Run npm run catalog:audit before release.
 
@@ -40,7 +42,7 @@ Initial npm account authentication or two-factor setup may require the owner. No
 
 Require PRs and the six CI checks on main, without another person's review approval. Merge with a merge commit to retain logical commits. After successful main CI, dispatch release.yml with the exact source_sha and ci_run_id.
 
-The workflow verifies that CI belongs to main and the selected commit, creates v0.3.3 and a draft Release, attaches all evidence, then publishes the validated tarball with public access and the explicit latest tag. It installs both the exact version and the default registry version, checks downloaded integrity, runs a mock graph and verifies the UI. Only then is the GitHub Release made public and Latest. Enable immutable releases before publication; drafts remain editable until their assets are complete. [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+The workflow verifies that CI belongs to main and the selected commit. It reads the version from package.json, creates the matching tag and draft Release, attaches the reports, then publishes the validated tarball with public access and the explicit latest tag. It installs both the exact version and the default registry version, checks downloaded integrity, runs a mock graph and verifies the UI. The GitHub Release becomes public and Latest after those checks pass. Enable immutable releases so published assets stay fixed. [Immutable Releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
 
 ## Recovery of a publication
 

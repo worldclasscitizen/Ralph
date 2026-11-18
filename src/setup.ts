@@ -8,6 +8,7 @@ import {
 } from "./credentials.js";
 import { probeProvider } from "./gateway/capabilities.js";
 import { createAdapter } from "./providers/index.js";
+import { providerAllowsModel } from "./providers/models.js";
 import { saveConfig } from "./state.js";
 import { RalphError } from "./util.js";
 import type { Prompt, PromptOption } from "./interaction/prompt.js";
@@ -45,7 +46,11 @@ export function catalogModelsFor(
   connection: ConnectionConfig,
 ): string[] {
   return catalog.models
-    .filter((model) => model.adapter === connection.adapter)
+    .filter(
+      (model) =>
+        model.adapter === connection.adapter &&
+        providerAllowsModel(connection.adapter, model.modelId),
+    )
     .map((model) => model.modelId);
 }
 
@@ -117,7 +122,7 @@ export function formatStatusTable(
     lines.push(`    모델: ${names.join(", ") || "없음"}`);
     if (row.unavailableModels?.length)
       lines.push(
-        `    카탈로그 외 (라우팅 불가): ${row.unavailableModels.join(", ")}`,
+        `    카탈로그에 없는 모델: ${row.unavailableModels.join(", ")}`,
       );
   }
   lines.push("");
@@ -189,7 +194,7 @@ export async function modelOptions(
         options.push({
           value: model.modelId,
           label: model.displayName ?? model.modelId,
-          note: "CLI가 보고했지만 카탈로그에 없어 선택할 수 없음",
+          note: "공급자 목록에는 있지만 Ralph 설정에서 선택할 수 없음",
           disabled: true,
         });
   } catch {
@@ -426,7 +431,7 @@ export async function runProviderSetup(
     const unavailable = optionsFor.filter((option) => option.disabled);
     if (unavailable.length)
       prompt.info(
-        `${connection.id}: ${unavailable.map((option) => option.value).join(", ")}는(은) 카탈로그에 없어 선택할 수 없습니다. 카탈로그 갱신이 필요합니다.`,
+        `${connection.id}: 다음 모델은 공급자 목록에 있지만 Ralph 카탈로그에 등록되어 있지 않아 설정에서 선택할 수 없습니다. (${unavailable.map((option) => option.value).join(", ")})`,
       );
     const preselected = connection.models?.length
       ? connection.models.filter((id) => selectable.some((option) => option.value === id))

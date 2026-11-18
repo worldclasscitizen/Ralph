@@ -18,7 +18,7 @@ if (reportPath) {
 for (const file of ["README.md", "README.ko.md"]) {
   const text = await readFile(file, "utf8");
   const rows = records.length ? records.map((r) => `| ${r.adapter} / ${r.model} | verified | ${r.cliVersion} · ${r.platform} · ${r.node} · ${r.checkedAt.slice(0, 10)} |`).join("\n") : "| Codex | compatible | Live release verification pending |";
-  const table = `<!-- provider-verification:start -->\n| Connection / model | Support | Verified environment |\n|---|---|---|\n${rows}\n| Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |\n| OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |\n| Antigravity | experimental | Requires a working automation interface |\n| Other compatible endpoints | compatible | No live verification |\n<!-- provider-verification:end -->`;
+  const table = `<!-- provider-verification:start -->\n| Connection / model | Support | Verified environment |\n|---|---|---|\n${rows}\n| Claude Code, Gemini CLI | compatible | Protocol tests; no current live verification |\n| OpenAI, Anthropic, Gemini, DeepSeek, GLM APIs | compatible | Protocol tests; no current live verification |\n| Gemini subscription (Antigravity) | compatible | Gemini models via the CLI; no packaged verification |\n| Other compatible endpoints | compatible | No live verification |\n<!-- provider-verification:end -->`;
   if (!text.includes("<!-- provider-verification:start -->")) throw new Error(`Missing generated support block: ${file}`);
   await writeFile(file, text.replace(/<!-- provider-verification:start -->[\s\S]*?<!-- provider-verification:end -->/, table));
 }

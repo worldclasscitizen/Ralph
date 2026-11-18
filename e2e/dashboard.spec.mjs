@@ -2,6 +2,85 @@ import { test, expect } from "@playwright/test";
 test("graph canvas, inspector and provider evidence", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  await page.route("**/api/capacity", (route) =>
+    route.fulfill({
+      json: {
+        "openai:codex-login": {
+          kind: "subscription",
+          status: "exact",
+          windows: [
+            {
+              label: "Codex primary",
+              durationMinutes: 300,
+              remainingPercent: 47,
+              resetsAt: "2026-11-17T03:00:00Z",
+            },
+            {
+              label: "Codex secondary",
+              durationMinutes: 10080,
+              remainingPercent: 81,
+            },
+          ],
+        },
+        "google:antigravity-login": {
+          kind: "subscription",
+          status: "exact",
+          windows: [
+            { label: "gemini-5h", durationMinutes: 300, remainingPercent: 74 },
+          ],
+        },
+        "zai:general": {
+          kind: "api_balance",
+          status: "unavailable",
+        },
+      },
+    }),
+  );
+  await page.route("**/api/v2/providers", async (route) => {
+    const response = await route.fetch();
+    const providers = await response.json();
+    await route.fulfill({
+      response,
+      json: [
+        ...providers,
+        {
+          id: "openai:api",
+          mode: "api",
+          enabled: false,
+          installed: true,
+          authentication: "unauthenticated",
+          support: "compatible",
+          models: [
+            {
+              modelId: "gpt-6-astra",
+              displayName: "GPT-6 Astra",
+              inRoute: false,
+              manual: false,
+            },
+          ],
+        },
+        {
+          id: "google:antigravity-login",
+          mode: "builtin",
+          enabled: true,
+          installed: true,
+          authentication: "unknown",
+          support: "experimental",
+          routableModels: 0,
+          models: [],
+        },
+        {
+          id: "google:gemini-cli-login",
+          mode: "builtin",
+          enabled: false,
+          installed: true,
+          authentication: "unknown",
+          support: "compatible",
+          models: [],
+        },
+      ],
+    });
+  });
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Build a verified artifact" }),
@@ -10,18 +89,63 @@ test("graph canvas, inspector and provider evidence", async ({ page }) => {
   await page.getByRole("button", { name: "Inspect work", exact: true }).click();
   await expect(page.locator(".inspector")).toBeVisible();
   await page.getByRole("button", { name: /^Inspect [0-9a-f]{12}$/ }).click();
+  await expect(page.getByText("검증 결과", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "노드 상세 닫기" }).click();
+  const usageButton = page.getByRole("button", { name: "사용량·한도" });
+  await usageButton.click();
   await expect(
-    page.getByText("Verification result", { exact: true }),
+    page.getByLabel("Codex 구독제 5시간 한도 잔여 비율"),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Close inspector" }).click();
-  await page.getByRole("button", { name: "▥ Providers & usage" }).click();
+  await expect(page.getByText("47% 남음", { exact: true })).toBeVisible();
+  await expect(page.getByText("74% 남음", { exact: true })).toBeVisible();
+  await expect(usageButton).toHaveText("사용량·한도");
+  const quotaMeter = page.getByLabel("Codex 구독제 5시간 한도 잔여 비율");
+  const quotaText = page.getByText("47% 남음", { exact: true });
+  const meter = await quotaMeter.boundingBox();
+  const percent = await quotaText.boundingBox();
+  expect(meter.y - percent.y - percent.height).toBeCloseTo(2, 0);
+  await expect(page.getByText("주간 한도", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "모델별 사용 내역 보기" }).click();
   await expect(
-    page.getByRole("heading", { name: "Providers & usage", exact: true }),
+    page.getByRole("heading", { name: "사용 내역", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("table").first()).toContainText("mock-1");
+  await expect(
+    page.getByRole("heading", { name: "남은 한도와 잔액" }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Gemini 구독제 Gemini · 5시간 한도 잔여 비율"),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Z.ai 결제 페이지 열기" }))
+    .toHaveAttribute("href", "https://z.ai/manage-apikey/billing");
+  await expect(page.locator('.metrics-limits [data-logo="gemini"]'))
+    .toHaveJSProperty("complete", true);
+  const providerCards = page.getByRole("region", { name: "공급자 연결" });
+  await expect(providerCards.getByText(/^모델 카탈로그 v\d+$/)).toBeVisible();
+  await providerCards.getByText("그 외 공급자", { exact: true }).click();
+  const openai = providerCards.getByRole("article").filter({ hasText: "OpenAI API" });
+  await expect(openai).toContainText("API 키 필요");
+  await openai.getByText("모델 목록 (1개)", { exact: true }).click();
+  await expect(openai.getByText("gpt-6-astra", { exact: true })).toBeVisible();
+  await expect(openai.getByText("카탈로그 등록", { exact: true })).toBeVisible();
+  const mock = providerCards.getByRole("article").filter({ hasText: "mock:process" });
+  await mock.getByText("모델 목록 (1개)", { exact: true }).click();
+  await expect(mock.getByText("수동으로 추가", { exact: true })).toBeVisible();
+  await expect(mock.getByText("실행 경로에 설정됨", { exact: true })).toBeVisible();
+  await expect(
+    providerCards.getByRole("article").filter({ hasText: "Gemini 구독제" }),
+  ).toContainText("연결됨");
+  await expect(
+    providerCards.getByText("Ralph에서 실행할 수 있는 모델이 아직 없어요."),
+  ).toBeVisible();
+  await expect(providerCards.getByRole("heading", { name: /Gemini CLI/ })).toHaveCount(0);
+  const usage = page.getByRole("table", { name: "모델별 사용 내역" });
+  await expect(usage).toContainText("mock-1");
+  await expect(
+    usage.getByRole("columnheader", { name: "예상 비용" }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
   await page.screenshot({ path: "test-results/providers.png", fullPage: true });
-  await page.getByRole("button", { name: "◈ Execution runs" }).click();
+  await page.getByRole("button", { name: "작업 화면으로" }).click();
   await page.screenshot({ path: "test-results/graph.png", fullPage: true });
 });
 
@@ -103,19 +227,54 @@ test("32 nodes, eight revisions and event resynchronization preserve selection",
   expect(await firstNode.evaluate((element) => element.style.transform)).toBe(
     before,
   );
-  await page.getByRole("button", { name: "Close inspector" }).click();
-  await page.getByLabel("Graph revision").selectOption("1");
+  await page.getByRole("button", { name: "노드 상세 닫기" }).click();
+  await page.getByRole("button", { name: "실행 메뉴" }).click();
+  await page.getByLabel("그래프 이력").selectOption("1");
   await expect(page.locator(".react-flow__node")).toHaveCount(32);
   await expect(
-    page.getByRole("button", { name: "Resume", exact: true }),
+    page.getByRole("button", { name: "다시 실행", exact: true }),
   ).toBeDisabled();
-  await page.getByLabel("Graph revision").selectOption("8");
+  await page.getByLabel("그래프 이력").selectOption("8");
   await expect(page.locator(".react-flow__node")).toHaveCount(32);
   expect(
     await page
       .locator("body")
       .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
   ).toBeGreaterThanOrEqual(14);
+});
+
+test("new sessions stay separate while an earlier completed graph is reopened", async ({ page }) => {
+  const history = await (await page.request.get("/api/v2/runs")).json();
+  const [finished] = history.runs;
+  const graph = await (await page.request.get(`/api/v2/runs/${finished.runId}/graph`)).json();
+  const current = { ...finished, runId: "new-session", goal: "New work", status: "running", nodes: {} };
+  const paused = { ...current, runId: "waiting-session", goal: "Needs review", status: "awaiting_input" };
+  let includeNew = false;
+  await page.route("**/api/v2/runs?view=sidebar", (route) => route.fulfill({
+    json: { ...history, runs: includeNew ? [current, paused, finished] : [finished] },
+  }));
+  await page.route("**/api/v2/runs/new-session", (route) => route.fulfill({ json: current }));
+  await page.route("**/api/v2/runs/new-session/graph", (route) =>
+    route.fulfill({ json: { ...graph, runId: current.runId } }),
+  );
+  await page.route("**/api/v2/runs/new-session/events?*", (route) =>
+    route.fulfill({ contentType: "text/event-stream", body: "" }),
+  );
+  await page.goto("/");
+  const ended = page.getByRole("region", { name: "종료됨" });
+  const older = ended.getByRole("button", { name: /Build a verified artifact/ });
+  await expect(older).toHaveAttribute("aria-current", "true");
+  includeNew = true;
+  await expect(page.getByRole("region", { name: "실행 중" })).toContainText("New work");
+  await expect(page.getByRole("region", { name: "대기 중" })).toContainText("확인 필요");
+  await expect(older).toHaveAttribute("aria-current", "true");
+
+  await page.reload();
+  await expect(page.getByRole("region", { name: "실행 중" }).getByRole("button")).toHaveAttribute("aria-current", "true");
+  await older.click();
+  await expect(page.locator(".react-flow__node [data-tone=done]")).toHaveCount(4);
+  await page.getByRole("button", { name: "Inspect work", exact: true }).click();
+  await expect(page.locator(".inspector")).toBeVisible();
 });
 test("small screens retain readable controls and a dismissible inspector", async ({
   page,
@@ -125,9 +284,9 @@ test("small screens retain readable controls and a dismissible inspector", async
   await expect(page.locator(".react-flow__node")).toHaveCount(4);
   await page.locator(".react-flow__node").first().click();
   await expect(
-    page.getByRole("button", { name: "Close inspector" }),
+    page.getByRole("button", { name: "노드 상세 닫기" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Close inspector" }).click();
+  await page.getByRole("button", { name: "노드 상세 닫기" }).click();
   await expect(page.locator(".inspector")).toHaveCount(0);
 });
 
@@ -151,8 +310,8 @@ test("keyboard navigation, historical revision and bounded large diff rendering"
   await node.press("Enter");
   await expect(page.locator(".inspector")).toBeVisible();
   await page.getByRole("button", { name: /^Inspect [0-9a-f]{12}$/ }).click();
-  await page.getByText("File diff", { exact: true }).click();
-  const log = page.getByRole("region", { name: "File diff log" });
+  await page.getByText("파일 변경 내용", { exact: true }).click();
+  const log = page.getByRole("region", { name: "파일 변경 기록" });
   await expect(log).toContainText("+line 1");
   expect(await log.locator("[data-log-line]").count()).toBeLessThan(40);
   await log.focus();
@@ -160,9 +319,312 @@ test("keyboard navigation, historical revision and bounded large diff rendering"
   await expect(log.locator('[data-log-line="100000"]')).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator(".inspector")).toHaveCount(0);
-  await page.getByLabel("Graph revision").selectOption("1");
+  await page.getByRole("button", { name: "실행 메뉴" }).click();
+  await page.getByLabel("그래프 이력").selectOption("1");
   await expect(
-    page.getByRole("button", { name: "Resume", exact: true }),
+    page.getByRole("button", { name: "다시 실행", exact: true }),
   ).toBeDisabled();
   await expect(page.locator(".react-flow__node")).toHaveCount(4);
+});
+
+test("submits worker direction and shows the revised graph from the event stream", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.EventSource = class extends EventTarget {
+      constructor() {
+        super();
+        window.directionStream = this;
+      }
+      close() {}
+    };
+  });
+  const { runs } = await (await page.request.get("/api/v2/runs")).json();
+  const runId = runs[0].runId;
+  const path = `/api/v2/runs/${runId}`;
+  const snapshot = await (await page.request.get(path)).json();
+  const graph = await (await page.request.get(`${path}/graph`)).json();
+  await page.route(`**${path}`, (route) =>
+    route.fulfill({ json: { ...snapshot, status: "running" } }),
+  );
+  let request;
+  await page.route(`**${path}/commands`, async (route) => {
+    request = route.request().postDataJSON();
+    await route.fulfill({
+      status: 202,
+      json: { accepted: true, commandId: request.commandId },
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Inspect work", exact: true }).click();
+  await page.getByRole("button", { name: "방향 변경" }).click();
+  await page.getByLabel("방향 변경").fill("Use the revised label");
+  await page.getByRole("button", { name: "변경 적용" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "관련 작업이 안전하게 멈출 수 있는 지점",
+  );
+  expect(request).toMatchObject({
+    type: "steer",
+    nodeId: "work",
+    expectedRevision: 1,
+    instruction: "Use the revised label",
+  });
+  await page.evaluate(
+    ({ graph, seq, commandId }) => {
+      const rerun = ["work", "integrate", "validate"];
+      graph.revision = 2;
+      graph.nodes.find((n) => n.nodeId === "work").direction =
+        "Use the revised label";
+      for (const n of graph.nodes) if (rerun.includes(n.nodeId)) n.generation++;
+      window.directionStream.dispatchEvent(
+        new MessageEvent("ralph", {
+          data: JSON.stringify({
+            seq: seq + 1,
+            timestamp: new Date().toISOString(),
+            type: "graph.revised",
+            payload: {
+              graph,
+              direction: {
+                nodeId: "work",
+                commandId,
+                rerun,
+                reused: ["right"],
+              },
+            },
+          }),
+        }),
+      );
+    },
+    { graph, seq: snapshot.seq, commandId: request.commandId },
+  );
+  await expect(page.getByRole("status")).toContainText(
+    "다시 사용한 작업 right.",
+  );
+  await expect(page.locator(".worker-direction")).toHaveText(
+    "Use the revised label",
+  );
+});
+
+test("loads Galmuri, keeps completed graphs and zooms around the pointer", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.locator(".react-flow__node")).toHaveCount(4);
+  await page.evaluate(() => document.fonts.ready);
+  expect(
+    await page.evaluate(() =>
+      [...document.fonts]
+        .filter(
+          (font) => font.family === "Galmuri11" && font.status === "loaded",
+        )
+        .map((font) => font.weight)
+        .sort(),
+    ),
+  ).toEqual(["400", "700"]);
+  await expect(page.locator(".run-item[aria-current] .lamp")).toHaveCSS(
+    "background-color",
+    "rgb(45, 187, 128)",
+  );
+
+  const canvas = page.locator(".canvas");
+  const box = await canvas.boundingBox();
+  const viewport = page.locator(".react-flow__viewport");
+  const readViewport = () =>
+    viewport.evaluate((element) => {
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform);
+      return { x: matrix.e, y: matrix.f, zoom: matrix.a };
+    });
+  await expect.poll(async () => (await readViewport()).y).toBeGreaterThan(80);
+  const before = await readViewport();
+  const x = box.width / 3;
+  const y = box.height / 3;
+  await page.mouse.move(box.x + x, box.y + y);
+  await page.mouse.wheel(0, -150);
+  await expect
+    .poll(async () => (await readViewport()).zoom)
+    .toBeGreaterThan(before.zoom);
+  const after = await readViewport();
+  expect(
+    Math.abs((x - before.x) / before.zoom - (x - after.x) / after.zoom),
+  ).toBeLessThan(1);
+  expect(
+    Math.abs((y - before.y) / before.zoom - (y - after.y) / after.zoom),
+  ).toBeLessThan(1);
+
+  await page.getByRole("button", { name: "다크 테마" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(canvas).toHaveCSS("background-color", "rgb(26, 31, 51)");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.locator(".react-flow__node")).toHaveCount(4);
+});
+
+async function observeDashboardEvents(page) {
+  await page.addInitScript(() => {
+    window.EventSource = class extends EventTarget {
+      constructor() {
+        super();
+        window.dashboardEventStream = this;
+      }
+      close() {}
+    };
+  });
+  const { runs } = await (await page.request.get("/api/v2/runs")).json();
+  const path = `/api/v2/runs/${runs[0].runId}`;
+  const snapshot = await (await page.request.get(path)).json();
+  const graph = await (await page.request.get(`${path}/graph`)).json();
+  let cursor = snapshot.seq;
+  const send = (type, payload) => page.evaluate((event) => {
+    window.dashboardEventStream.dispatchEvent(
+      new MessageEvent("ralph", { data: JSON.stringify(event) }),
+    );
+  }, { seq: ++cursor, timestamp: new Date().toISOString(), type, payload });
+  return { path, snapshot, graph, send };
+}
+
+test("a packet reaches the end of its edge and a resolved alert clears", async ({ page }) => {
+  const { path, snapshot, send } = await observeDashboardEvents(page);
+  snapshot.status = "running";
+  snapshot.nodes.validate = { status: "running", generation: 0, iteration: 0 };
+  await page.route(`**${path}`, (route) => route.fulfill({ json: snapshot }));
+  await page.goto("/");
+  await page.waitForFunction(() => window.dashboardEventStream);
+  const packet = page.locator(".data-packet");
+  await expect(packet).toHaveCount(1);
+  const distances = await packet.evaluate(async (element) => {
+    const travel = element.getAnimations()[0];
+    travel.pause();
+    await travel.ready;
+    const path = element.parentElement.querySelector("path.react-flow__edge-path");
+    const samples = [];
+    for (const fraction of [0.15, 0.45, 0.9]) {
+      travel.currentTime = fraction * travel.effect.getComputedTiming().duration;
+      await new Promise(requestAnimationFrame);
+      const expected = path.getPointAtLength(fraction * path.getTotalLength())
+        .matrixTransform(path.getScreenCTM());
+      const circle = element.querySelector("circle:last-child").getBoundingClientRect();
+      samples.push(Math.hypot(expected.x - circle.x - circle.width / 2,
+        expected.y - circle.y - circle.height / 2));
+    }
+    travel.currentTime = 700;
+    return samples;
+  });
+  for (const distance of distances) expect(distance).toBeLessThan(1);
+
+  await send("run.status", { status: "awaiting_input", message: "Review requested" });
+  const toast = page.locator(".report-toast");
+  await expect(toast).toBeVisible();
+  await send("node.status", { nodeId: "validate", status: "completed", generation: 0 });
+  await send("run.status", { status: "completed" });
+  await expect(page.locator('.node[data-tone="done"]')).toHaveCount(4);
+  await expect(toast).toHaveCount(0);
+  await expect(packet).toHaveCount(1);
+  await packet.evaluate((element) => {
+    const travel = element.getAnimations()[0];
+    travel.playbackRate = 8;
+    travel.play();
+  });
+  await expect(packet).toHaveCount(0);
+});
+
+test("simple Korean follows node changes while model IDs and activity originals stay accessible", async ({ page }) => {
+  const { path, graph, snapshot, send } = await observeDashboardEvents(page);
+  const batches = [];
+  const descriptions = new Map([
+    ["Artifact exists", "결과 파일이 만들어졌는지 확인해요."],
+    ["Build a verified artifact", "작업 결과를 만들어요"],
+    ["Review ranking against all repositories", "빠진 저장소가 없는지 확인해요"],
+    ["Collect sources for the ranking", "순위에 쓸 자료를 모아요"],
+    ["Validate against the repository manifest", "저장소가 전부 포함됐는지 확인했어요."],
+  ]);
+  await page.route(`**${path}/explanations`, async (route) => {
+    const { items } = route.request().postDataJSON();
+    batches.push(...items);
+    await route.fulfill({ json: {
+      status: "ready",
+      explanations: items.map(({ text }) => descriptions.get(text) ?? null),
+    } });
+  });
+  const work = graph.nodes.find((node) => node.nodeId === "work");
+  const event = {
+    seq: 8, timestamp: new Date().toISOString(), type: "evidence.saved",
+    payload: {
+      summary: "Validate against the repository manifest",
+      artifactId: snapshot.nodes.work.result.evidenceIds[0],
+    },
+  };
+  await page.route(`**${path}/nodes/work`, (route) =>
+    route.fulfill({ json: { ...snapshot.nodes.work, events: [event] } }),
+  );
+  await page.goto("/");
+  const task = page.getByRole("button", { name: "Inspect work", exact: true });
+  await expect(task.locator("strong")).toHaveText("작업 결과를 만들어요");
+  await expect(task).toContainText("mock-1");
+  await task.click();
+  await expect(page.locator(".subtask").filter({
+    hasText: "결과 파일이 만들어졌는지 확인해요.",
+  })).toHaveCount(1);
+  await page.getByRole("button", { name: /^활동\s*1$/ }).click();
+  const activity = page.locator(".activity-list");
+  await activity.getByText("저장소가 전부 포함됐는지 확인했어요.", { exact: true }).click();
+  await activity.getByText("원문 기록", { exact: true }).click();
+  await expect(activity.getByRole("region", { name: "활동 상세 기록" }))
+    .toContainText(event.payload.summary);
+
+  const previous = batches.length;
+  graph.revision++;
+  work.generation++;
+  work.goal = "Review ranking against all repositories";
+  graph.nodes = graph.nodes.map((node) => node.nodeId === "right"
+    ? { ...node, nodeId: "new", goal: "Collect sources for the ranking" }
+    : node,
+  );
+  graph.edges = graph.edges.map((edge) => edge.from === "right"
+    ? { ...edge, from: "new" }
+    : edge,
+  );
+  await send("graph.revised", { graph });
+  await expect(task.locator("strong")).toHaveText("빠진 저장소가 없는지 확인해요");
+  await expect(page.getByRole("button", { name: "Inspect right", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Inspect new", exact: true }).locator("strong"))
+    .toHaveText("순위에 쓸 자료를 모아요");
+  expect(batches.slice(previous)).toContainEqual({ kind: "title", text: work.goal });
+  expect(batches.slice(previous)).not.toContainEqual({ kind: "criterion", text: "Artifact exists" });
+});
+
+test("settings stays over the run and switches language, theme and toggle state", async ({ page }) => {
+  await page.goto("/");
+  const run = page.getByRole("heading", { name: "Build a verified artifact" });
+  await expect(run).toBeVisible();
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  const settings = page.getByRole("dialog", { name: "설정" });
+  await expect(settings).toBeVisible();
+  await expect(settings.getByText("Codex의 경량 모델을 활용해 작업 내용을 이해하기 쉬운 말로 번역합니다.")).toBeVisible();
+
+  const reports = settings.getByRole("button", { name: "확인이 필요한 보고 알림" });
+  await reports.getByText("ON", { exact: true }).click();
+  await expect(reports.getByText("OFF", { exact: true })).toHaveAttribute("data-active", "true");
+  await reports.getByText("OFF", { exact: true }).click();
+  await expect(reports.getByText("ON", { exact: true })).toHaveAttribute("data-active", "true");
+  const theme = settings.getByRole("button", { name: "화면 테마" });
+  await theme.getByText("다크", { exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await settings.getByRole("button", { name: "언어" }).getByText("English").click();
+  const english = page.getByRole("dialog", { name: "Settings" });
+  await expect(english.getByRole("button", { name: "Plain Korean", exact: true })).toBeDisabled();
+  await expect(english.getByRole("button", { name: "Plain Korean", exact: true }).getByText("OFF"))
+    .toHaveAttribute("data-active", "true");
+  await page.keyboard.press("Escape");
+  await expect(english).toBeHidden();
+  await expect(run).toBeVisible();
+  await expect(page.getByRole("button", { name: "Usage & limits" })).toBeVisible();
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await english.getByRole("button", { name: "Language" }).getByText("한국어").click();
+  await expect(settings.getByRole("button", { name: "쉬운 한국어 설명" })).toBeEnabled();
 });

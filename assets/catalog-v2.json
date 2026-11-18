@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
-  "keyId": "2dac79a372df181709c3d90522cf42740cd4599effd39f387234625965b3687e",
-  "version": 6,
-  "generatedAt": "2026-09-27T00:00:00.000Z",
+  "keyId": "11bfb3068d46cbcd315bb4a8c49b3fdd79cde49dddf292ce0f58321f3cbe0590",
+  "version": 7,
+  "generatedAt": "2026-11-17T19:58:21.411Z",
   "models": [
     {
       "provider": "openai",
@@ -681,6 +681,89 @@
         {
           "source": "https://docs.z.ai/guides/vlm/glm-5.3-flash",
           "checkedAt": "2026-09-27"
+        }
+      ]
+    },
+    {
+      "provider": "openai",
+      "adapter": "codex-builtin",
+      "modelId": "gpt-6.2-sol",
+      "displayName": "GPT-6.2 Sol",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-11-17T19:58:21.411Z",
+      "expiresAt": "2027-05-17T19:58:21.411Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": false,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra"
+      ],
+      "recommendedEffort": "low",
+      "evidence": [
+        {
+          "source": "https://learn.chatgpt.com/docs/models",
+          "checkedAt": "2026-11-17"
+        }
+      ]
+    },
+    {
+      "provider": "openai",
+      "adapter": "openai-api",
+      "modelId": "gpt-6.2-sol",
+      "displayName": "GPT-6.2 Sol",
+      "qualityTier": "unrated",
+      "checkedAt": "2026-11-17T19:58:21.411Z",
+      "expiresAt": "2027-05-17T19:58:21.411Z",
+      "capabilities": {
+        "reasoning": null,
+        "coding": null,
+        "structuredOutput": true,
+        "vision": true,
+        "toolUse": true,
+        "longContext": true
+      },
+      "taskAffinity": {
+        "planning_architecture": null,
+        "frontend_visual": null,
+        "backend_core": null,
+        "tdd_debugging": null,
+        "static_review": null,
+        "delivery_evidence": null
+      },
+      "costTier": null,
+      "latencyTier": null,
+      "reliabilityBaseline": null,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "recommendedEffort": "medium",
+      "evidence": [
+        {
+          "source": "https://developers.openai.com/api/docs/models/gpt-6.2-sol",
+          "checkedAt": "2026-11-17"
         }
       ]
     }

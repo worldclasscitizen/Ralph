@@ -8,7 +8,7 @@ import { ProviderGateway } from "../src/gateway/gateway.js";
 import { BudgetCounter } from "../src/runtime/budget.js";
 import { DEFAULT_BUDGET } from "../src/graph/schema.js";
 import { routesFor } from "../src/gateway/routing.js";
-import { codexWorkspaceConfig } from "../src/providers/cli.js";
+import { AntigravityBuiltinAdapter, codexWorkspaceConfig } from "../src/providers/cli.js";
 import type {
   AgentRequest,
   ConnectionConfig,
@@ -96,6 +96,17 @@ const request: AgentRequest = {
     mode: "api",
   },
 };
+it.each(["claude-sonnet-5-5-medium", "gpt-oss-120b-medium"])(
+  "blocks %s on the Gemini subscription before invoking the CLI",
+  async (modelId) => {
+    vi.stubEnv("PATH", "");
+    const result = await new AntigravityBuiltinAdapter().invoke(
+      { ...request, model: { ...request.model, modelId } },
+      new AbortController().signal,
+    );
+    expect(result.error).toMatchObject({ kind: "policy_denial", retryable: false });
+  },
+);
 describe("API transport conformance with recorded protocol shapes", () => {
   it.each(variants)(
     "normalizes $adapter text without inventing usage",

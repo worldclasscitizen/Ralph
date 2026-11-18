@@ -21,10 +21,9 @@ export function VirtualLog({ text, label }: { text: string; label: string }) {
       style={{
         height,
         overflow: "auto",
-        background: "#f4f6fa",
+        background: "var(--canvas)",
         fontSize: 14,
         lineHeight: `${rowHeight}px`,
-        fontFamily: "monospace",
         marginBlock: 10,
       }}
     >

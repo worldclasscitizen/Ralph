@@ -1,4 +1,5 @@
 import { controlToken, handleGraphApi } from "./dashboard/api.js";
+import { DashboardExplanations } from "./dashboard/explanations.js";
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
@@ -132,7 +133,11 @@ export async function startDashboard(
   options: { port?: number; all?: boolean } = {},
 ): Promise<{ server: Server; url: string }> {
   const port = options.port ?? 7331;
-  const projects = options.all ? await registeredProjects() : [projectRoot];
+  const projectsForDashboard = async () =>
+    options.all
+      ? [...new Set([projectRoot, ...(await registeredProjects())])]
+      : [projectRoot];
+  const explanations = new DashboardExplanations();
   const server = createServer(async (request, response) => {
     try {
       const url = new URL(
@@ -148,13 +153,16 @@ export async function startDashboard(
         request.headers["x-ralph-token"] !== controlToken
       )
         return json(response, 403, { error: "Control token required" });
-      const requestedRoot =
-        options.all && url.searchParams.get("project")
-          ? url.searchParams.get("project")!
-          : projectRoot;
-      if (!projects.includes(requestedRoot))
+      const project = url.searchParams.get("project");
+      const requestedRoot = options.all && project ? project : projectRoot;
+      if (project && !(await projectsForDashboard()).includes(project))
         return json(response, 403, { error: "등록되지 않은 프로젝트입니다." });
-      if (await handleGraphApi(request, response, url, requestedRoot)) return;
+      const allRunProjects =
+        options.all && !project && url.pathname === "/api/v2/runs"
+          ? await projectsForDashboard()
+          : undefined;
+      if (await handleGraphApi(request, response, url, requestedRoot, explanations, allRunProjects))
+        return;
       if (request.method === "GET" && url.pathname === "/api/snapshot")
         return json(
           response,
@@ -165,7 +173,7 @@ export async function startDashboard(
           ),
         );
       if (request.method === "GET" && url.pathname === "/api/projects")
-        return json(response, 200, projects);
+        return json(response, 200, await projectsForDashboard());
       if (request.method === "GET" && url.pathname === "/api/usage") {
         const scope = url.searchParams.get("scope") ?? "run";
         if (scope === "run")
@@ -181,7 +189,7 @@ export async function startDashboard(
           return json(response, 200, await usageRows(requestedRoot));
         if (scope === "all" && options.all) {
           const rows: unknown[] = [];
-          for (const project of projects)
+          for (const project of await projectsForDashboard())
             rows.push(...(await usageRows(project)));
           return json(response, 200, rows);
         }
@@ -254,20 +262,21 @@ export async function startDashboard(
       }
       const asset = url.pathname === "/" ? "index.html" : url.pathname.slice(1);
       if (
-        !/^(index\.html|app\.js|elk\.bundled\.js|styles\.css|chunks\/[a-zA-Z0-9_-]+\.js)$/.test(
+        !/^(index\.html|app\.js|elk\.bundled\.js|styles\.css|chunks\/[a-zA-Z0-9_-]+\.js|icons\/[a-z-]+\.svg|fonts\/Galmuri11(?:-Bold)?\.woff2)$/.test(
           asset,
         )
       )
         return json(response, 404, { error: "not found" });
       const path = join(ASSETS, asset);
       await stat(path);
-      response.writeHead(200, {
-        "Content-Type": asset.endsWith(".html")
-          ? "text/html; charset=utf-8"
-          : asset.endsWith(".js")
-            ? "text/javascript; charset=utf-8"
-            : "text/css; charset=utf-8",
-      });
+      const contentTypes: Record<string, string> = {
+        html: "text/html; charset=utf-8",
+        js: "text/javascript; charset=utf-8",
+        css: "text/css; charset=utf-8",
+        svg: "image/svg+xml",
+        woff2: "font/woff2",
+      };
+      response.writeHead(200, { "Content-Type": contentTypes[asset.split(".").at(-1)!] });
       createReadStream(path).pipe(response);
     } catch (error) {
       json(response, 500, {

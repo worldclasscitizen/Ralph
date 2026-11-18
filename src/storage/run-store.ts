@@ -43,6 +43,12 @@ export function replay(runId: string, events: EventEnvelope[]): GraphRunState {
       case "graph.revised": {
         const g = event.payload.graph;
         state.revision = g.revision;
+        const direction = event.payload.direction;
+        if (event.payload.recovery) state.latestRecovery = event.payload.recovery;
+        if (direction) {
+          state.latestDirection = direction;
+          state.commands[direction.commandId] = { accepted: true };
+        }
         state.nodes = Object.fromEntries(
           g.nodes.map((n) => [
             n.nodeId,
@@ -71,7 +77,12 @@ export function replay(runId: string, events: EventEnvelope[]): GraphRunState {
           status: p.status,
           ...(p.iteration !== undefined ? { iteration: p.iteration } : {}),
           ...(p.result ? { result: p.result } : {}),
-          ...(p.error ? { error: p.error } : {}),
+          ...(p.status === "pending"
+            ? { error: undefined, failure: undefined, result: undefined, startedAt: undefined, endedAt: undefined }
+            : {
+                ...(p.error ? { error: p.error } : {}),
+                ...(p.failure ? { failure: p.failure } : {}),
+              }),
           ...(p.status === "running" && !old.startedAt
             ? { startedAt: event.timestamp }
             : {}),
